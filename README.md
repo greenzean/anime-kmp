@@ -55,6 +55,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0002: Lint and format tooling](docs/decisions/0002-lint-tooling.md)
 - [0003: GraphQL server library](docs/decisions/0003-graphql-server.md)
 - [0004: Client/server contract](docs/decisions/0004-shared-contract.md)
+- [0005: Postgres access, migrations and test database](docs/decisions/0005-postgres-access.md)
 
 ## Build
 

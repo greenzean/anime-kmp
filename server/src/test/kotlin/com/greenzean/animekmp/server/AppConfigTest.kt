@@ -17,6 +17,20 @@ class AppConfigTest {
     }
 
     @Test
+    fun databaseConfigRead() {
+        val config =
+            AppConfig.fromEnv(
+                mapOf("DATABASE_URL" to "jdbc:postgresql://h/db", "DATABASE_USER" to "u", "DATABASE_PASSWORD" to "p"),
+            )
+        assertEquals(DatabaseConfig("jdbc:postgresql://h/db", "u", "p"), config.database)
+    }
+
+    @Test
+    fun databaseCredentialsRequiredWithUrl() {
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("DATABASE_URL" to "jdbc:postgresql://h/db")) }
+    }
+
+    @Test
     fun invalidPortRejected() {
         assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("PORT" to "abc")) }
         assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("PORT" to "70000")) }

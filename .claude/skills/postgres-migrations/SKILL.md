@@ -1,0 +1,42 @@
+---
+name: postgres-migrations
+description: |
+  Postgres schema, Flyway migrations, Exposed tables and the Testcontainers migration test for the Ktor server (`server/`). Use this skill whenever adding or changing a table, column, index or seed data, writing a migration, adding an Exposed table object, or touching database config or DB tests. Trigger on phrases like "migration", "Flyway", "add a column", "new table", "Exposed", "Testcontainers", "seed data", "DATABASE_URL", "tombstone", or "schema change".
+---
+
+# Postgres migrations
+
+Decision and versions: ADR 0005. Flyway owns the schema; Exposed only queries.
+
+## Layout
+
+```
+server/src/main/resources/db/migration/   V1__create_anime.sql, V2__..., V3__...
+server/src/main/kotlin/.../server/db/     Database.kt (pool + Flyway + Exposed), Tables.kt
+server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
+```
+
+## Rules
+
+- Files are `V<n>__snake_case_description.sql`, numbers consecutive. One concern per migration.
+- Never edit a migration that is merged. Fix forward with a new `V<n+1>`.
+- Seed data for dev lives in a migration only while there is no other way to load it; mark it `-- Dev seed data` in the file.
+- Tables: singular snake_case names, `TIMESTAMPTZ` for times, `UUID` ids for client-created rows (list entries), identity `BIGINT` for server-owned rows (anime), `TEXT` + `CHECK` for enums.
+- Sync tables carry `updated_at` and a nullable `deleted_at` tombstone. Rows are soft-deleted, never removed, so pulls can report deletions.
+- Every column change in SQL gets the matching change in `db/Tables.kt`. Exposed does not create or alter tables.
+- `user_id` has no foreign key until auth adds a users table.
+
+## Config
+
+`AppConfig.database` is read from `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` (see `.env.example`). If `DATABASE_URL` is unset the server starts without a database; if set, the other two are required. `main()` calls `connectDatabase()`, which migrates before serving. `module()` stays database-free so `testApplication` tests need no Postgres.
+
+## Tests
+
+`MigrationTest` starts `postgres:18-alpine` with Testcontainers, runs `connectDatabase()` and asserts on the schema and seed rows. It needs Docker locally; CI runners have it. Add a test for each new constraint.
+
+## Verify
+
+```
+./gradlew :server:test
+docker compose up -d postgres   # then run the server with DATABASE_* set and check flyway_schema_history
+```

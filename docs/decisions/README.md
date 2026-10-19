@@ -23,3 +23,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0002 | [Lint and format tooling](0002-lint-tooling.md) | Accepted | M0-3 |
 | 0003 | [GraphQL server library](0003-graphql-server.md) | Accepted | M0-7 |
 | 0004 | [Client/server contract](0004-shared-contract.md) | Accepted | M0-8 |
+| 0005 | [Postgres access, migrations and test database](0005-postgres-access.md) | Accepted | M1-3 |

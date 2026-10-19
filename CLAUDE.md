@@ -5,6 +5,7 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 ## Working rules (always apply)
 
 - **No commits, pushes, or PRs** until the user explicitly says so.
+- **Stage new files right away:** `git add` every file you create as soon as it exists, so it is tracked. Staging is not committing; the rule above still applies.
 - **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it.
 - **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
 - **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.

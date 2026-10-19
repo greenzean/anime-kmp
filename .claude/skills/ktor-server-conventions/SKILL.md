@@ -73,4 +73,4 @@ graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/Graph
 
 ## Not decided yet
 
-Database access, auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.
+Database access is covered by the `postgres-migrations` skill. Auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.
