@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import com.greenzean.animekmp.shared.Greeting
 
 @Composable
-fun App() {
+fun App(modifier: Modifier = Modifier) {
     MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(modifier = modifier.fillMaxSize()) {
             Box(contentAlignment = Alignment.Center) {
                 Text(Greeting().greet())
             }
