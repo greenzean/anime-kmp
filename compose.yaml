@@ -1,0 +1,46 @@
+name: anime-kmp
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-animekmp}
+      POSTGRES_USER: ${POSTGRES_USER:-animekmp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-animekmp}
+    ports:
+      # Localhost only: the default dev password must not be reachable from the LAN.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8080
+      APP_ENV: ${APP_ENV:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-animekmp}
+      DATABASE_USER: ${POSTGRES_USER:-animekmp}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-animekmp}
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  postgres-data:

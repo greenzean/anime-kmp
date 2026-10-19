@@ -1,0 +1,22 @@
+# Keep secrets and local state out of the build context
+.env
+.env.*
+!.env.example
+local.properties
+*.jks
+*.keystore
+
+# VCS / IDE / build output
+.git
+.github
+.idea
+.gradle
+.kotlin
+.claude
+**/build
+
+# Modules the server image does not need
+androidApp
+composeApp
+shared
+docs
