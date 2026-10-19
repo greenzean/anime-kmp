@@ -1,0 +1,146 @@
+package com.greenzean.animekmp.shared.library.data
+
+import app.cash.turbine.test
+import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.createTestDriver
+import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
+import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
+import com.greenzean.animekmp.shared.library.domain.SyncState
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class SqlDelightLibraryDataSourceTest {
+    private val driver = createTestDriver()
+    private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    private val repository = SqlDelightLibraryDataSource(db, dispatcher = UnconfinedTestDispatcher())
+    private val bebopId =
+        db.animeQueries
+            .selectByMalId(1)
+            .executeAsOne()
+            .id
+
+    @AfterTest
+    fun tearDown() = driver.close()
+
+    @Test
+    fun setStatusForUnknownAnimeFailsForeignKey() =
+        runTest {
+            assertFailsWith<Exception> { repository.setStatus(999L, WatchStatus.WATCHING) }
+        }
+
+    @Test
+    fun observeAnimeEmitsSeededRowsByTitle() =
+        runTest {
+            repository.observeAnime().test {
+                assertEquals(
+                    listOf("Cowboy Bebop", "Fullmetal Alchemist: Brotherhood", "Shingeki no Kyojin", "Steins;Gate"),
+                    awaitItem().map { it.title },
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun setStatusAddsPendingEntry() =
+        runTest {
+            repository.observeLibrary().test {
+                assertTrue(awaitItem().isEmpty())
+
+                repository.setStatus(bebopId, WatchStatus.WATCHING)
+
+                val entry = awaitItem().single()
+                assertEquals("Cowboy Bebop", entry.anime.title)
+                assertEquals(WatchStatus.WATCHING, entry.status)
+                assertEquals(SyncState.PENDING, entry.syncState)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun setStatusTwiceUpdatesTheSameEntry() =
+        runTest {
+            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            val id =
+                db.listEntryQueries
+                    .selectPending()
+                    .executeAsOne()
+                    .id
+
+            repository.setStatus(bebopId, WatchStatus.COMPLETED)
+
+            val row = db.listEntryQueries.selectPending().executeAsOne()
+            assertEquals(id, row.id)
+            assertEquals("COMPLETED", row.status)
+        }
+
+    @Test
+    fun markSyncedClearsPendingUntilNextLocalWrite() =
+        runTest {
+            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            val row = db.listEntryQueries.selectPending().executeAsOne()
+
+            db.listEntryQueries.markSynced(row.id, row.updated_at)
+            assertTrue(
+                db.listEntryQueries
+                    .selectPending()
+                    .executeAsList()
+                    .isEmpty(),
+            )
+
+            repository.setStatus(bebopId, WatchStatus.DROPPED)
+            assertEquals(
+                1,
+                db.listEntryQueries
+                    .selectPending()
+                    .executeAsList()
+                    .size,
+            )
+        }
+
+    @Test
+    fun removeHidesEntryButKeepsPendingTombstone() =
+        runTest {
+            repository.setStatus(bebopId, WatchStatus.WATCHING)
+
+            repository.remove(bebopId)
+
+            repository.observeLibrary().test {
+                assertTrue(awaitItem().isEmpty())
+                cancelAndIgnoreRemainingEvents()
+            }
+            val tombstone = db.listEntryQueries.selectPending().executeAsOne()
+            assertTrue(tombstone.deleted_at != null)
+        }
+
+    @Test
+    fun readdingAfterRemoveRevivesTheEntry() =
+        runTest {
+            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            repository.remove(bebopId)
+
+            repository.setStatus(bebopId, WatchStatus.PLAN_TO_WATCH)
+
+            val row = db.listEntryQueries.selectByUserAndAnime(LOCAL_USER_ID, bebopId).executeAsOne()
+            assertEquals(null, row.deleted_at)
+            assertEquals("PLAN_TO_WATCH", row.status)
+        }
+
+    @Test
+    fun invalidStatusIsRejectedByCheckConstraint() {
+        assertFailsWith<Exception> {
+            // Plain INSERT: insertPending uses OR IGNORE, which would swallow the CHECK violation.
+            driver.execute(
+                null,
+                "INSERT INTO list_entry (id, user_id, anime_id, status, updated_at) " +
+                    "VALUES ('id', 'u', $bebopId, 'BINGING', 0)",
+                0,
+            )
+        }
+    }
+}
