@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.apollo)
 }
 
 kotlin {
@@ -24,8 +25,19 @@ kotlin {
     }
 
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.apollo.runtime)
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+    }
+}
+
+apollo {
+    service("anime") {
+        packageName.set("com.greenzean.animekmp.shared.graphql")
+        srcDir("src/commonMain/graphql")
+        schemaFiles.from("src/commonMain/graphql/schema.graphqls")
     }
 }
