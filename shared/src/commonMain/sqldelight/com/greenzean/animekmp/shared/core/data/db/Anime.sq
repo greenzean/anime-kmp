@@ -16,3 +16,6 @@ INSERT OR IGNORE INTO anime (id, mal_id, title) VALUES (?, ?, ?);
 
 countAll:
 SELECT count(*) FROM anime;
+
+existsById:
+SELECT count(*) FROM anime WHERE id = ?;

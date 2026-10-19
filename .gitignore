@@ -17,3 +17,6 @@ local.properties
 *.keystore
 *.p12
 google-services.json
+
+# Local-only debug network config (cleartext to the emulator host); see README
+androidApp/src/debug/

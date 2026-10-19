@@ -23,6 +23,17 @@ android {
                 .toInt()
         versionCode = 1
         versionName = "0.1.0"
+
+        // Set animekmp.serverUrl in ~/.gradle/gradle.properties or with -P; no real URL is committed.
+        val serverUrl =
+            providers
+                .gradleProperty("animekmp.serverUrl")
+                .getOrElse("https://api.example.invalid/graphql")
+        buildConfigField("String", "GRAPHQL_URL", "\"$serverUrl\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -36,5 +47,6 @@ dependencies {
     implementation(projects.composeApp)
     implementation(projects.shared)
     implementation(libs.koin.android)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.activity.compose)
 }
