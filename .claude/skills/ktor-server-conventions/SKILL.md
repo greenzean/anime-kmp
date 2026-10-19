@@ -39,7 +39,7 @@ server/src/main/resources/
 
 ## Serialization
 
-`ContentNegotiation { json() }` (kotlinx.serialization). Respond with `call.respond(SomeSerializable(...))`.
+`ContentNegotiation { json() }` (kotlinx.serialization), installed inside a `route("") { }` in `routing { }` so it does not cover the GraphQL routes (graphql-kotlin installs its own Jackson one). Respond with `call.respond(SomeSerializable(...))`.
 
 ## Tests
 
@@ -67,6 +67,10 @@ Ktor, Logback and the logstash encoder versions live in `gradle/libs.versions.to
 ./gradlew :server:run     # then: curl localhost:8080/health
 ```
 
+## GraphQL
+
+graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and API-change order: `graphql-schema` skill.
+
 ## Not decided yet
 
-Database access, GraphQL, auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.
+Database access, auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.

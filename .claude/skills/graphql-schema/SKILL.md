@@ -40,8 +40,13 @@ A plain `./gradlew :server:test` fails if `schema.graphqls` no longer matches th
 - Input validation happens in resolvers. The client is untrusted.
 - Custom scalars need a graphql-kotlin `SchemaGeneratorHooks` entry and a matching Apollo scalar mapping. The export test must use the same hooks as the runtime.
 
-## TODO (fill in with M1-2 / M1-5)
+## Export and drift check (M1-2)
+
+- `GraphQLSchemaDefinition` (`server/.../graphql/`) is the single definition of the schema (packages, queries, later hooks). The runtime `install(GraphQL)` and `SchemaExportTest` both read it; add new `Query`/`Mutation` objects there.
+- `SchemaExportTest` prints the schema with graphql-java's `SchemaPrinter` and compares it with `schema.graphqls`. With `-PupdateSchema` it rewrites the file instead. `server/build.gradle.kts` passes `updateSchema` and `schemaFile` to the test JVM as system properties and forces the test to rerun when `-PupdateSchema` is set.
+- `graphQLPostRoute()` installs its own Jackson `ContentNegotiation`, so the kotlinx one is scoped to the non-GraphQL routes in `module()`.
+
+## TODO (fill in with M1-5)
 
 - Scalar mapping table (`Instant`, IDs).
-- Exact `SchemaExportTest` / `-PupdateSchema` wiring once M1-2 lands.
 - Query depth/complexity limits.
