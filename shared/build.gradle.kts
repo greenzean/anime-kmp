@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.apollo)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -27,9 +28,22 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.apollo.runtime)
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines)
+            api(libs.kotlinx.coroutines.core)
+            api(libs.koin.core)
+        }
+        androidMain.dependencies {
+            implementation(libs.sqldelight.android.driver)
+            implementation(libs.koin.android)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.turbine)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.sqldelight.sqlite.driver)
         }
     }
 }
@@ -39,5 +53,15 @@ apollo {
         packageName.set("com.greenzean.animekmp.shared.graphql")
         srcDir("src/commonMain/graphql")
         schemaFiles.from("src/commonMain/graphql/schema.graphqls")
+    }
+}
+
+sqldelight {
+    databases {
+        create("AnimeDatabase") {
+            packageName.set("com.greenzean.animekmp.shared.core.data.db")
+            verifyMigrations.set(true)
+            schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
+        }
     }
 }
