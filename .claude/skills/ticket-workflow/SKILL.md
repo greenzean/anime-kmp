@@ -42,4 +42,4 @@ Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`.
 - Reviewed and merged, with the ticket linked to the PR.
 
 ## Decisions
-Architecture decisions get an ADR in `docs/decisions/`.
+Architecture decisions get an ADR in `docs/decisions/`. Process: `adr` skill.

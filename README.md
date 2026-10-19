@@ -6,10 +6,55 @@ Offline-first anime tracker built with Kotlin Multiplatform and Compose Multipla
 
 ## Modules
 
-- `composeApp/`: Compose Multiplatform UI, Android host.
+- `androidApp/`: Android host (application module, `MainActivity`).
+- `composeApp/`: Compose Multiplatform UI library (`commonMain`).
 - `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, importers, view models.
 - `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway, MAL adapter.
 - `docs/`: ADRs (`docs/decisions/`), tickets, notes.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Client["Client (Android; iOS and web later)"]
+        UI["composeApp<br/>Compose UI"] --> VM["shared<br/>view models"]
+        VM --> DB[("SQLDelight<br/>local DB")]
+        DB <--> Sync["shared<br/>sync"]
+        Sync --> Apollo["Apollo client"]
+    end
+    subgraph Server["server (Ktor)"]
+        GQL["GraphQL API<br/>graphql-kotlin"] --> PG[("PostgreSQL")]
+        GQL --> MALAdapter["MAL adapter"]
+    end
+    Apollo -- "GraphQL (schema.graphqls)" --> GQL
+    MALAdapter --> MAL["MyAnimeList API"]
+```
+
+- **Offline first.** The local database is the source of truth. The UI reads and writes only locally, and sync talks to the server.
+- **Only the server talks to MyAnimeList.** The client is treated as untrusted.
+- **The GraphQL schema is the contract.** The server owns it, and the SDL is committed in `shared`. API changes go server first, then the client.
+- **Shared logic lives in `commonMain`.** Platform APIs (secure storage, notifications, file picker, connectivity, background work) sit behind interfaces or `expect/actual`.
+
+### Sync
+
+*TBD.*
+
+### Auth
+
+*TBD (MAL OAuth with PKCE, server-issued JWT).*
+
+### Data model
+
+*TBD.*
+
+### Decisions
+
+Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
+
+- [0001: AGP 9 module layout](docs/decisions/0001-agp9-module-layout.md)
+- [0002: Lint and format tooling](docs/decisions/0002-lint-tooling.md)
+- [0003: GraphQL server library](docs/decisions/0003-graphql-server.md)
+- [0004: Client/server contract](docs/decisions/0004-shared-contract.md)
 
 ## Build
 
