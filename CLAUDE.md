@@ -14,7 +14,8 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 
 ## Modules
 
-- `composeApp/`: Compose Multiplatform UI, Android host.
+- `androidApp/`: Android host (application module, `MainActivity`); required by AGP 9, which cannot combine KMP with `com.android.application`.
+- `composeApp/`: Compose Multiplatform UI library (`commonMain`).
 - `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, importers, view models.
 - `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway, MAL adapter.
 - `docs/`: ADRs in `docs/decisions/`, ticket CSV, notes.

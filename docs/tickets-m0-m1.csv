@@ -8,6 +8,9 @@ Acceptance: Gradle multi-module build; license added; .gitignore covers keystore
 Skills: codebase-overview, domain-glossary."
 M0-2,KMP skeleton - Android target only,chore,M0,"chore,phase-1",sonnet,"composeApp, shared","Goal: Compose Multiplatform app runs on Android with UI in commonMain.
 Acceptance: version catalog (libs.versions.toml); iOS target declared but disabled or stubbed."
+M0-2a,Add and adapt KMP skills,chore,M0,"chore,phase-1",sonnet,.claude/skills,"Goal: the project carries the Katanime Android/KMP skills, renamed kmp-* and adapted to this repo.
+Acceptance: 8 skills at .claude/skills/kmp-<name>/SKILL.md; renamed name and cross-references; content describes the flat layout (androidApp, composeApp, shared, server) with package-by-feature, SQLDelight, Apollo, Koin, Android-first; no leftover Katanime module paths or Room references.
+Out of scope: code changes in the app modules."
 M0-3,"Lint, formatting, static checks",chore,M0,"chore,phase-1",sonnet,all modules,"Goal: consistent style enforced.
 Acceptance: ktlint or Spotless plus detekt run locally and in CI; pre-commit hook or documented command."
 M0-4,CI pipeline,chore,M0,"chore,phase-1",sonnet,CI,"Goal: GitHub Actions builds Android and server.
