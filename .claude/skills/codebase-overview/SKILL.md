@@ -19,6 +19,7 @@ Gradle multi-module monorepo. Group and base package: `com.greenzean.animekmp`. 
 
 - Packages: `com.greenzean.animekmp.<module>.<feature>`.
 - Local DB (SQLDelight) is the source of truth; the UI reads and writes only locally.
+- Architecture and patterns: `kmp-*` skills (module-structure, data-layer, presentation-mvi, di-koin, navigation, compose-ui, error-handling, testing).
 - Secrets go in `.env` (ignored); `.env.example` lists the keys.
 
 ## Status
