@@ -79,7 +79,10 @@ Copy `.env.example` to `.env` for server configuration. Never commit `.env`.
 ```
 ./gradlew :server:run
 curl localhost:8080/health
+curl localhost:8080/graphql -H 'content-type: application/json' -d '{"query":"{ hello }"}'
 ```
+
+GraphiQL is at <http://localhost:8080/graphiql>. After changing the GraphQL schema, run `./gradlew :server:test -PupdateSchema` and commit the `shared/src/commonMain/graphql/schema.graphqls` diff.
 
 Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
 
