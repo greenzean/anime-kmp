@@ -46,7 +46,16 @@ A plain `./gradlew :server:test` fails if `schema.graphqls` no longer matches th
 - `SchemaExportTest` prints the schema with graphql-java's `SchemaPrinter` and compares it with `schema.graphqls`. With `-PupdateSchema` it rewrites the file instead. `server/build.gradle.kts` passes `updateSchema` and `schemaFile` to the test JVM as system properties and forces the test to rerun when `-PupdateSchema` is set.
 - `graphQLPostRoute()` installs its own Jackson `ContentNegotiation`, so the kotlinx one is scoped to the non-GraphQL routes in `module()`.
 
-## TODO (fill in with M1-5)
+## Custom scalars (ADR 0006)
 
-- Scalar mapping table (`Instant`, IDs).
+| GraphQL | Server (graphql-kotlin hook in `SyncSchemaHooks`) | Client (`mapScalar` in `shared/build.gradle.kts`) |
+|---|---|---|
+| `Instant` | `java.time.Instant`, ISO-8601 UTC string | `kotlin.time.Instant` via `InstantAdapter` |
+| `UUID` | `java.util.UUID`, string | `kotlin.String` |
+| `Long` | `kotlin.Long`, JSON integer | `kotlin.Long` |
+
+graphql-kotlin ships none of these. Add a scalar in three places: the hook, the `mapScalar` line, and a round-trip test. Nullable resolver arguments need a Kotlin default (`= null`) or omitting them fails.
+
+## TODO
+
 - Query depth/complexity limits.

@@ -36,6 +36,67 @@ directive @specifiedBy(
     url: String!
   ) on SCALAR
 
+type ChangeResult {
+  entryId: UUID!
+  id: UUID!
+  outcome: PushOutcome!
+}
+
+type ChangesPage {
+  changes: [ListEntryChange!]!
+  hasMore: Boolean!
+  nextCursor: String!
+}
+
+type ListEntryChange {
+  animeId: Long!
+  deletedAt: Instant
+  id: UUID!
+  status: ListStatus!
+  updatedAt: Instant!
+}
+
+type Mutation {
+  pushChanges(changes: [ListEntryChangeInput!]!): PushResult!
+}
+
+type PushResult {
+  results: [ChangeResult!]!
+}
+
 type Query {
+  changesSince(cursor: String, limit: Int): ChangesPage!
   hello: String!
+}
+
+enum ListStatus {
+  COMPLETED
+  DROPPED
+  ON_HOLD
+  PLAN_TO_WATCH
+  WATCHING
+}
+
+enum PushOutcome {
+  APPLIED
+  IGNORED_STALE
+  REJECTED_INVALID
+  REJECTED_UNKNOWN_ANIME
+}
+
+"A point in time as an ISO-8601 UTC string, e.g. 2026-10-19T12:00:00Z"
+scalar Instant
+
+"A 64-bit signed integer"
+scalar Long
+
+"A UUID in canonical string form"
+scalar UUID
+
+input ListEntryChangeInput {
+  animeId: Long!
+  deletedAt: Instant
+  id: UUID!
+  status: ListStatus!
+  updatedAt: Instant!
 }
