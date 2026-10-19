@@ -19,9 +19,10 @@ Gradle multi-module monorepo. Group and base package: `com.greenzean.animekmp`. 
 
 - Packages: `com.greenzean.animekmp.<module>.<feature>`.
 - Local DB (SQLDelight) is the source of truth; the UI reads and writes only locally.
+- Server: `ktor-server-conventions` skill.
 - Architecture and patterns: `kmp-*` skills (module-structure, data-layer, presentation-mvi, di-koin, navigation, compose-ui, error-handling, testing).
 - Secrets go in `.env` (ignored); `.env.example` lists the keys.
 
 ## Status
 
-After M0-2 the Android skeleton builds (`androidApp` -> `composeApp` -> `shared`). iOS targets are declared but gated by `animekmp.enableIos` (default false). `server` is still a stub.
+After M0-2 the Android skeleton builds (`androidApp` -> `composeApp` -> `shared`). iOS targets are declared but gated by `animekmp.enableIos` (default false). `server` is a runnable Ktor skeleton (`GET /health`); see `ktor-server-conventions`.

@@ -29,6 +29,15 @@ Spotless (ktlint + Compose rules) handles formatting; detekt handles static anal
 
 Copy `.env.example` to `.env` for server configuration. Never commit `.env`.
 
+## Run the server
+
+```
+./gradlew :server:run
+curl localhost:8080/health
+```
+
+Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
+
 ## License
 
 MIT, see `LICENSE`.

@@ -17,7 +17,7 @@ M0-4,CI pipeline,chore,M0,"chore,phase-1",sonnet,CI,"Goal: GitHub Actions builds
 Acceptance: unit tests and lint run; README badge; no secrets for fork PRs.
 Skill: gradle-ci (covers M0-3 lint commands)."
 M0-5,Server skeleton,chore,M0,"chore,phase-1",sonnet,server,"Goal: runnable Ktor server.
-Acceptance: GET /health; env-based config; structured logging.
+Acceptance: GET /health; env-based config (HOST, PORT, APP_ENV, LOG_LEVEL); structured logging (readable in dev, JSON in prod); tests for /health and config; ktor-server-conventions skill written.
 Skill: ktor-server-conventions."
 M0-6,Docker Compose for local dev,chore,M0,"chore,phase-1",sonnet,"server, infra","Goal: one-command local environment.
 Acceptance: docker compose up starts Postgres and the server; works from the README alone."
