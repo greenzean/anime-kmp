@@ -71,6 +71,10 @@ Ktor, Logback and the logstash encoder versions live in `gradle/libs.versions.to
 
 graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and API-change order: `graphql-schema` skill.
 
+## Database
+
+Postgres, Flyway and Exposed (ADR 0005): `postgres-migrations` skill.
+
 ## Not decided yet
 
-Database access is covered by the `postgres-migrations` skill. Auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.
+Auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.

@@ -23,6 +23,16 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 
 Details of where things live: `codebase-overview` skill.
 
+## Commands
+
+Run Gradle as a plain `./gradlew <tasks>` (or `.\gradlew` in PowerShell), with no pipes or `&&`: the PreToolUse hook `.claude/hooks/gradle_filter.py` then filters the output to failures. Needs a JDK (17, as in CI) and Python 3.
+
+- `./gradlew build`: everything (compile, tests, Spotless, detekt).
+- `./gradlew :shared:allTests` / `./gradlew :server:test`: tests per module. `MigrationTest` needs Docker.
+- `./gradlew spotlessApply` then `./gradlew spotlessCheck detekt`: format, then what CI lints.
+- `./gradlew :server:test -PupdateSchema`: export the GraphQL SDL after a schema change (`graphql-schema` skill).
+- `docker compose up --build`: Postgres plus server.
+
 ## Code rules
 
 - Business logic, data layer, sync, API client and view models live in `commonMain`.
@@ -40,10 +50,18 @@ The main session is the orchestrator and implements tickets itself. Subagents st
 - `researcher`: versions, prices, API terms.
 - `docs`: formatting ADRs, README sections, ticket text from decisions already made.
 - `reviewer`, `security-reviewer`: **only when the user asks.**
-- Area agents (`shared-kmp`, `server`, `compose-ui`, `tester`, `build-ci`) only for large features, once they exist.
+- Area agents (`shared-kmp`, `server`, `compose-ui`, `tester`, `build-ci`): only for large features, each with its module's skills preloaded. Give them the approved plan and the exact part to implement.
 
-Subagents never delegate further. Feature order for large features: server schema first, then app back end, then views (views in parallel only when the view model interface is fixed up front), then tests.
+Subagents never delegate further (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` in `.claude/settings.json`) and cannot stage files they did not create; the main session checks `git status` after each one. Feature order for large features: server schema first, then app back end, then views (views in parallel only when the view model interface is fixed up front), then tests.
 
 ## Token habits
 
 Default effort is medium. Prefer `gh` over a GitHub MCP server. `/clear` between unrelated tickets.
+
+## Precedence
+
+These project rules win over any user-level or global instructions where they differ:
+
+- The stack is the one above. Generic web-stack agents, skills and checklists do not apply; use the project agents and skills in `.claude/`.
+- Docs go in `docs/` (ADRs in `docs/decisions/`). Plans go in plan mode or the chat, not in new repo files.
+- Repo files are written in English; chat replies follow the user's language.

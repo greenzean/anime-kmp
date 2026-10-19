@@ -8,6 +8,8 @@ description: |
 
 All UI lives in `composeApp/commonMain` (package `com.greenzean.animekmp.composeapp`). Use only multiplatform Compose APIs there; Android-only APIs go in `androidMain` behind an interface or `expect`/`actual`.
 
+**State of the code (M1-4):** `composeApp` has only `App.kt` and depends on `compose.runtime`, `foundation`, `material3` and `ui`. Compose resources (`Res`), the multiplatform `@Preview` tooling and lifecycle-aware collection are not added yet: verify the artifacts with the `researcher` agent in the first ticket that needs them.
+
 ## Core Principle
 
 The UI is dumb. Composables render state and forward user actions — nothing more. All state lives in the ViewModel. All logic lives in the ViewModel, domain, or data layer. Compose code should contain zero business logic, zero data transformation, and minimal side effects.

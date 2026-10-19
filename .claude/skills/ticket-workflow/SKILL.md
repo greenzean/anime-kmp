@@ -37,9 +37,12 @@ Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`.
 
 ## Definition of Done
 - Builds in CI for all active targets.
-- Tests pass; shared logic is covered in `commonTest`.
-- Checked manually on a device or emulator.
-- Reviewed and merged, with the ticket linked to the PR.
+- Tests pass; shared logic is covered in `commonTest`, server logic in `server/src/test`.
+- Checked manually where it runs:
+  - App changes (`androidApp`, `composeApp`, `shared` behaviour visible in the app): on a device or emulator.
+  - Server changes: against a running server (`./gradlew :server:run` or `docker compose up`), with `curl` or GraphiQL.
+  - Docs, tooling and config only: no manual check; say so in the PR.
+- Reviewed by the user in the PR and merged, with the ticket linked to the PR. The `reviewer` agent is an optional extra, only when the user asks.
 
 ## Decisions
 Architecture decisions get an ADR in `docs/decisions/`. Process: `adr` skill.
