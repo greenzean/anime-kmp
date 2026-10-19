@@ -3,6 +3,7 @@ kotlin = "2.4.20"
 agp = "9.4.0"
 composeMultiplatform = "1.12.1"
 activityCompose = "1.13.0"
+work = "2.12.0"
 android-compileSdk = "37"
 android-targetSdk = "36"
 android-minSdk = "26"
@@ -27,6 +28,7 @@ testcontainers = "2.0.5"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 compose-rules-detekt = { module = "io.nlopez.compose.rules:detekt", version.ref = "composeRules" }
 compose-rules-ktlint = { module = "io.nlopez.compose.rules:ktlint", version.ref = "composeRules" }

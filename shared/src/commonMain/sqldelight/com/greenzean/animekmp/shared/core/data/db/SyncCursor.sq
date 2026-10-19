@@ -1,0 +1,12 @@
+-- Single-row table: the opaque changesSince cursor (ADR 0006). Stored only after a page is applied.
+CREATE TABLE sync_cursor (
+    id     INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    cursor TEXT    NOT NULL
+);
+
+selectCursor:
+SELECT cursor FROM sync_cursor WHERE id = 1;
+
+-- INSERT OR REPLACE rather than ON CONFLICT: minSdk 26 ships SQLite 3.18.
+saveCursor:
+INSERT OR REPLACE INTO sync_cursor (id, cursor) VALUES (1, ?);

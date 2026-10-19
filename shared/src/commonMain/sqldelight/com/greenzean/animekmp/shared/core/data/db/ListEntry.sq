@@ -48,3 +48,20 @@ WHERE user_id = :userId AND anime_id = :animeId AND deleted_at IS NULL;
 
 markSynced:
 UPDATE list_entry SET sync_state = 'SYNCED' WHERE id = ? AND updated_at = ?;
+
+selectPendingBatch:
+SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at LIMIT :limit;
+
+-- The server kept another id for the same (user, anime): adopt it, content unchanged.
+rewriteId:
+UPDATE list_entry SET id = :newId WHERE id = :oldId;
+
+-- Pulled rows are server state, so they land SYNCED. Callers decide whether to apply (see applyPage).
+updatePulled:
+UPDATE list_entry
+SET status = :status, updated_at = :updatedAt, deleted_at = :deletedAt, sync_state = 'SYNCED'
+WHERE id = :id;
+
+insertPulled:
+INSERT OR IGNORE INTO list_entry (id, user_id, anime_id, status, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, 'SYNCED');
