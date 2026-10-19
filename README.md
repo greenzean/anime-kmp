@@ -56,6 +56,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0003: GraphQL server library](docs/decisions/0003-graphql-server.md)
 - [0004: Client/server contract](docs/decisions/0004-shared-contract.md)
 - [0005: Postgres access, migrations and test database](docs/decisions/0005-postgres-access.md)
+- [0006: Sync protocol](docs/decisions/0006-sync-protocol.md)
 
 ## Build
 

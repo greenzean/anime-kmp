@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.server.db
 
 import com.greenzean.animekmp.server.DatabaseConfig
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -100,5 +101,43 @@ class MigrationTest {
         }
         val row = transaction(db) { ListEntryTable.selectAll().where { ListEntryTable.id eq entryId }.single() }
         assertNull(row[ListEntryTable.deletedAt])
+    }
+
+    @Test
+    fun v4BackfillsServerSeqForExistingRows() {
+        PostgreSQLContainer("postgres:18-alpine").use { fresh ->
+            fresh.start()
+            val ds = createDataSource(DatabaseConfig(fresh.jdbcUrl, fresh.username, fresh.password))
+
+            fun flyway(target: String) =
+                Flyway
+                    .configure()
+                    .dataSource(ds)
+                    .locations("classpath:db/migration")
+                    .target(target)
+                    .load()
+            flyway("3").migrate()
+            ds.connection.use { c ->
+                c.createStatement().use { st ->
+                    for (i in 1..3) {
+                        st.execute(
+                            "INSERT INTO list_entry (id, user_id, anime_id, status, updated_at) VALUES " +
+                                "(gen_random_uuid(), gen_random_uuid(), $i, 'WATCHING', now())",
+                        )
+                    }
+                }
+            }
+            flyway("4").migrate()
+            val seqs =
+                ds.connection.use { c ->
+                    c.createStatement().use { st ->
+                        st.executeQuery("SELECT server_seq FROM list_entry ORDER BY server_seq").use { rs ->
+                            generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
+                        }
+                    }
+                }
+            assertEquals(3, seqs.size)
+            assertEquals(3, seqs.toSet().size)
+        }
     }
 }

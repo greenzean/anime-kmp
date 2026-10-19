@@ -1,0 +1,13 @@
+query ChangesSince($cursor: String, $limit: Int) {
+  changesSince(cursor: $cursor, limit: $limit) {
+    nextCursor
+    hasMore
+    changes {
+      id
+      animeId
+      status
+      updatedAt
+      deletedAt
+    }
+  }
+}

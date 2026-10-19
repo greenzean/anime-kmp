@@ -1,0 +1,9 @@
+mutation PushChanges($changes: [ListEntryChangeInput!]!) {
+  pushChanges(changes: $changes) {
+    results {
+      id
+      outcome
+      entryId
+    }
+  }
+}
