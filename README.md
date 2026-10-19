@@ -15,6 +15,16 @@ Offline-first anime tracker built with Kotlin Multiplatform and Compose Multipla
 ./gradlew build
 ```
 
+## Lint and format
+
+```
+./gradlew spotlessApply        # format
+./gradlew spotlessCheck detekt # what CI runs
+./gradlew installGitHooks      # optional pre-commit hook running the checks
+```
+
+Spotless (ktlint + Compose rules) handles formatting; detekt handles static analysis. Style settings are in `.editorconfig` and `config/detekt/detekt.yml`.
+
 Copy `.env.example` to `.env` for server configuration. Never commit `.env`.
 
 ## License

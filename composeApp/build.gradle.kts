@@ -8,8 +8,14 @@ plugins {
 kotlin {
     android {
         namespace = "com.greenzean.animekmp.composeapp"
-        compileSdk = libs.versions.android.compileSdk.get().toInt()
-        minSdk = libs.versions.android.minSdk.get().toInt()
+        compileSdk =
+            libs.versions.android.compileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
     }
 
     if (providers.gradleProperty("animekmp.enableIos").get().toBoolean()) {
