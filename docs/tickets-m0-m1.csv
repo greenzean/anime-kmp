@@ -1,0 +1,49 @@
+id,title,type,milestone,labels,planning_model,scope,body
+M0-0,Set up Claude Code on the dev machine,chore,M0,"chore,phase-1",sonnet,dev machine,"Goal: Claude Code installed and configured with the project's working rules.
+Acceptance: CLAUDE.md (global rules, agent ownership, feature routing; under 200 lines); .claude/settings.json (model sonnet, permissions.ask for git commit/push and gh pr, env CLAUDE_CODE_SUBAGENT_MODEL=sonnet and CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1); subagent files in .claude/agents/ (always-available tier + reviewers); token setup (effort medium, Gradle output-filter hook, prompt suggestions off, codebase-overview skill stub); ticket-workflow skill written. Verified: small task planned and executed on Sonnet; after /model opusplan a task plans in Opus and executes on Sonnet; work delegated to the right subagent (/tasks); a git commit attempt prompts for permission.
+Note: repo does not exist yet; project-level files are committed in M0-1 when approved.
+Skill: ticket-workflow."
+M0-1,Create the monorepo,chore,M0,"chore,phase-1",sonnet,"repo, all modules","Goal: public monorepo with composeApp/, shared/, server/, docs/.
+Acceptance: Gradle multi-module build; license added; .gitignore covers keystores, .env, local.properties; .env.example exists.
+Skills: codebase-overview, domain-glossary."
+M0-2,KMP skeleton - Android target only,chore,M0,"chore,phase-1",sonnet,"composeApp, shared","Goal: Compose Multiplatform app runs on Android with UI in commonMain.
+Acceptance: version catalog (libs.versions.toml); iOS target declared but disabled or stubbed."
+M0-3,"Lint, formatting, static checks",chore,M0,"chore,phase-1",sonnet,all modules,"Goal: consistent style enforced.
+Acceptance: ktlint or Spotless plus detekt run locally and in CI; pre-commit hook or documented command."
+M0-4,CI pipeline,chore,M0,"chore,phase-1",sonnet,CI,"Goal: GitHub Actions builds Android and server.
+Acceptance: unit tests and lint run; README badge; no secrets for fork PRs.
+Skill: gradle-ci (covers M0-3 lint commands)."
+M0-5,Server skeleton,chore,M0,"chore,phase-1",sonnet,server,"Goal: runnable Ktor server.
+Acceptance: GET /health; env-based config; structured logging.
+Skill: ktor-server-conventions."
+M0-6,Docker Compose for local dev,chore,M0,"chore,phase-1",sonnet,"server, infra","Goal: one-command local environment.
+Acceptance: docker compose up starts Postgres and the server; works from the README alone."
+M0-7,Spike: GraphQL server library,spike,M0,"spike,opus-plan,phase-1",opusplan,server,"Goal: choose the Kotlin GraphQL server library. Time-box 1 to 2 days.
+Acceptance: hello-world query in at least two candidates (Expedia graphql-kotlin, KGraphQL, Apollo server tooling); decision in docs/decisions/0001-graphql-server.md covering maintenance, Ktor compatibility, schema approach, subscriptions."
+M0-8,Spike: shared contract strategy,spike,M0,"spike,opus-plan,phase-1",opusplan,"server, shared","Goal: decide GraphQL schema as contract (Apollo generates client models) versus shared Kotlin DTOs.
+Acceptance: decision record written; affects feature routing order (server first).
+Skill: graphql-schema, written once M0-7 and M0-8 are both decided."
+M0-9,Decision records setup,chore,M0,"chore,phase-1",sonnet,docs,"Goal: ADR process in place.
+Acceptance: ADR template in docs/decisions/; README skeleton with architecture section.
+Skill: adr."
+M1-1,Apollo Kotlin setup in shared,feature,M1,"feature,phase-1",sonnet,shared,"Goal: Apollo wired into shared.
+Acceptance: Gradle plugin and schema file configured; a trivial query generates Kotlin models; builds from clean; Apollo version pinned."
+M1-2,Server GraphQL endpoint with hello query,feature,M1,"feature,phase-1",sonnet,server,"Goal: /graphql serves a hello query.
+Acceptance: checkable in GraphiQL or similar; schema exported to the file the client uses."
+M1-3,Postgres schema v1 and migrations,feature,M1,"feature,phase-1",sonnet,server,"Goal: first database schema.
+Acceptance: Flyway runs on startup; list_entry with ID, user ID placeholder, internal anime ID (mal_id on the anime table), status, updated_at, deleted_at tombstone; integration test with Testcontainers or similar.
+Skill: postgres-migrations."
+M1-4,Local database in shared,feature,M1,"feature,phase-1",sonnet,shared,"Goal: SQLDelight local store as source of truth.
+Acceptance: same table shape as the server plus sync_state column (pending, synced); repository functions in commonMain; tests in commonTest.
+Skill: testing-conventions."
+M1-5,Push mutation and pull query,feature,M1,"feature,opus-plan,phase-1",opusplan,"server, shared","Goal: sync protocol on the server.
+Acceptance: pushChanges accepts a batch with client-generated IDs and is idempotent; changesSince(cursor) returns changes and tombstones; server tests.
+Out of scope: conflict handling beyond last-write-wins; auth.
+Skill: sync-protocol."
+M1-6,Sync worker on the client,feature,M1,"feature,phase-1",sonnet,shared,"Goal: client sync loop.
+Acceptance: push pending then pull new, mark synced, store the cursor; scheduling behind an interface (WorkManager on Android)."
+M1-7,Minimal UI,feature,M1,"feature,phase-1",sonnet,composeApp,"Goal: trivial screen over the local DB.
+Acceptance: one Compose screen lists local entries, adds one, shows sync state; reads only from the local DB."
+M1-8,End-to-end check,chore,M1,"chore,phase-1",sonnet,all,"Goal: prove the walking skeleton.
+Acceptance: offline add, reconnect, entry reaches the server; a second install pulls it; short result note in docs/.
+Checkpoint: clone-and-run works from the README; offline edits sync after reconnect; all logic in commonMain apart from the Android scheduler; CI, lint and tests pass on main."
