@@ -30,23 +30,35 @@ M0-9,Decision records setup,chore,M0,"chore,phase-1",sonnet,docs,"Goal: ADR proc
 Acceptance: ADR template in docs/decisions/; README skeleton with architecture section.
 Skill: adr."
 M1-1,Apollo Kotlin setup in shared,feature,M1,"feature,phase-1",sonnet,shared,"Goal: Apollo wired into shared.
-Acceptance: Gradle plugin and schema file configured; a trivial query generates Kotlin models; builds from clean; Apollo version pinned."
-M1-2,Server GraphQL endpoint with hello query,feature,M1,"feature,phase-1",sonnet,server,"Goal: /graphql serves a hello query.
-Acceptance: checkable in GraphiQL or similar; schema exported to the file the client uses."
+Depends on: M1-2 (needs the committed SDL).
+Acceptance: Apollo Gradle plugin configured against the committed `shared/src/commonMain/graphql/schema.graphqls` (ADR 0004); a `HelloQuery` operation generates Kotlin models; builds from clean; Apollo version pinned in the version catalog.
+Out of scope: Apollo client runtime calls, server URL, custom scalars (M1-5), sync.
+Skill: graphql-schema."
+M1-2,Server GraphQL endpoint with hello query,feature,M1,"feature,phase-1",sonnet,server (writes the SDL file into shared),"Goal: /graphql serves a hello query.
+Acceptance: graphql-kotlin (ADR 0003) serves `{ hello }` at /graphql, checkable in GraphiQL or similar; a server test exports the SDL to `shared/src/commonMain/graphql/schema.graphqls`, fails on drift by default and rewrites the file with `-PupdateSchema` (ADR 0004); SDL committed.
+Out of scope: Apollo setup in shared (M1-1), subscriptions, auth, query limits.
+Skill: ktor-server-conventions, graphql-schema."
 M1-3,Postgres schema v1 and migrations,feature,M1,"feature,phase-1",sonnet,server,"Goal: first database schema.
-Acceptance: Flyway runs on startup; list_entry with ID, user ID placeholder, internal anime ID (mal_id on the anime table), status, updated_at, deleted_at tombstone; integration test with Testcontainers or similar.
-Skill: postgres-migrations."
+Acceptance: DB access library and connection pool chosen and recorded in ADR 0005; Flyway runs on startup; `anime` table (internal ID, `mal_id`, title) with a seed migration of a few dev anime rows; `list_entry` with ID, user ID placeholder, internal anime ID, status, updated_at, deleted_at tombstone; integration test with Testcontainers (or similar) that runs in `:server:test` in CI; `postgres-migrations` skill written from what this ticket sets up.
+Out of scope: auth and real users, MAL fields beyond `mal_id` and title, GraphQL exposure of the tables (M1-5).
+Skill: ktor-server-conventions, adr."
 M1-4,Local database in shared,feature,M1,"feature,phase-1",sonnet,shared,"Goal: SQLDelight local store as source of truth.
-Acceptance: same table shape as the server plus sync_state column (pending, synced); repository functions in commonMain; tests in commonTest.
-Skill: testing-conventions."
+Acceptance: same table shape as the server (anime and list_entry) plus a sync_state column (pending, synced); the dev anime rows available locally; repository functions in commonMain exposing Flows; Koin set up in shared with a module providing the database and repository; tests in commonTest.
+Out of scope: network and sync (M1-5, M1-6), UI wiring (M1-7), auth.
+Skill: kmp-data-layer, kmp-di-koin, kmp-testing."
 M1-5,Push mutation and pull query,feature,M1,"feature,opus-plan,phase-1",opusplan,"server, shared","Goal: sync protocol on the server.
-Acceptance: pushChanges accepts a batch with client-generated IDs and is idempotent; changesSince(cursor) returns changes and tombstones; server tests.
-Out of scope: conflict handling beyond last-write-wins; auth.
-Skill: sync-protocol."
-M1-6,Sync worker on the client,feature,M1,"feature,phase-1",sonnet,shared,"Goal: client sync loop.
-Acceptance: push pending then pull new, mark synced, store the cursor; scheduling behind an interface (WorkManager on Android)."
-M1-7,Minimal UI,feature,M1,"feature,phase-1",sonnet,composeApp,"Goal: trivial screen over the local DB.
-Acceptance: one Compose screen lists local entries, adds one, shows sync state; reads only from the local DB."
+Acceptance: pushChanges accepts a batch with client-generated IDs (UUID) and is idempotent; changesSince(cursor) returns changes and tombstones; cursor design and last-write-wins rule recorded in an ADR; custom scalars (`Instant`, IDs) with matching graphql-kotlin hooks and Apollo adapters; SDL regenerated and Apollo operations added in shared; server tests; `sync-protocol` skill written.
+Out of scope: conflict handling beyond last-write-wins; auth; the client sync loop (M1-6); subscriptions.
+Skill: graphql-schema, ktor-server-conventions, adr."
+M1-6,Sync worker on the client,feature,M1,"feature,phase-1",sonnet,"shared, androidApp (scheduler)","Goal: client sync loop.
+Acceptance: push pending then pull new, mark synced, store the cursor; sync logic in commonMain; scheduling behind an interface (WorkManager on Android, with a network-connected constraint so syncs run after reconnect); server URL configurable per build, with debug-only cleartext HTTP to the emulator host (`10.0.2.2`); tests in commonTest with a fake API.
+Out of scope: iOS scheduler, backoff tuning, auth.
+Skill: kmp-data-layer, kmp-error-handling, kmp-testing."
+M1-7,Minimal UI,feature,M1,"feature,phase-1",sonnet,"composeApp, androidApp (Koin start)","Goal: trivial screen over the local DB.
+Acceptance: one Compose screen lists local entries, adds one (picking from the dev anime rows), shows sync state; reads only from the local DB; view model obtained with `koinViewModel`, Koin started in androidApp.
+Out of scope: navigation, design system, editing or deleting entries, search.
+Skill: kmp-presentation-mvi, kmp-compose-ui, kmp-di-koin."
 M1-8,End-to-end check,chore,M1,"chore,phase-1",sonnet,all,"Goal: prove the walking skeleton.
-Acceptance: offline add, reconnect, entry reaches the server; a second install pulls it; short result note in docs/.
+Acceptance: offline add, reconnect, entry reaches the server; a second install pulls it; README updated so clone-and-run works (Compose up, run the app on an emulator); short result note in docs/.
+Out of scope: new features; fixes go in follow-up bug tickets unless trivial.
 Checkpoint: clone-and-run works from the README; offline edits sync after reconnect; all logic in commonMain apart from the Android scheduler; CI, lint and tests pass on main."
