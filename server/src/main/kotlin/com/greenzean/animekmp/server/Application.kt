@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.server
 
 import com.expediagroup.graphql.server.ktor.GraphQL
+import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.graphql.GraphQLSchemaDefinition
 import com.greenzean.animekmp.server.routes.graphQLRoutes
 import com.greenzean.animekmp.server.routes.healthRoutes
@@ -18,6 +19,7 @@ fun main() {
     val config = AppConfig.fromEnv()
     // Must run before the first logger is created.
     if (config.env == AppEnv.PROD) System.setProperty("logback.configurationFile", "logback-prod.xml")
+    config.database?.let { connectDatabase(it) }
     embeddedServer(Netty, port = config.port, host = config.host) {
         module()
     }.start(wait = true)
