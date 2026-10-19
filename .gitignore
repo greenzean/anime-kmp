@@ -1,0 +1,19 @@
+# Gradle / Kotlin
+.gradle/
+build/
+.kotlin/
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+
+# Secrets and local config
+local.properties
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+google-services.json
