@@ -1,7 +1,7 @@
 # 0001: AGP 9 module layout
 
-- **Status:** accepted
-- **Date:** 2026-10-19
+## Status
+Accepted (M0-2), 2026-10-19
 
 ## Context
 
