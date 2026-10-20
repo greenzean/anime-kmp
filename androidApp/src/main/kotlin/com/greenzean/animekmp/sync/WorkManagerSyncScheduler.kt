@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.sync
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -13,10 +14,16 @@ import com.greenzean.animekmp.shared.sync.domain.SyncResult
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.concurrent.TimeUnit
 
 private const val UNIQUE_WORK_NAME = "sync"
+private const val BACKOFF_SECONDS = 30L
 
-/** Queues one sync that WorkManager runs once the network is connected, so it also fires after a reconnect. */
+/**
+ * Queues a sync that WorkManager runs once the network is connected, so it also fires after a reconnect.
+ * A request made while a sync is queued or running is chained after it, so no change waits for the next trigger.
+ * Failures retry with a short linear backoff so a reconnect is not stuck behind a long exponential delay.
+ */
 class WorkManagerSyncScheduler(
     private val context: Context,
 ) : SyncScheduler {
@@ -24,10 +31,11 @@ class WorkManagerSyncScheduler(
         val request =
             OneTimeWorkRequestBuilder<SyncWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .setBackoffCriteria(BackoffPolicy.LINEAR, BACKOFF_SECONDS, TimeUnit.SECONDS)
                 .build()
         WorkManager
             .getInstance(context)
-            .enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.KEEP, request)
+            .enqueueUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 }
 
@@ -41,6 +49,6 @@ class SyncWorker(
     override suspend fun doWork(): Result =
         when (engine.sync()) {
             is SyncResult.Success -> Result.success()
-            is SyncResult.Failure -> Result.retry() // default backoff; tuning is out of scope
+            is SyncResult.Failure -> Result.retry() // linear backoff set in requestSync
         }
 }
