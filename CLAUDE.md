@@ -41,7 +41,7 @@ The main session is the orchestrator and implements tickets itself. Subagents st
 - `researcher`: versions, prices, API terms.
 - `docs`: formatting ADRs, README sections, ticket text from decisions already made.
 - `reviewer`, `security-reviewer`: **only when the user asks.**
-- Area agents (`shared-kmp`, `server`, `compose-ui`, `tester`, `build-ci`) only for large features, once they exist.
+- Area agents (`shared-kmp`, `server`, `compose-ui`, `tester`, `build-ci`) only for large features. They run their own Gradle checks, because subagents cannot call `build-runner`.
 
 Subagents never delegate further. Feature order for large features: server schema first, then app back end, then views (views in parallel only when the view model interface is fixed up front), then tests.
 
