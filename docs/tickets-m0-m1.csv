@@ -54,10 +54,11 @@ M1-6,Sync worker on the client,feature,M1,"feature,phase-1",sonnet,"shared, andr
 Acceptance: push pending then pull new, mark synced, store the cursor; sync logic in commonMain; scheduling behind an interface (WorkManager on Android, with a network-connected constraint so syncs run after reconnect); server URL configurable per build, with debug-only cleartext HTTP to the emulator host (`10.0.2.2`); tests in commonTest with a fake API.
 Out of scope: iOS scheduler, backoff tuning, auth.
 Skill: kmp-data-layer, kmp-error-handling, kmp-testing."
-M1-7,Minimal UI,feature,M1,"feature,phase-1",sonnet,"composeApp, androidApp (Koin start)","Goal: trivial screen over the local DB.
-Acceptance: one Compose screen lists local entries, adds one (picking from the dev anime rows), shows sync state; reads only from the local DB; view model obtained with `koinViewModel`, Koin started in androidApp.
-Out of scope: navigation, design system, editing or deleting entries, search.
-Skill: kmp-presentation-mvi, kmp-compose-ui, kmp-di-koin."
+M1-7,Minimal UI,feature,M1,"feature,phase-1",sonnet,"shared (view model), composeApp (screen), androidApp (only if wiring changes)","Goal: trivial screen over the local DB.
+Acceptance: one Compose screen lists local entries and adds one, picked from the dev anime rows not yet in the library, with fixed status PLAN_TO_WATCH; each entry shows a PENDING/SYNCED badge (no global sync status); after adding, the view model calls SyncScheduler.requestSync(); reads only from the local DB; view model obtained with `koinViewModel`; reuse the Koin start in AnimeApplication and register the view model in a shared Koin module added to initKoin; add koin-compose, koin-compose-viewmodel and lifecycle-viewmodel to the version catalog; view model unit test in commonTest with fakes; checked on an emulator.
+Theme: an AppTheme wrapper (colors, dark mode, dynamic color on Android 12+) is in scope.
+Out of scope: navigation, design system components and typography, editing or deleting entries, search, global sync status.
+Skill: kmp-presentation-mvi, kmp-compose-ui, kmp-di-koin, kmp-testing."
 M1-8,End-to-end check,chore,M1,"chore,phase-1",sonnet,all,"Goal: prove the walking skeleton.
 Acceptance: offline add, reconnect, entry reaches the server; a second install pulls it; README updated so clone-and-run works (Compose up, run the app on an emulator); short result note in docs/.
 Out of scope: new features; fixes go in follow-up bug tickets unless trivial.
