@@ -6,7 +6,7 @@ description: |
 
 # Ktor server conventions
 
-The server is a JVM-only Ktor (Netty) app in `server/`. Base package: `com.greenzean.animekmp.server`. Only the server talks to MAL; treat clients as untrusted.
+The server is a JVM-only Ktor (Netty) app in `server/`. Base package: `com.greenzean.animekmp.server`. The server syncs libraries between a user's devices. It never calls MAL or any other platform and stores no platform tokens or platform user data (ADR 0007). Treat clients as untrusted.
 
 ## Layout
 
@@ -73,4 +73,4 @@ graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/Graph
 
 ## Not decided yet
 
-Database access is covered by the `postgres-migrations` skill. Auth and the MAL adapter get their own conventions in the tickets that build them; add them here then.
+Database access is covered by the `postgres-migrations` skill. Auth (Google ID token verification, session tokens) gets its own conventions in the tickets that build them; add them here then.

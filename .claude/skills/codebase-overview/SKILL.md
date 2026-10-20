@@ -11,9 +11,9 @@ Gradle multi-module monorepo. Group and base package: `com.greenzean.animekmp`. 
 
 - `androidApp/`: Android host (`com.android.application`): manifest, `MainActivity`. AGP 9 forbids KMP plus application plugin in one module.
 - `composeApp/`: Compose Multiplatform UI library. Screens and composables in `commonMain`.
-- `shared/`: KMP logic in `commonMain`: data layer, sync, Apollo operations, importers, view models. Platform APIs behind interfaces / `expect/actual`.
-- `server/`: Ktor server (JVM): GraphQL schema/resolvers, Postgres, Flyway migrations, MAL adapter. Only the server talks to MAL.
-- `docs/`: ADRs in `docs/decisions/`, ticket CSV, notes.
+- `shared/`: KMP logic in `commonMain`: data layer, sync, Apollo operations, MAL client, importers, view models. Platform APIs behind interfaces / `expect/actual`. MAL is accessed only from the app (ADR 0007).
+- `server/`: Ktor server (JVM): GraphQL schema/resolvers, Postgres, Flyway migrations. Syncs libraries between a user's devices. Never calls MAL; stores no platform tokens, platform user data or anime metadata.
+- `docs/`: ADRs in `docs/decisions/`, MVP scope in `docs/milestone2-mvp.md`, ticket CSV, notes.
 
 ## Conventions
 

@@ -21,8 +21,8 @@ description: Module layout, package-by-feature rules, dependency rules, and Grad
 ```
 androidApp/   Android host: com.android.application, Application class (startKoin), MainActivity, manifest
 composeApp/   Compose Multiplatform UI library: screens, design system, navigation (commonMain)
-shared/       KMP logic library: domain, data (SQLDelight, Apollo), sync, view models (commonMain)
-server/       Ktor server (JVM): GraphQL schema/resolvers, Postgres, Flyway, MAL adapter
+shared/       KMP logic library: domain, data (SQLDelight, Apollo, MAL client), sync, view models (commonMain)
+server/       Ktor server (JVM): GraphQL schema/resolvers, Postgres, Flyway. Never calls MAL (ADR 0007)
 docs/         ADRs (docs/decisions), ticket CSV, notes
 ```
 
