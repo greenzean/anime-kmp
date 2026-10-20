@@ -17,9 +17,9 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 
 - `androidApp/`: Android host (application module, `MainActivity`); required by AGP 9, which cannot combine KMP with `com.android.application`.
 - `composeApp/`: Compose Multiplatform UI library (`commonMain`).
-- `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, importers, view models.
-- `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway, MAL adapter.
-- `docs/`: ADRs in `docs/decisions/`, ticket CSV, notes.
+- `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, MAL client, importers, view models.
+- `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway. Syncs libraries between a user's devices.
+- `docs/`: ADRs in `docs/decisions/`, MVP scope in `docs/milestone2-mvp.md`, ticket CSV, notes.
 
 Details of where things live: `codebase-overview` skill.
 
@@ -29,7 +29,8 @@ Details of where things live: `codebase-overview` skill.
 - Only multiplatform libraries (no Retrofit, Hilt; verify Room KMP support before using it).
 - Platform APIs (secure storage, notifications, file picker, connectivity, background work) go behind interfaces / `expect/actual`.
 - Local DB is the source of truth; the UI reads and writes only locally.
-- Only the server talks to MAL. Treat the client as untrusted. Never commit secrets (`.env`, keystores).
+- Only the app talks to MAL and other platforms; the server never does and stores no platform tokens or platform user data (ADR 0007). The app works without an account.
+- Treat the client as untrusted on our server. Never commit secrets (`.env`, keystores).
 
 ## Delegation
 

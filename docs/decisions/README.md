@@ -25,3 +25,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0004 | [Client/server contract](0004-shared-contract.md) | Accepted | M0-8 |
 | 0005 | [Postgres access, migrations and test database](0005-postgres-access.md) | Accepted | M1-3 |
 | 0006 | [Sync protocol](0006-sync-protocol.md) | Accepted | M1-5 |
+| 0007 | [Client-side platform access](0007-client-side-platform-access.md) | Accepted | M2 MVP brief |
