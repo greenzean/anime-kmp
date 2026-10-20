@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
@@ -24,11 +26,21 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        // Set animekmp.serverUrl in ~/.gradle/gradle.properties or with -P; no real URL is committed.
+        // Set animekmp.serverUrl with -P, in ~/.gradle/gradle.properties or in the gitignored
+        // local.properties; no real URL is committed.
+        val localProperties =
+            Properties().apply {
+                rootProject
+                    .file("local.properties")
+                    .takeIf { it.exists() }
+                    ?.reader()
+                    ?.use(::load)
+            }
         val serverUrl =
             providers
                 .gradleProperty("animekmp.serverUrl")
-                .getOrElse("https://api.example.invalid/graphql")
+                .orElse(localProperties.getProperty("animekmp.serverUrl") ?: "https://api.example.invalid/graphql")
+                .get()
         buildConfigField("String", "GRAPHQL_URL", "\"$serverUrl\"")
     }
 
