@@ -2,15 +2,15 @@
 
 [![CI](https://github.com/greenzean/anime-kmp/actions/workflows/ci.yml/badge.svg)](https://github.com/greenzean/anime-kmp/actions/workflows/ci.yml)
 
-Offline-first anime tracker built with Kotlin Multiplatform and Compose Multiplatform. Anime data comes from MyAnimeList via a Ktor + PostgreSQL server with a GraphQL API. Phase 1 targets Android; iOS and web come later.
+Offline-first anime tracker built with Kotlin Multiplatform and Compose Multiplatform. The app talks to MyAnimeList directly and works without an account; an optional account on a Ktor + PostgreSQL server (GraphQL API) syncs the library between devices. Phase 1 targets Android; iOS and web come later. MVP scope: [`docs/milestone2-mvp.md`](docs/milestone2-mvp.md).
 
 ## Modules
 
 - `androidApp/`: Android host (application module, `MainActivity`).
 - `composeApp/`: Compose Multiplatform UI library (`commonMain`).
-- `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, importers, view models.
-- `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway, MAL adapter.
-- `docs/`: ADRs (`docs/decisions/`), tickets, notes.
+- `shared/`: KMP logic (`commonMain`): data layer, sync, Apollo operations, MAL client, importers, view models.
+- `server/`: Ktor server, GraphQL schema/resolvers, Postgres, Flyway.
+- `docs/`: ADRs (`docs/decisions/`), MVP scope, tickets, notes.
 
 ## Architecture
 
@@ -21,17 +21,17 @@ flowchart LR
         VM --> DB[("SQLDelight<br/>local DB")]
         DB <--> Sync["shared<br/>sync"]
         Sync --> Apollo["Apollo client"]
+        DB <--> MALClient["shared<br/>MAL client"]
     end
     subgraph Server["server (Ktor)"]
         GQL["GraphQL API<br/>graphql-kotlin"] --> PG[("PostgreSQL")]
-        GQL --> MALAdapter["MAL adapter"]
     end
     Apollo -- "GraphQL (schema.graphqls)" --> GQL
-    MALAdapter --> MAL["MyAnimeList API"]
+    MALClient --> MAL["MyAnimeList API"]
 ```
 
 - **Offline first.** The local database is the source of truth. The UI reads and writes only locally, and sync talks to the server.
-- **Only the server talks to MyAnimeList.** The client is treated as untrusted.
+- **Only the app talks to MyAnimeList.** MAL tokens stay on each device; the server stores no platform tokens, platform user data or anime metadata, only library entries and anime IDs ([ADR 0007](docs/decisions/0007-client-side-platform-access.md)). The client is still treated as untrusted by our server.
 - **The GraphQL schema is the contract.** The server owns it, and the SDL is committed in `shared`. API changes go server first, then the client.
 - **Shared logic lives in `commonMain`.** Platform APIs (secure storage, notifications, file picker, connectivity, background work) sit behind interfaces or `expect/actual`.
 
@@ -41,7 +41,7 @@ Offline-first: the UI reads and writes only the local SQLDelight database. Chang
 
 ### Auth
 
-Not implemented yet (planned: MAL OAuth with PKCE, server-issued JWT). For now every request is treated as a single hardcoded dev user, so any install pulls the same library.
+Not implemented yet. Planned: Google sign-in for the optional server account (the server verifies the Google ID token and issues its own token), and MAL OAuth with PKCE on each device, with tokens kept on the device. For now every request is treated as a single hardcoded dev user, so any install pulls the same library.
 
 ### Data model
 
@@ -57,6 +57,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0004: Client/server contract](docs/decisions/0004-shared-contract.md)
 - [0005: Postgres access, migrations and test database](docs/decisions/0005-postgres-access.md)
 - [0006: Sync protocol](docs/decisions/0006-sync-protocol.md)
+- [0007: Client-side platform access](docs/decisions/0007-client-side-platform-access.md)
 
 ## Build
 
