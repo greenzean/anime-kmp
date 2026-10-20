@@ -37,15 +37,15 @@ flowchart LR
 
 ### Sync
 
-*TBD.*
+Offline-first: the UI reads and writes only the local SQLDelight database. Changes are queued as pending and pushed by a WorkManager job when the network is available; the client then pulls changes since its cursor. Last-write-wins with tombstones. Details: [ADR 0006](docs/decisions/0006-sync-protocol.md).
 
 ### Auth
 
-*TBD (MAL OAuth with PKCE, server-issued JWT).*
+Not implemented yet (planned: MAL OAuth with PKCE, server-issued JWT). For now every request is treated as a single hardcoded dev user, so any install pulls the same library.
 
 ### Data model
 
-*TBD.*
+Anime catalog plus per-user `list_entry` rows (status, progress, score) that carry the sync columns (`server_seq`, tombstone). Server schema: Flyway migrations in `server/`; client schema: SQLDelight in `shared/`. Debug builds seed a small dev catalog.
 
 ### Decisions
 
@@ -88,6 +88,8 @@ GraphiQL is at <http://localhost:8080/graphiql>. After changing the GraphQL sche
 
 Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
 
+Gradle does not read `.env`. With `DATABASE_URL`, `DATABASE_USER` and `DATABASE_PASSWORD` exported the server connects to Postgres and runs Flyway migrations on start; without them it starts without a database and the sync API is unavailable.
+
 ## Android debug build against a local server
 
 The server URL comes from the `animekmp.serverUrl` Gradle property (default: a placeholder HTTPS URL). For a local server, set it in the gitignored `local.properties` at the repo root (or `~/.gradle/gradle.properties`, or `-P`), e.g. `animekmp.serverUrl=http://10.0.2.2:8080/graphql` (`10.0.2.2` is the emulator's host machine). Android blocks plain HTTP by default, so also create two files that are gitignored (`androidApp/src/debug/`) and never ship in release builds:
@@ -109,9 +111,18 @@ curl localhost:8080/health
 
 - The first build takes a few minutes (Gradle downloads dependencies); later builds reuse the cache.
 - Postgres listens on `127.0.0.1:5432` (db, user and password default to `animekmp`; override with `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` in `.env`). Data lives in the `postgres-data` volume.
-- The server does not use the database yet; Postgres is started and health-checked so it is ready for the DB tickets.
+- The server connects to Postgres and runs Flyway migrations on start.
 - Stop with `docker compose down`; add `-v` to also delete the database volume.
-- To run the server from Gradle against the Compose database: `docker compose up postgres`, then `./gradlew :server:run`.
+- To run the server from Gradle against the Compose database: `docker compose up postgres`, then `DATABASE_URL=jdbc:postgresql://localhost:5432/animekmp DATABASE_USER=animekmp DATABASE_PASSWORD=animekmp ./gradlew :server:run`.
+
+## Quick start (emulator)
+
+1. `docker compose up --build -d` and check `curl localhost:8080/health`.
+2. Add `animekmp.serverUrl=http://10.0.2.2:8080/graphql` to `local.properties` and create the two debug cleartext files described above.
+3. Start an Android emulator and run `./gradlew :androidApp:installDebug`, then open the app.
+4. Add an anime (it shows *Pending* and syncs when the network is up, then shows *Synced*). Clear the app data or use a second emulator to see the entry pulled back.
+
+Result of the end-to-end check: [`docs/m1-8-e2e-result.md`](docs/m1-8-e2e-result.md).
 
 ## License
 
