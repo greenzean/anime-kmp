@@ -210,6 +210,21 @@ class SyncEngineTest {
         }
 
     @Test
+    fun parkedChangeAppliesOnLaterSyncOnceAnimeIsInCatalog() =
+        runTest {
+            api.pages.add(page("c1", false, pulled("e99", 99, 1_000)))
+            engine.sync()
+            assertEquals(null, row(99))
+
+            db.animeQueries.insertOrIgnore(99, 99, "Late Arrival")
+            api.pages.add(page("c1", false))
+            val result = engine.sync()
+
+            assertEquals("COMPLETED", row(99)!!.status)
+            assertEquals(1, (result as SyncResult.Success).pulled)
+        }
+
+    @Test
     fun newerPendingRowIsNotOverwrittenByPull() =
         runTest {
             library.setStatus(1, WatchStatus.WATCHING)

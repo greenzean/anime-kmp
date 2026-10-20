@@ -78,6 +78,8 @@ class SyncEngine(
             pulled += local.applyPage(page.changes, page.nextCursor)
             cursor = page.nextCursor
         } while (page.hasMore)
+        // Changes parked for an unknown anime apply once the catalog has it, even with nothing new to pull.
+        pulled += local.retryParked()
         return Result.Success(pulled)
     }
 
