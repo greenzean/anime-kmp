@@ -18,9 +18,15 @@ interface SyncLocalDataSource {
 
     suspend fun getCursor(): String?
 
-    /** Applies one pulled page and stores [nextCursor] in a single transaction. Returns rows applied. */
+    /**
+     * Applies one pulled page and stores [nextCursor] in a single transaction. Returns rows applied.
+     * A change for an anime missing from the local catalog is parked, not dropped; see [retryParked].
+     */
     suspend fun applyPage(
         changes: List<SyncChange>,
         nextCursor: String,
     ): Int
+
+    /** Applies parked changes whose anime is in the catalog now. Returns rows applied. */
+    suspend fun retryParked(): Int
 }

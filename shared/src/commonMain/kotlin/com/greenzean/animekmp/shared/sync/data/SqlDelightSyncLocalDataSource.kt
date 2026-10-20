@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.sync.data
 
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.data.db.List_entry
+import com.greenzean.animekmp.shared.core.data.db.Parked_change
 import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.sync.domain.SyncChange
@@ -16,6 +17,7 @@ class SqlDelightSyncLocalDataSource(
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : SyncLocalDataSource {
     private val listEntries get() = db.listEntryQueries
+    private val parked get() = db.parkedChangeQueries
 
     override suspend fun pendingChanges(limit: Int): List<SyncChange> =
         withContext(dispatcher) {
@@ -44,24 +46,55 @@ class SqlDelightSyncLocalDataSource(
     ): Int =
         withContext(dispatcher) {
             db.transactionWithResult {
-                val applied = changes.count(::applyPulled)
+                val applied = changes.count(::applyOrPark)
                 db.syncCursorQueries.saveCursor(nextCursor)
                 applied
             }
         }
 
+    override suspend fun retryParked(): Int =
+        withContext(dispatcher) {
+            db.transactionWithResult {
+                parked.selectAll().executeAsList().count { row ->
+                    val inCatalog = db.animeQueries.existsById(row.anime_id).executeAsOne() > 0L
+                    if (inCatalog) parked.deleteById(row.id)
+                    inCatalog && applyPulled(row.toSyncChange())
+                }
+            }
+        }
+
+    private fun applyOrPark(change: SyncChange): Boolean =
+        if (db.animeQueries.existsById(change.animeId).executeAsOne() == 0L) {
+            park(change)
+            false
+        } else {
+            parked.deleteByAnimeId(change.animeId)
+            applyPulled(change)
+        }
+
+    /** Keeps only the newest parked change per anime, so a stale one cannot overwrite a newer one later. */
+    private fun park(change: SyncChange) {
+        val existing = parked.selectByAnimeId(change.animeId).executeAsOneOrNull()
+        if (existing == null || existing.updated_at < change.updatedAt.toEpochMilliseconds()) {
+            parked.insertOrReplace(
+                change.id,
+                change.animeId,
+                change.status.name,
+                change.updatedAt.toEpochMilliseconds(),
+                change.deletedAt?.toEpochMilliseconds(),
+            )
+        }
+    }
+
     /**
      * Merge rule from ADR 0006: one row per (user, anime). Adopt the server id first, then apply the
      * pulled row only if local is SYNCED or older; a newer (or equal) PENDING edit is never overwritten.
-     * A row for an anime missing from the local catalog is skipped (the FK cannot be satisfied).
+     * The anime must already be in the local catalog (FK).
      */
-    private fun applyPulled(change: SyncChange): Boolean =
-        if (db.animeQueries.existsById(change.animeId).executeAsOne() == 0L) {
-            false
-        } else {
-            val local = listEntries.selectByUserAndAnime(LOCAL_USER_ID, change.animeId).executeAsOneOrNull()
-            if (local == null) insertPulled(change) else mergePulled(change, local)
-        }
+    private fun applyPulled(change: SyncChange): Boolean {
+        val local = listEntries.selectByUserAndAnime(LOCAL_USER_ID, change.animeId).executeAsOneOrNull()
+        return if (local == null) insertPulled(change) else mergePulled(change, local)
+    }
 
     private fun insertPulled(change: SyncChange): Boolean {
         listEntries.insertPulled(
@@ -93,6 +126,15 @@ class SqlDelightSyncLocalDataSource(
         return !localWins
     }
 }
+
+private fun Parked_change.toSyncChange() =
+    SyncChange(
+        id = id,
+        animeId = anime_id,
+        status = WatchStatus.valueOf(status),
+        updatedAt = Instant.fromEpochMilliseconds(updated_at),
+        deletedAt = deleted_at?.let(Instant::fromEpochMilliseconds),
+    )
 
 private fun List_entry.toSyncChange() =
     SyncChange(
