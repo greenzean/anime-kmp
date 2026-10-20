@@ -25,4 +25,9 @@ Gradle multi-module monorepo. Group and base package: `com.greenzean.animekmp`. 
 
 ## Status
 
-After M0-2 the Android skeleton builds (`androidApp` -> `composeApp` -> `shared`). iOS targets are declared but gated by `animekmp.enableIos` (default false). `server` is a runnable Ktor skeleton (`GET /health`); see `ktor-server-conventions`.
+Last updated after M1-4. Check `git log` for newer tickets before relying on this list.
+
+- Android skeleton builds (`androidApp` -> `composeApp` -> `shared`). iOS targets are declared but gated by `animekmp.enableIos` (default false).
+- `server`: Ktor with `GET /health`, GraphQL `hello` query (M1-2), and a Postgres schema with Flyway migrations V1 to V3, used when `DATABASE_URL` is set (M1-3). See `ktor-server-conventions`, `graphql-schema`, `postgres-migrations`.
+- `shared`: Apollo set up with the committed `schema.graphqls` (M1-1), and a local SQLDelight `AnimeDatabase` with the `library` feature's local data source and a dev seed matching the server's (M1-4). See `kmp-data-layer`.
+- Not built yet: `Result`/`DataError` types, network client, sync, auth, view models, screens, navigation.

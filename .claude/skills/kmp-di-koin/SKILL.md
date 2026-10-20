@@ -9,7 +9,8 @@ description: |
 ## Principles
 
 - One Koin module per feature layer (`data`, `presentation`) — create it only if there are dependencies to provide. Modules are plain `val`s in the feature's package in `shared` (`shared.<feature>.data`, `shared.<feature>.presentation`).
-- Modules are assembled once, in `initKoin` (in `composeApp/commonMain`), and started from `androidApp`'s `Application` class. Feature packages never call `startKoin` themselves.
+- Modules are assembled once, in `initKoin` (`shared/commonMain`, `com.greenzean.animekmp.shared.InitKoin.kt`), and started from `androidApp`'s `AnimeApplication`. Feature packages never call `startKoin` themselves.
+- In the catalog today: `koin-core` (`shared`) and `koin-android` (`shared` androidMain, `androidApp`). `viewModelOf` and `koinViewModel()` need the Koin Compose/ViewModel artifacts, which are not added yet: verify them with the `researcher` agent in the first ticket with a ViewModel.
 - Platform-only dependencies (Ktor engine, SQLDelight driver, secure token storage, Android `Context`) come from a `platformModule` (`expect`/`actual`), so everything else stays in `commonMain`.
 - In Compose Root composables, always inject ViewModels via `koinViewModel()`.
 
@@ -22,10 +23,12 @@ Prefer the constructor-reference overloads (`singleOf`, `viewModelOf`, `factoryO
 ### Data layer module
 
 ```kotlin
-// shared.library.data
+// shared.library.data — today the module binds only the local data source:
+//   single<LibraryLocalDataSource> { SqlDelightLibraryDataSource(get()) }
+// Target shape once remote data and sync exist:
 val libraryDataModule = module {
-    singleOf(::SqlDelightAnimeDataSource) { bind<AnimeLocalDataSource>() }
-    singleOf(::ApolloAnimeDataSource) { bind<AnimeRemoteDataSource>() }
+    singleOf(::SqlDelightLibraryDataSource) { bind<LibraryLocalDataSource>() }
+    singleOf(::ApolloLibraryDataSource) { bind<LibraryRemoteDataSource>() }
     singleOf(::OfflineFirstLibraryRepository) { bind<LibraryRepository>() }
 }
 ```
@@ -40,15 +43,13 @@ val libraryPresentationModule = module {
 }
 ```
 
-### Core data module (example)
+### Core data module
 
 ```kotlin
-// shared.core.data
+// shared.core.data — as in the code today (CoreDataModule.kt)
 val coreDataModule = module {
-    // Lambda overload needed here — calling a factory method, not a constructor
-    single { HttpClientFactory.create(get()) }
-    single { ApolloClientFactory.create(get(), get()) }   // HttpClient/engine + TokenStorage
-    single { AnimeDatabase(get<DatabaseDriverFactory>().create()) }
+    single { AnimeDatabase(get<SqlDriver>()) }   // SqlDriver comes from platformModule
+    // Later (not built yet): single { ApolloClientFactory.create(...) }, TokenStorage-backed auth
 }
 ```
 
@@ -59,8 +60,8 @@ val coreDataModule = module {
 Register all modules in a shared `initKoin` entry point in common code, and expose platform-only dependencies through an `expect`/`actual` `platformModule`:
 
 ```kotlin
-// composeApp/commonMain — shared entry point, called by every platform
-fun initKoin(config: KoinAppDeclaration? = null) {
+// shared/commonMain (InitKoin.kt) — shared entry point, called by every platform
+fun initKoin(config: KoinAppDeclaration? = null): KoinApplication =
     startKoin {
         config?.invoke(this)
         modules(
@@ -69,39 +70,36 @@ fun initKoin(config: KoinAppDeclaration? = null) {
             coreDataModule,
             // features
             libraryDataModule,
-            libraryPresentationModule,
-            // ...
+            // libraryPresentationModule, ... once they exist
         )
     }
-}
 
-// shared/commonMain — platform-only dependencies (Ktor engine, DB driver, secure token storage)
+// shared/commonMain (core.data) — platform-only dependencies
 expect val platformModule: Module
 ```
 
 ```kotlin
-// shared/androidMain — Ktor engine, DB driver, token storage all come from here
+// shared/androidMain — as in the code today: the platform module provides the SqlDriver
 actual val platformModule = module {
-    single<HttpClientEngine> { OkHttp.create() }
-    single { DatabaseDriverFactory(androidContext()) }
-    single<TokenStorage> { AndroidTokenStorage(androidContext()) }
+    single<SqlDriver> {
+        val context = androidContext()
+        DatabaseDriverFactory(context, seedDevData = context.isDebuggable()).create()
+    }
+    // Later: HttpClientEngine, TokenStorage (Android Keystore) — see kmp-data-layer
 }
 ```
 
 ```kotlin
-// androidApp — androidContext/androidLogger live only in the Android host
+// androidApp — androidContext lives only in the Android host
 class AnimeApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        initKoin {
-            androidContext(this@AnimeApplication)
-            androidLogger()
-        }
+        initKoin { androidContext(this@AnimeApplication) }
     }
 }
 ```
 
-Register the class in `androidApp`'s `AndroidManifest.xml` (`android:name=".AnimeApplication"`).
+`AnimeApplication` is registered in `androidApp`'s `AndroidManifest.xml`. Add `androidLogger()` only when debugging DI.
 
 When iOS is enabled (`animekmp.enableIos`), add an `iosMain` `platformModule` (`Darwin.create()`, native driver, Keychain storage) and expose `fun initKoinIos() = initKoin()` for Swift. Only the Android `Application` passes `androidContext`/`androidLogger`.
 

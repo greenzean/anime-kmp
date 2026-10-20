@@ -5,7 +5,9 @@ description: |
 ---
  
 # KMP Navigation
- 
+
+**State of the code (M1-4):** no navigation library is in the catalog and `App.kt` has no `NavHost`. Verify the Compose Multiplatform Navigation artifact and version with the `researcher` agent in the first ticket with two screens.
+
 ## Principles
  
 - **Type-safe navigation** with `@Serializable` route objects (KotlinX Serialization).
