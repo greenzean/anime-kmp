@@ -12,8 +12,6 @@ All data-layer code lives in `shared/commonMain`, in the `data` package of its f
 
 This skill uses `Result<T, E>`, `DataError`, and the extension helpers defined in the **kmp-error-handling** skill. Refer to that skill for the full `Result` wrapper, `DataError` sealed interface, and `map`/`onSuccess`/`onFailure`/`asEmptyResult` extensions.
 
-**State of the code (M1-4):** `Result`/`DataError` do not exist yet, and `LibraryLocalDataSource` returns plain values (`Unit`, `Flow`). The first ticket that adds a fallible call (network or sync) creates the types in `shared.core.domain` and moves the local data source to them. Until then, examples with `Result` show the target shape, not existing code.
-
 ---
 
 ## Who Talks to Whom
@@ -30,20 +28,17 @@ This skill uses `Result<T, E>`, `DataError`, and the extension helpers defined i
 - **Repository** — combines multiple data sources (e.g., a remote API + a local DB for offline-first). Only use the term "repository" when the class genuinely coordinates multiple sources.
 
 ```kotlin
-// Single source → data source (exists: shared.library.domain.LibraryLocalDataSource)
-interface LibraryLocalDataSource {
-    fun observeAnime(): Flow<List<Anime>>
+// Single source → data source
+interface AnimeLocalDataSource {
     fun observeLibrary(): Flow<List<LibraryEntry>>
-    suspend fun setStatus(animeId: Long, status: WatchStatus)   // entry becomes pending sync
-    suspend fun remove(animeId: Long)                           // soft delete (tombstone)
+    suspend fun upsert(entry: LibraryEntry): EmptyResult<DataError.Local>
 }
 
-// Not built yet (M1-5/M1-6)
-interface LibraryRemoteDataSource {
+interface AnimeRemoteDataSource {
     suspend fun pullChanges(since: Instant?): Result<List<LibraryEntry>, DataError.Network>
 }
 
-// Multiple sources → repository (not built yet)
+// Multiple sources → repository
 interface LibraryRepository {
     fun observeLibrary(): Flow<List<LibraryEntry>>
     suspend fun sync(): EmptyResult<DataError>
@@ -78,28 +73,22 @@ Name implementations for what makes them unique — never suffix with `Impl`.
 
 ### Data source (single source)
 
-The real one is `shared.library.data.SqlDelightLibraryDataSource`; read it before writing a new data source. Shape:
-
 ```kotlin
-class SqlDelightLibraryDataSource(
-    private val db: AnimeDatabase,
-    private val clock: Clock = Clock.System,                             // injected so tests control time
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,   // and the dispatcher
-) : LibraryLocalDataSource {
+class SqlDelightAnimeDataSource(private val db: AnimeDatabase) : AnimeLocalDataSource {
     override fun observeLibrary(): Flow<List<LibraryEntry>> =
-        db.listEntryQueries.selectActiveWithAnime(LOCAL_USER_ID)
+        db.libraryEntryQueries.selectAll()
             .asFlow()
-            .mapToList(dispatcher)
+            .mapToList(Dispatchers.Default)
             .map { rows -> rows.map { it.toLibraryEntry() } }
 }
 ```
 
-### Repository (multiple sources, not built yet)
+### Repository (multiple sources)
 
 ```kotlin
 class OfflineFirstLibraryRepository(
-    private val local: LibraryLocalDataSource,
-    private val remote: LibraryRemoteDataSource,
+    private val local: AnimeLocalDataSource,
+    private val remote: AnimeRemoteDataSource,
 ) : LibraryRepository {
     override fun observeLibrary() = local.observeLibrary()   // UI only ever reads the DB
 
@@ -110,7 +99,7 @@ class OfflineFirstLibraryRepository(
 }
 ```
 
-Use names like `SqlDelightLibraryDataSource`, `ApolloLibraryDataSource`, `OfflineFirstLibraryRepository`. The name should tell you what the class wraps or how it behaves.
+Use names like `SqlDelightAnimeDataSource`, `ApolloAnimeDataSource`, `OfflineFirstLibraryRepository`. The name should tell you what the class wraps or how it behaves.
 
 ---
 
@@ -118,10 +107,8 @@ Use names like `SqlDelightLibraryDataSource`, `ApolloLibraryDataSource`, `Offlin
 
 The API is GraphQL; use Apollo Kotlin operations for it. `.graphql` files live in `shared/src/commonMain/graphql`, and the generated models stay inside the data layer.
 
-Today `shared` has the Apollo runtime and one operation (`Hello.graphql`); there is no `ApolloClient` factory or server URL yet. Target shape:
-
 ```kotlin
-class ApolloLibraryDataSource(private val apollo: ApolloClient) : LibraryRemoteDataSource {
+class ApolloAnimeDataSource(private val apollo: ApolloClient) : AnimeRemoteDataSource {
     override suspend fun pullChanges(since: Instant?): Result<List<LibraryEntry>, DataError.Network> {
         val response = apollo.query(PullChangesQuery(since = Optional.presentIfNotNull(since))).execute()
         return response.toResult { data -> data.changes.map { it.libraryEntryFragment.toLibraryEntry() } }
@@ -133,9 +120,7 @@ class ApolloLibraryDataSource(private val apollo: ApolloClient) : LibraryRemoteD
 
 ---
 
-## Ktor — HttpClient (non-GraphQL calls)
-
-Not in the catalog yet: add `ktor-client-*` in the first ticket that needs a plain HTTP call, with the version verified by the `researcher` agent. Whether Apollo should use Ktor as its engine on Android is not decided or verified; Apollo uses its own default engine until a ticket decides otherwise.
+## Ktor — HttpClient (non-GraphQL calls and as Apollo's engine)
 
 Configure the client once. Accept the engine externally so tests can swap in a mock engine:
 
@@ -176,26 +161,22 @@ Never store tokens in plain preferences, logs, or the SQLDelight database. Never
 
 ## Persistence (SQLDelight)
 
-The database is `AnimeDatabase` (package `shared.core.data.db`). `.sq` files live in `shared/src/commonMain/sqldelight/com/greenzean/animekmp/shared/core/data/db/` (`Anime.sq`, `ListEntry.sq`); only the driver is per-platform. As in the code today:
+`.sq` files, schema and queries live in `shared/src/commonMain/sqldelight`; only the driver is per-platform. Expose it through an `expect`/`actual` factory (or a platform Koin module) injected via Koin:
 
 ```kotlin
-// commonMain (core.data)
+// commonMain
 expect class DatabaseDriverFactory {
     fun create(): SqlDriver
 }
-// androidMain → AndroidSqliteDriver(schema, context, "anime.db") with a callback that enables
-//               foreign keys on open; schema is SeededSchema in debuggable builds, else AnimeDatabase.Schema
-// iosMain     → not written yet (NativeSqliteDriver when iOS is enabled)
+// androidMain → AndroidSqliteDriver(AnimeDatabase.Schema, context, "anime.db")
+// iosMain     → NativeSqliteDriver(AnimeDatabase.Schema, "anime.db")
 ```
 
-`platformModule` turns the factory into a `SqlDriver` singleton; `coreDataModule` builds `AnimeDatabase` from it (see **kmp-di-koin**).
-
-- **Dev seed:** `DevAnimeSeed` inserts the same rows and ids as the server's `V3__seed_dev_anime.sql`. `SeededSchema` applies it once, when the database file is created. Keep the two in sync when either changes.
-- **Tests:** `commonTest` calls `expect fun createTestDriver()` (`TestDriver.kt`); the Android host test `actual` returns an in-memory `JdbcSqliteDriver` (`sqldelight-sqlite-driver`).
+Tests use an in-memory driver (JDBC in-memory on the JVM/Android host test, native in-memory on iOS).
 
 ## Migrations
 
-`verifyMigrations` is on and the schema snapshot is committed in `shared/src/commonMain/sqldelight/databases/` (`1.db` today). Schema changes after a release ship as numbered `.sqm` files (`1.sqm` migrates 1 → 2, ...) plus the new snapshot. Never edit a released `.sq` schema without a matching migration. Find the snapshot task with `./gradlew :shared:tasks --all` rather than guessing its name.
+Schema changes ship as numbered `.sqm` migration files (`1.sqm`, `2.sqm`, ...). Never edit a released `.sq` schema without a matching migration; verify migrations in CI with SQLDelight's `verifyMigrations`.
 
 ---
 

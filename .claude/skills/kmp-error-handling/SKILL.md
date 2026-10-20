@@ -6,9 +6,7 @@ description: |
 
 # KMP Error Handling
 
-Core types live in `shared/commonMain`, package `shared.core.domain`, and network helpers in `shared.core.data`. Error-to-text mapping lives in `composeApp/commonMain` (`composeapp.core`), because string resources live there.
-
-**State of the code (M1-4):** none of this exists yet. The first ticket with a fallible call (network or sync) creates `Result`, `DataError` and the helpers. The `HttpClient` helpers also need Ktor Client and a logger (Kermit or a small interface), neither of which is in the catalog yet. Base packages: `com.greenzean.animekmp.shared` and `com.greenzean.animekmp.composeapp`.
+Everything here lives in `shared/commonMain`. Core types are in the `shared.core.domain` package, helpers for the network in `shared.core.data`, and error-to-text mapping in `composeApp` (`composeapp.core`), because string resources live there. Base packages: `com.greenzean.animekmp.shared` and `com.greenzean.animekmp.composeapp`.
 
 ## Result Wrapper (`shared.core.domain`)
 

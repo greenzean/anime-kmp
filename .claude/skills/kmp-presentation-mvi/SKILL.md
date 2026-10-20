@@ -7,8 +7,6 @@ description: |
 # KMP Presentation Layer (MVI)
 
 **Where things live:** State, Action, Event, ViewModel and UI models are plain Kotlin in `shared/commonMain` (`shared.<feature>.presentation`), as the project keeps view models in `commonMain`. Root/Screen composables, `UiText`, `ObserveAsEvents` and `toUiText()` mappers live in `composeApp/commonMain` (`composeapp.<feature>`, `composeapp.core`), because they depend on Compose and string resources. `shared` must not depend on `composeApp`.
-
-**State of the code (M1-4):** no view model, screen or `UiText` exists yet, and the KMP lifecycle ViewModel, Koin Compose and Compose resources artifacts are not in the catalog. Verify them with the `researcher` agent in the first ticket that builds a screen.
  
 ## Overview
  

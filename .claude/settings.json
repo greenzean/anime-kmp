@@ -20,11 +20,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|PowerShell",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/gradle_filter.py\""
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/gradle-filter.sh"
           }
         ]
       }

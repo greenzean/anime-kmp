@@ -1,7 +1,7 @@
 ---
 name: kmp-testing
 description: |
-  Testing patterns for KMP (Android-first) - ViewModel and repository unit tests with kotlin.test, Turbine, UnconfinedTestDispatcher, fake repositories, SavedStateHandle, and Compose UI tests. Use this skill whenever writing or reviewing tests for ViewModels, repositories, use cases, or Compose screens. Trigger on phrases like "write a test", "unit test the ViewModel", "test a repository", "Turbine", "fake repository", "UnconfinedTestDispatcher", "runTest", "ComposeTestRule", or "in-memory database".
+  Testing patterns for KMP (Android-first) - ViewModel and repository unit tests with kotlin.test, Turbine, AssertK, UnconfinedTestDispatcher, fake repositories, SavedStateHandle, and Compose UI tests. Use this skill whenever writing or reviewing tests for ViewModels, repositories, use cases, or Compose screens. Trigger on phrases like "write a test", "unit test the ViewModel", "test a repository", "Turbine", "fake repository", "UnconfinedTestDispatcher", "runTest", "ComposeTestRule", or "in-memory database".
 ---
  
 # KMP Testing
@@ -13,7 +13,7 @@ Shared logic is tested in `commonTest` (`shared/src/commonTest`, `composeApp/src
 | Concern | Library |
 |---|---|
 | Test framework | `kotlin.test` (commonTest); JUnit5 is JVM-only (jvmTest/androidUnitTest) |
-| Assertions | `kotlin.test` (`assertEquals`, `assertTrue`, ...). AssertK is not in the catalog; the `assertThat` examples below are only for shape, so write them with `kotlin.test` unless a ticket adds AssertK |
+| Assertions | AssertK |
 | Flow / StateFlow testing | Turbine |
 | Coroutine testing | `kotlinx-coroutines-test` + `UnconfinedTestDispatcher` |
 | UI testing | `runComposeUiTest` |

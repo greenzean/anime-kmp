@@ -86,10 +86,8 @@ Add a new Gradle module only for a standalone concern with real complexity (mult
 | Serialization | KotlinX Serialization |
 | Async | Coroutines + Flow |
 | Background tasks | WorkManager on Android, behind an interface |
-| Testing | `kotlin.test`, Turbine, `kotlinx-coroutines-test` |
+| Testing | `kotlin.test`, Turbine, AssertK, `kotlinx-coroutines-test` |
 | UI testing | Compose Multiplatform UI test (`runComposeUiTest`) |
-
-In the catalog today: Koin, Apollo, SQLDelight, coroutines, `kotlin.test`, Turbine. The others in the table (Ktor Client, Navigation, lifecycle ViewModel, WorkManager, secure storage, Compose UI test) are not added yet: verify the version and KMP support with the `researcher` agent in the ticket that first needs them.
 
 Image loading (Coil) and logging (Kermit) are fine choices when a ticket needs them. No Retrofit, no Hilt. Never commit secrets (`.env`, keystores).
 
