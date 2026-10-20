@@ -30,6 +30,14 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.lifecycle.runtime.compose)
         }
     }
+}
+
+dependencies {
+    // Android Studio preview renderer (ComposeViewAdapter); kept off the release runtime classpath.
+    androidRuntimeClasspath(compose.uiTooling)
 }

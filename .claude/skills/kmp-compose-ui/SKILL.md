@@ -166,6 +166,8 @@ fun Modifier.roundedBackground(color: Color, radius: Dp) =
 
 The design system lives in the `composeapp.designsystem` package of `composeApp` and contains reusable Compose components, colors, theme, and typography.
 
+**Theme:** wrap the app and every preview in `AppTheme(darkTheme)` (`composeapp.designsystem`), never a bare `MaterialTheme {}`. It uses `dynamicColorScheme(darkTheme)` (`expect`/`actual`; wallpaper colors on Android 12+, `null` elsewhere) and falls back to static light/dark schemes. iOS needs its own `actual` returning `null` when enabled. The host window theme needs a `values-night` variant (`androidApp/src/main/res`) and `MainActivity` calls `enableEdgeToEdge()`, otherwise dark mode only half applies.
+
 Use slot APIs (passing `@Composable` lambdas) primarily for design system components that need flexible content areas:
 
 ```kotlin
@@ -211,7 +213,28 @@ private fun LibraryScreenPreview() {
 
 Wrap previews in the app theme so they reflect real appearance. Use realistic sample data, not empty states (unless previewing the empty state specifically).
 
-`@Preview` comes from `org.jetbrains.compose.ui.tooling.preview.Preview` (not the Android tooling package). The multiplatform `@Preview` has no `uiMode`, `showBackground`, or device parameters, so preview dark mode by passing a `darkTheme` flag to the theme wrapper (e.g. `AppTheme(darkTheme = true) { ... }`) rather than `uiMode = Configuration.UI_MODE_NIGHT_YES`.
+### Setup (once per module that has previews)
+
+```kotlin
+// composeApp/build.gradle.kts
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(compose.components.uiToolingPreview) // provides @Preview
+        }
+    }
+}
+
+dependencies {
+    // Android Studio's preview renderer needs ComposeViewAdapter at runtime.
+    // Android KMP library modules have no debugImplementation; this keeps it out of release.
+    androidRuntimeClasspath(compose.uiTooling)
+}
+```
+
+If the IDE preview fails with `ClassNotFoundException: androidx.compose.ui.tooling.ComposeViewAdapter`, the `androidRuntimeClasspath` line is missing. A Gradle build, spotless and detekt cannot catch this: after adding the first preview in a module, open it in Android Studio.
+
+Import `@Preview` from `org.jetbrains.compose.ui.tooling.preview.Preview` (not the Android tooling package). The multiplatform `@Preview` has no `uiMode`, `showBackground`, or device parameters, so preview dark mode by passing a `darkTheme` flag to the theme wrapper (e.g. `AppTheme(darkTheme = true) { ... }`) rather than `uiMode = Configuration.UI_MODE_NIGHT_YES`.
 
 ---
 

@@ -69,6 +69,7 @@ Add a new Gradle module only for a standalone concern with real complexity (mult
 - Apply plugins via `alias(libs.plugins.…)`; modules are referenced with type-safe accessors (`projects.shared`).
 - iOS targets (`iosArm64`, `iosSimulatorArm64`) are declared but gated by the Gradle property `animekmp.enableIos` (default `false`). Web comes later.
 - No convention plugins / `build-logic` yet. Introduce them when three or more modules repeat the same non-trivial config.
+- A module with `@Preview` composables needs `androidRuntimeClasspath(compose.uiTooling)` or the IDE preview fails; setup in `kmp-compose-ui` (Previews).
 - Verify versions and library support with a search before adding a dependency, and say what could not be verified.
 
 ---
