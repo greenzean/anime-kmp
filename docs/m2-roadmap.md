@@ -79,6 +79,6 @@ M2-2 needs a MAL client ID registered by the user before it starts.
 
 ## Open points
 
-- M2-2 may change the later tickets: if MAL search needs a user login, M2-10 and M2-11 depend on M2-9; if MAL offers no app type for PKCE without a secret, M2-9 needs a new plan.
+- M2-2 result (2026-10-22, [ADR 0008](decisions/0008-mal-api.md)): MAL search and details need no login, so M2-10 and M2-11 do not depend on M2-9; MAL offers an Android app type and PKCE `plain` works without a secret, so M2-9 keeps its plan, but it needs a redirect URI the app owns.
 - M2-15 keeps the local entry on a conflict until M2-20 exists; revisit the order if import is wanted earlier.
 - Account deletion (M2-8) and the privacy policy (M2-25) are required by Play, so M2-26 cannot start without them.
