@@ -60,6 +60,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0007: Client-side platform access](docs/decisions/0007-client-side-platform-access.md)
 - [0008: MAL API behaviour and how the app uses it](docs/decisions/0008-mal-api.md)
 - [0009: Anime references: a server-side ID map keyed by platform IDs](docs/decisions/0009-anime-id-map.md)
+- [0010: Server sign-in and session tokens](docs/decisions/0010-server-sign-in.md)
 
 ## Build
 
@@ -90,6 +91,8 @@ curl localhost:8080/graphql -H 'content-type: application/json' -d '{"query":"{ 
 GraphiQL is at <http://localhost:8080/graphiql>. After changing the GraphQL schema, run `./gradlew :server:test -PupdateSchema` and commit the `shared/src/commonMain/graphql/schema.graphqls` diff.
 
 Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
+
+Google sign-in needs `GOOGLE_CLIENT_ID` (the web/server OAuth client ID) and `JWT_SECRET` (at least 32 bytes, e.g. `openssl rand -base64 48`), and a database. Set both or neither; `APP_ENV=prod` requires them. Without them the server starts and the `signInNonce`, `signInWithGoogle` and `refreshSession` mutations return "Sign-in is not configured".
 
 Gradle does not read `.env`. With `DATABASE_URL`, `DATABASE_USER` and `DATABASE_PASSWORD` exported the server connects to Postgres and runs Flyway migrations on start; without them it starts without a database and the sync API is unavailable.
 

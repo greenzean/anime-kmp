@@ -71,6 +71,10 @@ Ktor, Logback and the logstash encoder versions live in `gradle/libs.versions.to
 
 graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and API-change order: `graphql-schema` skill.
 
+## Auth (ADR 0010)
+
+`auth/` holds `GoogleIdTokenVerifier`, `SessionTokens`, `AuthRepository` and `AuthService`; the GraphQL mutations are in `graphql/auth/`. `AppConfig.auth` (`GOOGLE_CLIENT_ID`, `JWT_SECRET`) is both-or-neither and required in prod. Auth failures throw `AuthFailure`: one generic client message, `extensions.code = UNAUTHENTICATED`, the reason only in the log. Tests use a fake `RSAKeyProvider` (`auth/FakeGoogleKeys.kt`), never Google's real keys.
+
 ## Not decided yet
 
-Database access is covered by the `postgres-migrations` skill. Auth (Google ID token verification, session tokens) gets its own conventions in the tickets that build them; add them here then.
+Database access is covered by the `postgres-migrations` skill. 

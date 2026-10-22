@@ -33,6 +33,8 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-animekmp}
       DATABASE_USER: ${POSTGRES_USER:-animekmp}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-animekmp}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      JWT_SECRET: ${JWT_SECRET:-}
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:
