@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -33,6 +34,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.lifecycle.runtime.compose)
+            implementation(libs.navigation.compose)
         }
     }
 }

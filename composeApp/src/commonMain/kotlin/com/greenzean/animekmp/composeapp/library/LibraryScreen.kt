@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -30,17 +31,24 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun LibraryRoot(
+    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LibraryScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
+    LibraryScreen(
+        state = state,
+        onAction = viewModel::onAction,
+        onNavigateToSettings = onNavigateToSettings,
+        modifier = modifier,
+    )
 }
 
 @Composable
 fun LibraryScreen(
     state: LibraryState,
     onAction: (LibraryAction) -> Unit,
+    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -48,7 +56,16 @@ fun LibraryScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { Text("My library", style = MaterialTheme.typography.headlineSmall) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("My library", style = MaterialTheme.typography.headlineSmall)
+                TextButton(onClick = onNavigateToSettings) { Text("Settings") }
+            }
+        }
         if (state.entries.isEmpty()) {
             item { Text("Nothing here yet. Add an anime below.") }
         }
@@ -131,6 +148,7 @@ private fun LibraryScreenPreviewContent() {
                     addable = listOf(AnimeUi(1, "Cowboy Bebop")),
                 ),
             onAction = {},
+            onNavigateToSettings = {},
         )
     }
 }
