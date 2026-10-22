@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.sync
 
 import app.cash.sqldelight.db.SqlDriver
+import com.greenzean.animekmp.shared.auth.data.InMemorySessionStore
+import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.sync.data.ServerConfig
@@ -20,6 +22,7 @@ class SyncDataModuleTest {
                     module {
                         single<SqlDriver> { createTestDriver() }
                         single { ServerConfig("http://localhost:8080/graphql") }
+                        single<SessionStore> { InMemorySessionStore() }
                     },
                     coreDataModule,
                     syncDataModule,
