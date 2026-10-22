@@ -2,7 +2,6 @@ package com.greenzean.animekmp.shared.sync
 
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
-import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.sync.data.SqlDelightSyncLocalDataSource
 import com.greenzean.animekmp.shared.sync.domain.SyncChange
@@ -37,7 +36,7 @@ class ParkedChangesTest {
 
     private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop")
 
-    private fun row() = db.listEntryQueries.selectByUserAndMalId(LOCAL_USER_ID, ANIME_ID.toLong()).executeAsOneOrNull()
+    private fun row() = db.listEntryQueries.selectByMalId(ANIME_ID.toLong()).executeAsOneOrNull()
 
     private fun parkedCount() =
         db.parkedChangeQueries

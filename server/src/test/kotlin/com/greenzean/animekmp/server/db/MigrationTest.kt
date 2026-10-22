@@ -3,6 +3,7 @@ package com.greenzean.animekmp.server.db
 import com.greenzean.animekmp.server.DatabaseConfig
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -75,7 +76,7 @@ class MigrationTest {
             val animeId = newAnime()
             ListEntryTable.insert {
                 it[id] = entryId
-                it[userId] = Uuid.random()
+                it[userId] = newUser(Uuid.random().toString())
                 it[this.animeId] = animeId
                 it[status] = "WATCHING"
                 it[updatedAt] = OffsetDateTime.now()
@@ -93,7 +94,7 @@ class MigrationTest {
                 val animeId = newAnime()
                 ListEntryTable.insert {
                     it[id] = Uuid.random()
-                    it[userId] = Uuid.random()
+                    it[userId] = newUser(Uuid.random().toString())
                     it[this.animeId] = animeId
                     it[status] = "BOGUS"
                     it[updatedAt] = OffsetDateTime.now()
@@ -108,7 +109,7 @@ class MigrationTest {
         transaction(db) {
             ListEntryTable.insert {
                 it[id] = entryId
-                it[userId] = Uuid.random()
+                it[userId] = newUser(Uuid.random().toString())
                 it[animeId] = newAnime()
                 it[status] = "COMPLETED"
                 it[updatedAt] = OffsetDateTime.now()
@@ -124,7 +125,7 @@ class MigrationTest {
             transaction(db) {
                 ListEntryTable.insert {
                     it[id] = Uuid.random()
-                    it[userId] = Uuid.random()
+                    it[userId] = newUser(Uuid.random().toString())
                     it[this.animeId] = newAnime()
                     it[status] = "WATCHING"
                     it[updatedAt] = OffsetDateTime.now()
@@ -184,5 +185,29 @@ class MigrationTest {
     @Test
     fun refreshTokenNeedsAnExistingUser() {
         assertFailsWith<SQLException> { insertRefresh(Uuid.random(), byteArrayOf(9)) }
+    }
+
+    private fun insertEntry(user: Uuid) =
+        transaction(db) {
+            ListEntryTable.insert {
+                it[id] = Uuid.random()
+                it[userId] = user
+                it[animeId] = newAnime()
+                it[status] = "WATCHING"
+                it[updatedAt] = OffsetDateTime.now()
+            }
+        }
+
+    @Test
+    fun listEntryNeedsAnExistingUser() {
+        assertFailsWith<SQLException> { insertEntry(Uuid.random()) }
+    }
+
+    @Test
+    fun deletingAUserDeletesTheirEntries() {
+        val user = newUser("sub-1")
+        insertEntry(user)
+        transaction(db) { AppUserTable.deleteWhere { AppUserTable.id eq user } }
+        assertEquals(0, transaction(db) { ListEntryTable.selectAll().count() }.toInt())
     }
 }

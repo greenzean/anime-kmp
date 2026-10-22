@@ -4,7 +4,6 @@ import app.cash.turbine.test
 import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
-import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -122,7 +121,7 @@ class SqlDelightLibraryDataSourceTest {
 
             repository.setStatus(bebop, WatchStatus.PLAN_TO_WATCH)
 
-            val row = db.listEntryQueries.selectByUserAndMalId(LOCAL_USER_ID, bebop.toLong()).executeAsOne()
+            val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
             assertEquals(null, row.deleted_at)
             assertEquals("PLAN_TO_WATCH", row.status)
         }
@@ -133,8 +132,8 @@ class SqlDelightLibraryDataSourceTest {
             // Plain INSERT: insertPending uses OR IGNORE, which would swallow the CHECK violation.
             driver.execute(
                 null,
-                "INSERT INTO list_entry (id, user_id, mal_id, status, updated_at) " +
-                    "VALUES ('id', 'u', $bebop, 'BINGING', 0)",
+                "INSERT INTO list_entry (id, mal_id, status, updated_at) " +
+                    "VALUES ('id', $bebop, 'BINGING', 0)",
                 0,
             )
         }

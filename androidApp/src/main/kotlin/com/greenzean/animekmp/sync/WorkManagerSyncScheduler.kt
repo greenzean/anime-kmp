@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.sync.domain.SyncEngine
 import com.greenzean.animekmp.shared.sync.domain.SyncResult
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
@@ -47,8 +48,18 @@ class SyncWorker(
     private val engine: SyncEngine by inject()
 
     override suspend fun doWork(): Result =
-        when (engine.sync()) {
-            is SyncResult.Success -> Result.success()
-            is SyncResult.Failure -> Result.retry() // linear backoff set in requestSync
+        when (val result = engine.sync()) {
+            is SyncResult.Success -> {
+                Result.success()
+            }
+
+            // Signed out or session ended: retrying cannot help. Signing in requests a new sync.
+            is SyncResult.Failure -> {
+                if (result.error == DataError.Network.UNAUTHORIZED) {
+                    Result.failure()
+                } else {
+                    Result.retry() // linear backoff set in requestSync
+                }
+            }
         }
 }

@@ -1,15 +1,19 @@
 package com.greenzean.animekmp.server.sync
 
 import com.greenzean.animekmp.server.DatabaseConfig
+import com.greenzean.animekmp.server.auth.SessionTokens
 import com.greenzean.animekmp.server.db.AnimeTable
+import com.greenzean.animekmp.server.db.AppUserTable
 import com.greenzean.animekmp.server.db.ListEntryTable
 import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.module
 import io.ktor.client.HttpClient
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
@@ -41,6 +45,7 @@ import kotlin.test.assertTrue
 import kotlin.uuid.toKotlinUuid
 
 private const val CHANGE_FIELDS = "id malId status updatedAt deletedAt"
+private const val SECRET = "0123456789abcdef0123456789abcdef"
 
 /** One Postgres container for the whole class; the container is reaped by Testcontainers when the JVM exits. */
 private object SharedDb {
@@ -60,11 +65,22 @@ class SyncApiTest {
 
     @BeforeTest
     fun setUp() {
-        transaction(db) { exec("TRUNCATE list_entry") }
+        transaction(db) {
+            exec("TRUNCATE list_entry, app_user CASCADE")
+            for ((id, sub) in listOf(userA to "sub-a", userB to "sub-b")) {
+                AppUserTable.insert {
+                    it[AppUserTable.id] = id.toKotlinUuid()
+                    it[googleSub] = sub
+                }
+            }
+        }
     }
 
     // Fixed "now" so test timestamps are never in the future relative to the server (future timestamps are rejected).
     private val clock = Clock.fixed(Instant.parse("2026-10-20T00:00:00Z"), ZoneOffset.UTC)
+    private val tokens = SessionTokens(SECRET, clock)
+    private val userA = UUID.randomUUID()
+    private val userB = UUID.randomUUID()
     private val bebop = 1
     private val fma = 5114
 
@@ -78,22 +94,35 @@ class SyncApiTest {
         "\"$it\""
     } ?: "null"}}"""
 
-    private suspend fun HttpClient.gql(query: String): JsonObject {
+    private fun bearer(user: UUID) = tokens.issueAccess(user).token
+
+    /** Signed in as user A unless `token` says otherwise; null sends no Authorization header. */
+    private suspend fun HttpClient.gql(
+        query: String,
+        token: String? = bearer(userA),
+    ): JsonObject {
         val body = buildJsonObject { put("query", query) }.toString()
         val text =
             post("/graphql") {
                 contentType(ContentType.Application.Json)
+                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
                 setBody(body)
             }.bodyAsText()
         return Json.parseToJsonElement(text).jsonObject
     }
 
-    private suspend fun HttpClient.push(vararg changes: String): JsonObject {
+    private suspend fun HttpClient.push(vararg changes: String): JsonObject = pushAs(userA, *changes)
+
+    private suspend fun HttpClient.pushAs(
+        user: UUID,
+        vararg changes: String,
+    ): JsonObject {
         val r =
             gql(
                 """mutation { pushChanges(changes: [${changes.joinToString(
                     ",",
                 )}]) { results { id outcome entryId } } }""",
+                bearer(user),
             )
         return (r["data"] ?: error("push failed: $r")).jsonObject["pushChanges"]!!.jsonObject
     }
@@ -101,10 +130,11 @@ class SyncApiTest {
     private suspend fun HttpClient.pull(
         cursor: String?,
         limit: Int? = null,
+        user: UUID = userA,
     ): JsonObject {
         val args = listOfNotNull(cursor?.let { "cursor:\"$it\"" }, limit?.let { "limit:$it" }).joinToString(",")
         val field = if (args.isEmpty()) "changesSince" else "changesSince($args)"
-        val r = gql("{ $field { nextCursor hasMore changes { $CHANGE_FIELDS } } }")
+        val r = gql("{ $field { nextCursor hasMore changes { $CHANGE_FIELDS } } }", bearer(user))
         return (r["data"] ?: error("pull failed: $r")).jsonObject["changesSince"]!!.jsonObject
     }
 
@@ -117,7 +147,7 @@ class SyncApiTest {
 
     private fun sync(block: suspend ApplicationTestBuilder.() -> Unit) =
         testApplication {
-            application { module(db, clock) }
+            application { module(db, clock, tokens = tokens) }
             block()
         }
 
@@ -253,8 +283,6 @@ class SyncApiTest {
         val repo = SyncRepository(db, clock)
         val shared = 424242
         val at = Instant.parse("2026-10-19T12:00:00Z")
-        val userA = UUID.randomUUID()
-        val userB = UUID.randomUUID()
         repo.push(userA, listOf(EntryChange(UUID.randomUUID(), shared, "WATCHING", at, null)))
         repo.push(userB, listOf(EntryChange(UUID.randomUUID(), shared, "COMPLETED", at, null)))
         assertEquals(1L, animeRowsFor(shared))
@@ -294,12 +322,12 @@ class SyncApiTest {
         val change = EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null)
         val outcomes =
             (1..8)
-                .map { thread { repo.push(DevUser.id, listOf(change)) } }
+                .map { thread { repo.push(userA, listOf(change)) } }
                 .map { it.get() }
                 .map { it.single().outcome }
         assertEquals(1, outcomes.count { it == PushOutcome.APPLIED })
         assertEquals(7, outcomes.count { it == PushOutcome.IGNORED_STALE })
-        assertEquals(1, repo.changesSince(DevUser.id, null, 10).changes.size)
+        assertEquals(1, repo.changesSince(userA, null, 10).changes.size)
     }
 
     @Test
@@ -310,12 +338,12 @@ class SyncApiTest {
                 .map {
                     val change =
                         EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null)
-                    thread { repo.push(DevUser.id, listOf(change)) }
+                    thread { repo.push(userA, listOf(change)) }
                 }.map { it.get().single() }
         assertEquals(1, results.count { it.outcome == PushOutcome.APPLIED })
         assertEquals(7, results.count { it.outcome == PushOutcome.IGNORED_STALE })
         assertEquals(1, results.map { it.entryId }.toSet().size)
-        assertEquals(1, repo.changesSince(DevUser.id, null, 10).changes.size)
+        assertEquals(1, repo.changesSince(userA, null, 10).changes.size)
     }
 
     @Test
@@ -410,7 +438,7 @@ class SyncApiTest {
             transaction(db) {
                 ListEntryTable.insert {
                     it[ListEntryTable.id] = foreign.toKotlinUuid()
-                    it[userId] = UUID.randomUUID().toKotlinUuid()
+                    it[userId] = userB.toKotlinUuid()
                     it[animeId] = AnimeTable.selectAll().where { AnimeTable.malId eq fma }.single()[AnimeTable.id]
                     it[status] = "WATCHING"
                     it[updatedAt] = Instant.parse("2026-10-19T10:00:00Z").atOffset(ZoneOffset.UTC)
@@ -455,13 +483,120 @@ class SyncApiTest {
         }
 
     @Test
+    fun usersNeverSeeEachOthersEntries() =
+        sync {
+            val idA = UUID.randomUUID()
+            client.pushAs(userA, change(idA, bebop, "WATCHING", "2026-10-19T12:00:00Z"))
+            assertEquals(0, client.pull(null, user = userB).changes().size)
+
+            val idB = UUID.randomUUID()
+            client.pushAs(userB, change(idB, fma, "COMPLETED", "2026-10-19T12:00:00Z"))
+            assertEquals(listOf(idA.toString()), client.pull(null, user = userA).changes().map { it.str("id") })
+            assertEquals(listOf(idB.toString()), client.pull(null, user = userB).changes().map { it.str("id") })
+        }
+
+    @Test
+    fun theSameAnimeIsSeparatePerUser() =
+        sync {
+            val idA = UUID.randomUUID()
+            val idB = UUID.randomUUID()
+            client.pushAs(userA, change(idA, bebop, "WATCHING", "2026-10-19T12:00:00Z"))
+            val pushedB = client.pushAs(userB, change(idB, bebop, "DROPPED", "2026-10-19T13:00:00Z"))
+            assertEquals(listOf("APPLIED"), pushedB.outcomes())
+            assertEquals(
+                "WATCHING",
+                client
+                    .pull(null, user = userA)
+                    .changes()
+                    .single()
+                    .str("status"),
+            )
+            assertEquals(
+                "DROPPED",
+                client
+                    .pull(null, user = userB)
+                    .changes()
+                    .single()
+                    .str("status"),
+            )
+        }
+
+    @Test
+    fun pushingAnotherUsersEntryIdTouchesNothing() =
+        sync {
+            val idA = UUID.randomUUID()
+            client.pushAs(userA, change(idA, bebop, "WATCHING", "2026-10-19T12:00:00Z"))
+            val hijack = client.pushAs(userB, change(idA, bebop, "DROPPED", "2026-10-19T13:00:00Z"))
+            assertEquals(listOf("REJECTED_INVALID"), hijack.outcomes())
+            assertEquals(
+                "WATCHING",
+                client
+                    .pull(null, user = userA)
+                    .changes()
+                    .single()
+                    .str("status"),
+            )
+            assertEquals(0, client.pull(null, user = userB).changes().size)
+        }
+
+    @Test
+    fun unauthenticatedCallsAreRejectedOnBothOperations() =
+        sync {
+            val expired = SessionTokens(SECRET, Clock.fixed(Instant.parse("2026-10-19T00:00:00Z"), ZoneOffset.UTC))
+            val otherSecret = SessionTokens("fedcba9876543210fedcba9876543210", clock)
+            val refreshToken = tokens.newRefreshToken().token
+            val badTokens =
+                listOf(
+                    null,
+                    "garbage",
+                    expired.issueAccess(userA).token,
+                    otherSecret.issueAccess(userA).token,
+                    refreshToken,
+                )
+            val input = change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z")
+            val queries =
+                listOf(
+                    "{ changesSince { nextCursor } }",
+                    "mutation { pushChanges(changes: [$input]) { results { id } } }",
+                )
+            for (token in badTokens) {
+                for (query in queries) {
+                    val error =
+                        client
+                            .gql(query, token)["errors"]!!
+                            .jsonArray
+                            .single()
+                            .jsonObject
+                    assertEquals("UNAUTHENTICATED", error["extensions"]!!.jsonObject.str("code"), "token $token")
+                }
+            }
+            assertEquals(0, transaction(db) { ListEntryTable.selectAll().count() }.toInt())
+        }
+
+    @Test
+    fun withoutAuthConfigSyncIsRejected() =
+        testApplication {
+            application { module(db, clock) }
+            val r = client.gql("{ changesSince { nextCursor } }", bearer(userA))
+            val error = r["errors"]!!.jsonArray.single().jsonObject
+            assertEquals("UNAUTHENTICATED", error["extensions"]!!.jsonObject.str("code"))
+        }
+
+    @Test
+    fun operationsWithoutAUserStayOpenWithoutAToken() =
+        sync {
+            val r = client.gql("{ hello }", null)
+            assertTrue(!r.containsKey("errors"), r.toString())
+        }
+
+    @Test
     fun repositoryTruncatesTimestampsSoReplaysAreIdempotent() {
         val repo = SyncRepository(db, clock)
         val change =
             EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00.123456789Z"), null)
-        assertEquals(PushOutcome.APPLIED, repo.push(DevUser.id, listOf(change)).single().outcome)
-        assertEquals(PushOutcome.IGNORED_STALE, repo.push(DevUser.id, listOf(change)).single().outcome)
-        val stored = repo.changesSince(DevUser.id, null, 10).changes.single()
+        assertEquals(PushOutcome.APPLIED, repo.push(userA, listOf(change)).single().outcome)
+        assertEquals(PushOutcome.IGNORED_STALE, repo.push(userA, listOf(change)).single().outcome)
+        val stored = repo.changesSince(userA, null, 10).changes.single()
         assertEquals(Instant.parse("2026-10-19T12:00:00.123Z"), stored.updatedAt)
     }
 

@@ -6,7 +6,6 @@ import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.library.data.SqlDelightLibraryDataSource
-import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.sync.data.SqlDelightSyncLocalDataSource
 import com.greenzean.animekmp.shared.sync.domain.ChangesPage
@@ -39,7 +38,7 @@ class SyncEngineTest {
 
     private fun row(malId: Int) =
         db.listEntryQueries
-            .selectByUserAndMalId(LOCAL_USER_ID, malId.toLong())
+            .selectByMalId(malId.toLong())
             .executeAsOneOrNull()
 
     private fun pulled(
@@ -143,7 +142,7 @@ class SyncEngineTest {
         runTest {
             library.setStatus(1, WatchStatus.WATCHING)
             api.onPush = {
-                db.listEntryQueries.updatePending("COMPLETED", row(1)!!.updated_at + 1, LOCAL_USER_ID, 1)
+                db.listEntryQueries.updatePending("COMPLETED", row(1)!!.updated_at + 1, 1)
             }
 
             engine.sync()

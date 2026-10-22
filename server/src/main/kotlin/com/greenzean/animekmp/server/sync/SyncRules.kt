@@ -1,7 +1,6 @@
 package com.greenzean.animekmp.server.sync
 
 import java.time.Instant
-import java.util.UUID
 
 enum class PushOutcome {
     APPLIED,
@@ -25,9 +24,4 @@ object Cursor {
     }
 
     fun encode(seq: Long): String = seq.toString()
-}
-
-/** Placeholder until auth lands. Mirrors `LOCAL_USER_ID` in shared; auth replaces this. */
-object DevUser {
-    val id: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001")
 }

@@ -7,6 +7,7 @@ import com.apollographql.apollo.api.Optional
 import com.apollographql.apollo.exception.ApolloException
 import com.apollographql.apollo.exception.ApolloHttpException
 import com.apollographql.apollo.exception.ApolloNetworkException
+import com.greenzean.animekmp.shared.auth.domain.SessionManager
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.graphql.ChangesSinceQuery
@@ -21,25 +22,37 @@ import com.greenzean.animekmp.shared.sync.domain.SyncApi
 import com.greenzean.animekmp.shared.sync.domain.SyncChange
 import com.greenzean.animekmp.shared.graphql.type.PushOutcome as GqlPushOutcome
 
+/**
+ * Every call runs as the signed-in user: the access token goes in the Authorization header. A rejected token is
+ * renewed once and the call retried; with no session nothing is sent and the result is UNAUTHORIZED.
+ */
 class ApolloSyncApi(
     private val client: ApolloClient,
+    private val sessions: SessionManager,
 ) : SyncApi {
     override suspend fun push(changes: List<SyncChange>): Result<List<PushResult>, DataError.Network> =
-        client
-            .mutation(PushChangesMutation(changes.map { it.toInput() }))
-            .execute()
-            .toResult { data ->
+        authorized { token ->
+            client
+                .mutation(PushChangesMutation(changes.map { it.toInput() }))
+                .addHttpHeader(AUTHORIZATION, "Bearer $token")
+                .execute()
+        }.flatMap { response ->
+            response.toResult { data ->
                 data.pushChanges.results.map { PushResult(it.id, it.outcome.toDomain(), it.entryId) }
             }
+        }
 
     override suspend fun pull(
         cursor: String?,
         limit: Int,
     ): Result<ChangesPage, DataError.Network> =
-        client
-            .query(ChangesSinceQuery(Optional.presentIfNotNull(cursor), Optional.Present(limit)))
-            .execute()
-            .toResult { data ->
+        authorized { token ->
+            client
+                .query(ChangesSinceQuery(Optional.presentIfNotNull(cursor), Optional.Present(limit)))
+                .addHttpHeader(AUTHORIZATION, "Bearer $token")
+                .execute()
+        }.flatMap { response ->
+            response.toResult { data ->
                 val page = data.changesSince
                 ChangesPage(
                     nextCursor = page.nextCursor,
@@ -56,7 +69,35 @@ class ApolloSyncApi(
                         },
                 )
             }
+        }
+
+    private suspend fun <D : Operation.Data> authorized(
+        call: suspend (token: String) -> ApolloResponse<D>,
+    ): Result<ApolloResponse<D>, DataError.Network> =
+        sessions.accessToken().flatMap { token ->
+            val response = call(token)
+            if (response.isUnauthenticated()) {
+                sessions.renewAfterRejection(token).flatMap { renewed -> Result.Success(call(renewed)) }
+            } else {
+                Result.Success(response)
+            }
+        }
 }
+
+private const val AUTHORIZATION = "Authorization"
+private const val UNAUTHENTICATED = "UNAUTHENTICATED"
+
+private inline fun <T, R> Result<T, DataError.Network>.flatMap(
+    next: (T) -> Result<R, DataError.Network>,
+): Result<R, DataError.Network> =
+    when (this) {
+        is Result.Error -> this
+        is Result.Success -> next(data)
+    }
+
+/** The server's typed auth error (`extensions.code`); it comes back as HTTP 200 with a GraphQL error. */
+internal fun ApolloResponse<*>.isUnauthenticated(): Boolean =
+    errors?.any { it.extensions?.get("code") == UNAUTHENTICATED } == true
 
 private fun SyncChange.toInput() =
     ListEntryChangeInput(
@@ -83,6 +124,7 @@ internal inline fun <D : Operation.Data, T> ApolloResponse<D>.toResult(map: (D) 
     val data = data
     return when {
         exception != null -> Result.Error(exception!!.toDataError())
+        isUnauthenticated() -> Result.Error(DataError.Network.UNAUTHORIZED)
         hasErrors() -> Result.Error(DataError.Network.SERVER_ERROR)
         data == null -> Result.Error(DataError.Network.UNKNOWN)
         else -> Result.Success(map(data))
