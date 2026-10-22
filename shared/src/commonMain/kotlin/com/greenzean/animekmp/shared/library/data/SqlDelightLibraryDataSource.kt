@@ -4,7 +4,6 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.library.domain.Anime
-import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
@@ -33,7 +32,7 @@ class SqlDelightLibraryDataSource(
 
     override fun observeLibrary(): Flow<List<LibraryEntry>> =
         db.listEntryQueries
-            .selectActiveWithAnime(LOCAL_USER_ID)
+            .selectActiveWithAnime()
             .asFlow()
             .mapToList(dispatcher)
             .map { rows -> rows.map { it.toLibraryEntry() } }
@@ -44,8 +43,8 @@ class SqlDelightLibraryDataSource(
     ) = withContext(dispatcher) {
         val now = clock.now().toEpochMilliseconds()
         db.transaction {
-            db.listEntryQueries.updatePending(status.name, now, LOCAL_USER_ID, malId.toLong())
-            db.listEntryQueries.insertPending(Uuid.random().toString(), LOCAL_USER_ID, malId.toLong(), status.name, now)
+            db.listEntryQueries.updatePending(status.name, now, malId.toLong())
+            db.listEntryQueries.insertPending(Uuid.random().toString(), malId.toLong(), status.name, now)
         }
     }
 
@@ -53,7 +52,6 @@ class SqlDelightLibraryDataSource(
         withContext(dispatcher) {
             db.listEntryQueries.softDelete(
                 now = clock.now().toEpochMilliseconds(),
-                userId = LOCAL_USER_ID,
                 malId = malId.toLong(),
             )
             Unit

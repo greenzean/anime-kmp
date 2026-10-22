@@ -3,7 +3,6 @@ package com.greenzean.animekmp.shared.sync.data
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.data.db.List_entry
 import com.greenzean.animekmp.shared.core.data.db.Parked_change
-import com.greenzean.animekmp.shared.library.domain.LOCAL_USER_ID
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.sync.domain.SyncChange
 import com.greenzean.animekmp.shared.sync.domain.SyncLocalDataSource
@@ -87,19 +86,18 @@ class SqlDelightSyncLocalDataSource(
     }
 
     /**
-     * Merge rule from ADR 0006: one row per (user, anime). Adopt the server id first, then apply the
+     * Merge rule from ADR 0006: one row per anime. Adopt the server id first, then apply the
      * pulled row only if local is SYNCED or older; a newer (or equal) PENDING edit is never overwritten.
      * The anime must already be in the local catalog (FK).
      */
     private fun applyPulled(change: SyncChange): Boolean {
-        val local = listEntries.selectByUserAndMalId(LOCAL_USER_ID, change.malId.toLong()).executeAsOneOrNull()
+        val local = listEntries.selectByMalId(change.malId.toLong()).executeAsOneOrNull()
         return if (local == null) insertPulled(change) else mergePulled(change, local)
     }
 
     private fun insertPulled(change: SyncChange): Boolean {
         listEntries.insertPulled(
             change.id,
-            LOCAL_USER_ID,
             change.malId.toLong(),
             change.status.name,
             change.updatedAt.toEpochMilliseconds(),
