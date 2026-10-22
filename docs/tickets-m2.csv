@@ -31,3 +31,134 @@ Depends on: M2-0 (ADR 0007).
 Acceptance: `codebase-overview`: `shared/` lists the MAL client and says only the app talks to MAL; `server/` says it syncs libraries between a user's devices, never calls MAL and stores no platform tokens, platform user data or anime metadata; `docs/` mentions `milestone2-mvp.md`. `kmp-module-structure`: the module tree shows the MAL client in `shared/` and no MAL adapter in `server/`. `ktor-server-conventions`: the intro rule matches ADR 0007, and the not-decided-yet note names auth (Google ID token verification, session tokens) instead of the MAL adapter. `grep -rn 'MAL adapter\|talks to MAL' .claude/` finds no old-rule text.
 Out of scope: agents (M2-0a, M2-0b), other skills.
 Skill: codebase-overview, kmp-module-structure, ktor-server-conventions."
+M2-1,Write the M2 roadmap,chore,M2,"chore,phase-1",sonnet,docs,"Goal: the MVP decisions D1-D24 are split into ordered tickets with dependencies.
+Acceptance: `docs/m2-roadmap.md` lists the tickets in order with dependencies and the D-numbers each covers; every D-number maps to at least one ticket; the tickets are rows in `docs/tickets-m2.csv`; relative links resolve.
+Out of scope: creating the GitHub issues, any code.
+Skill: ticket-workflow."
+M2-2,Spike: MAL API with a real client ID,spike,M2,"spike,opus-plan,phase-1",opusplan,"shared (throwaway client), docs","Goal: replace the unconfirmed MAL API points with tested facts. Time-box 1 to 2 days.
+Depends on: a MAL client ID registered by the user.
+Acceptance: tested with a real client ID: search and details with only `X-MAL-CLIENT-ID`; the `recommendations` field on details (shape, size); `/anime/suggestions` response shape and the empty list for new users; rate-limit behaviour and the 403 block; which app type MAL offers when registering and whether PKCE `plain` works without a secret; list read and write (`/users/@me/animelist`); decision in `docs/decisions/0008-mal-api.md` (caching, backoff, fields to request); `docs/milestone2-mvp.md` findings updated.
+Out of scope: production MAL client code.
+Covers: D5, D10, D11, D13, D14. Skill: adr."
+M2-3,Server stores IDs only: drop the dev catalog,feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared (sync), docs","Goal: the server holds library entries and anime IDs, not anime details (ADR 0007).
+Depends on: M2-2.
+Acceptance: decision on entries referencing `mal_id` directly or the `anime` table becoming an ID map, written in an ADR; Flyway migration drops `title` and any other anime detail from the server; the debug dev catalog is removed; the SDL is regenerated and committed; the client sync path follows the new shape; sync tests and the Testcontainers migration test pass; existing local libraries still sync.
+Out of scope: accounts (M2-4).
+Covers: D2, D19. Skills: sync-protocol, postgres-migrations, graphql-schema, adr."
+M2-4,Server: Google sign-in and session tokens,feature,M2,"feature,opus-plan,phase-1",opusplan,server,"Goal: the server accepts a Google ID token and issues its own session token.
+Depends on: M2-3.
+Acceptance: `signInWithGoogle` mutation; ID token checked for signature (Google's rotating keys), `aud` = web client ID, `iss`, `exp` and nonce; users table keyed on `sub`, no email used as the key; session token (short-lived access plus refresh) signed with a secret from env; token and client ID config in `.env.example`; tests with a fake key set for each check that must fail; SDL committed.
+Out of scope: the Android sign-in UI (M2-6), authorizing sync (M2-5).
+Covers: D24. Skills: graphql-schema, ktor-server-conventions, postgres-migrations."
+M2-5,Server: authorize sync per user,feature,M2,"feature,phase-1",sonnet,"server, shared (sync)","Goal: every sync operation runs as the signed-in user; the hardcoded dev user is gone.
+Depends on: M2-4.
+Acceptance: `pushChanges` and `changesSince` read the user ID from the session token, never from input; entries of one user are never visible to another (tests with two users); unauthenticated calls are rejected with a typed error; the client sends the session token and refreshes it on expiry; dev user removed from server and client.
+Out of scope: the sign-in UI (M2-6).
+Covers: D2, D24. Skills: sync-protocol, graphql-schema."
+M2-6,App: Google sign-in and optional account,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, composeApp, androidApp","Goal: the user can sign in with Google; the app still works fully without an account.
+Depends on: M2-4.
+Acceptance: Credential Manager with the Sign in with Google library behind an interface (`expect/actual` or Android-only implementation in `androidApp`); versions rechecked on Maven; ID token sent to `signInWithGoogle`; session token in Keystore-backed secure storage; account state in a view model (signed out / signed in); sign-in screen reachable from settings, never required to use the app; view model tests with fakes.
+Out of scope: merging the local library (M2-7), account deletion (M2-8).
+Covers: D1, D24. Skills: kmp-presentation-mvi, kmp-data-layer, kmp-di-koin."
+M2-7,First login merge and logout choice,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: signing in does not lose data and signing out lets the user decide.
+Depends on: M2-5, M2-6.
+Acceptance: on first login on a device with a library, its entries are merged into the account automatically (pending changes pushed, account entries pulled, last-write-wins as in ADR 0006); on logout the app asks whether to keep or delete the library on the device; tests for both paths including a library with entries on two devices.
+Out of scope: MAL linking (M2-21).
+Covers: D18, D20. Skill: sync-protocol."
+M2-8,Account deletion in the app and on the web,feature,M2,"feature,phase-1",sonnet,"server, shared, composeApp, docs","Goal: meet the Play account-deletion policy.
+Depends on: M2-5, M2-6.
+Acceptance: `deleteAccount` mutation removes the user, entries and tombstones in one transaction; in-app delete flow with confirmation; a public web page (served by the server) explains and starts deletion; declared in the Data safety form notes; data kept for security or legal reasons is listed; server test proves nothing remains for the user.
+Out of scope: the Play listing (M2-26).
+Covers: D22. Skills: graphql-schema, postgres-migrations."
+M2-9,App: MAL login with PKCE,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, androidApp","Goal: the user can log in to MAL on this device and the app keeps the tokens safely.
+Depends on: M2-2.
+Acceptance: authorization code with PKCE (`plain`), no client secret; browser redirect handled behind an interface; access and refresh tokens in Keystore-backed storage, never sent to our server; refresh on expiry; logout deletes the tokens; MAL client ID read from config (public); typed errors; tests with a fake MAL server (Ktor MockEngine).
+Out of scope: using the tokens for list sync (M2-17, M2-19).
+Covers: D1, D3, D4. Skills: kmp-data-layer, kmp-error-handling, kmp-di-koin."
+M2-10,App: MAL search and details with cache and backoff,feature,M2,"feature,phase-1",sonnet,shared,"Goal: search for anime and load details through MAL, cached on the device.
+Depends on: M2-2.
+Acceptance: Ktor MAL client with the `X-MAL-CLIENT-ID` header; search and details calls with the fields chosen in ADR 0008; results cached in SQLDelight with an expiry (client-side caching only as long as reasonably necessary); backoff and stop on HTTP 403; offline returns a typed `NoConnection` error; tests with MockEngine and an in-memory database.
+Out of scope: screens (M2-11).
+Covers: D5, D10. Skills: kmp-data-layer, kmp-error-handling."
+M2-11,Search for new anime screen,feature,M2,"feature,phase-1",sonnet,"shared (view model), composeApp","Goal: the user searches MAL and adds an anime to their library.
+Depends on: M2-10, M2-14.
+Acceptance: search screen with debounce, results with image, title and add action; offline shows that searching for new anime needs a connection; adding writes to the local database only; previews and accessibility labels; view model tests.
+Out of scope: library search (M2-13).
+Covers: D10. Skills: kmp-presentation-mvi, kmp-compose-ui, kmp-navigation."
+M2-12,Personal suggestions screen,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: show MAL's personal suggestions for the logged-in user.
+Depends on: M2-9, M2-10.
+Acceptance: `GET /anime/suggestions` call and screen; without a MAL login, or with an empty list, the screen explains why and shows nothing; items can be added to the library; view model tests for logged out, empty, error and success.
+Out of scope: per-anime recommendations (future features).
+Covers: D11. Skills: kmp-presentation-mvi, kmp-compose-ui."
+M2-13,"Library search, filter and sort on the device",feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: find entries in the user's own library, offline.
+Acceptance: SQLDelight queries for title search, status filter and sort by title, score or last updated; UI on the library screen; tombstoned entries never shown; tests with an in-memory database.
+Out of scope: filters by genre, year or type (future features).
+Covers: D9. Skills: kmp-data-layer, kmp-presentation-mvi."
+M2-14,Library entry: five statuses and score 1-10,feature,M2,"feature,phase-1",sonnet,"shared, composeApp, server","Goal: the entry model matches MAL: status, episode progress and score.
+Acceptance: statuses Watching, Completed, On hold, Dropped, Plan to watch (map to MAL's values) in the local database, sync and server; score 1-10 (or unset) validated on the client and in `pushChanges`; edit UI for status, progress and score; migrations for existing data; SDL committed; tests.
+Out of scope: dates, rewatch count, notes (future features).
+Covers: D6, D7, D12. Skills: sync-protocol, graphql-schema, postgres-migrations."
+M2-15,Import a MAL export file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: the user imports an exported MAL list from a file, no login needed.
+Depends on: M2-14.
+Acceptance: file picker behind an interface; parser for MAL's XML export (including gzip) with tests on a sample file; entries merged into the local library; entries that already exist and differ are reported, handled by the conflict feature once M2-20 lands (until then the local entry is kept); summary of added, skipped and invalid entries.
+Out of scope: API import (M2-17).
+Covers: D16. Skills: kmp-data-layer, kmp-testing."
+M2-16,Export the library as a MAL file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: the user saves their library in MAL's export format.
+Depends on: M2-14.
+Acceptance: writer for MAL's XML format; save through a platform file API behind an interface; round trip test (export, import, same entries); only this format.
+Out of scope: CSV or JSON export (future features).
+Covers: D16, D23. Skill: kmp-data-layer."
+M2-17,Import the library from MAL by login,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: a logged-in user pulls their MAL list into the app.
+Depends on: M2-9, M2-14, M2-18.
+Acceptance: paged read of `/users/@me/animelist` respecting backoff; mapped to local entries; entries that differ go to the conflict flow from M2-18; progress shown; resumable after a failure; tests with MockEngine.
+Out of scope: automatic ongoing sync (M2-19, M2-20).
+Covers: D16. Skills: kmp-data-layer, kmp-error-handling."
+M2-18,Design: user decides on conflicts,spike,M2,"spike,opus-plan,phase-1",opusplan,"docs, shared (sketch)","Goal: a written design for D15 before sync code depends on it. Time-box 1 day.
+Depends on: M2-2.
+Acceptance: ADR 0009 states what counts as a conflict (same anime, different status, progress or score; timestamps available from MAL), what the user can choose (keep app, keep MAL, per entry or for all), where unresolved conflicts are stored, how this interacts with last-write-wins on our server and with MAL linked on one device only; UI sketch; test cases listed.
+Out of scope: implementation (M2-20).
+Covers: D15. Skills: adr, sync-protocol."
+M2-19,Send app changes to MAL automatically,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, androidApp","Goal: every change made on this device reaches MAL when the user is logged in to MAL.
+Depends on: M2-9, M2-14.
+Acceptance: outbox of changes to push to MAL in SQLDelight; sender runs as background work behind an interface (WorkManager on Android) with connectivity constraint and retry with backoff; only changes made on this device are sent, not changes pulled from our server (D17); idempotent; failures keep the change queued; tests with fakes for the scheduler and MAL client.
+Out of scope: pulling MAL changes (M2-20).
+Covers: D13, D17. Skills: kmp-data-layer, sync-protocol."
+M2-20,Two-way MAL sync with conflict choice,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, androidApp, composeApp","Goal: changes made on MAL's website come into the app; conflicts are decided by the user.
+Depends on: M2-18, M2-19.
+Acceptance: periodic background pull of the MAL list; differences applied automatically when there is no conflict; conflicts shown and resolved as designed in ADR 0009; resolved choice is synced to MAL and our server; tests for no conflict, conflict kept local, conflict kept MAL, and offline.
+Out of scope: devices without MAL (M2-21).
+Covers: D14, D15. Skills: sync-protocol, kmp-presentation-mvi."
+M2-21,MAL on several devices,feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","Goal: the account knows MAL is linked, and a device without MAL asks the user what to do.
+Depends on: M2-5, M2-9, M2-20.
+Acceptance: server stores only the platform name (""MAL"") as linked for the user, no username or ID (D19); device with synced entries but no MAL login offers: log in to MAL, or keep the library local to our account; changes pulled from our server are never pushed to MAL by that device (D17); server and client tests; SDL committed.
+Out of scope: other platforms.
+Covers: D15, D17, D19. Skills: sync-protocol, graphql-schema, postgres-migrations."
+M2-22,Server hardening: query limits and input validation,feature,M2,"feature,phase-1",sonnet,server,"Goal: the public GraphQL endpoint resists abuse.
+Depends on: M2-5.
+Acceptance: query depth and complexity limits, batch-size limit on `pushChanges`, request size limit, rate limiting per user and IP; input validation for every field (lengths, ranges, enums); introspection decision documented; tests for each limit.
+Out of scope: hosting (M2-23, M2-24).
+Covers: D22. Skills: graphql-schema, ktor-server-conventions."
+M2-23,Spike: where to host the server,spike,M2,"spike,opus-plan,phase-1",opusplan,docs,"Goal: pick the host for the Ktor server and Postgres. Time-box 1 day.
+Acceptance: ADR 0010 compares at least three options on price, free tier limits, Postgres backups, HTTPS, region and effort (verified with the researcher agent, with dates); decision and monthly cost estimate.
+Out of scope: deploying.
+Covers: D22. Skill: adr."
+M2-24,Deploy the server,chore,M2,"chore,phase-1",sonnet,"server, build-ci, docs","Goal: the server runs online with HTTPS and a managed database.
+Depends on: M2-22, M2-23.
+Acceptance: production Dockerfile; environment config documented (no secrets in the repo); Flyway migrations run on start; JSON logs; health check; database backups verified by a restore; the app has a release server URL; deploy steps in the README.
+Out of scope: CD automation unless trivial.
+Covers: D22. Skills: ktor-server-conventions, postgres-migrations."
+M2-25,Privacy policy and MAL agreement compliance,chore,M2,"chore,phase-1",sonnet,"docs, server (static page)","Goal: the legal pages Play and MAL require exist.
+Depends on: M2-8.
+Acceptance: privacy policy (data stored on the server: Google `sub`, library entries and anime IDs, linked platform name; data on the device; MAL data and caching; deletion) served from a public URL; MAL consent shown before MAL login; checklist against the MAL agreement (no credentials stored, cache only as needed, removal within 24 hours on request, no scraping, no revenue); contact for removal requests.
+Out of scope: legal review.
+Covers: D22. Skill: adr."
+M2-26,Release build and Google Play listing,chore,M2,"chore,phase-1",sonnet,"androidApp, build-ci, docs","Goal: the app is on a Play test track.
+Depends on: M2-24, M2-25.
+Acceptance: release build type with R8 and a keystore kept out of the repo; signed AAB built in CI from secrets; applicationId and version set; store listing, screenshots, Data safety form and account-deletion URL; content rating; internal testing track published; target API level meets Play's current requirement (verified).
+Out of scope: production rollout.
+Covers: D21, D22. Skill: kmp-module-structure."
+M2-27,M2 checkpoint: end-to-end,chore,M2,"chore,phase-1",sonnet,"all modules, docs","Goal: prove the MVP.
+Depends on: all other M2 tickets.
+Acceptance: on a clean install with no account: add anime, search, filter, rate, export and import a file; sign in with Google on two devices and see the same library; log in to MAL, import, change on both sides and resolve a conflict; delete the account; result note in `docs/m2-result.md`; CI, lint and tests pass on main.
+Out of scope: new features; fixes go in follow-up bug tickets unless trivial.
+Checkpoint: every D1-D24 verified or listed as not met."
