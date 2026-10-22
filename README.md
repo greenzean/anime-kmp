@@ -82,6 +82,8 @@ Copy `.env.example` to `.env` for server configuration. Never commit `.env`.
 
 ## Run the server
 
+`scripts/dev-server.sh` starts the Compose Postgres and runs the server against it (`--reset` wipes the database first); `scripts/dev-app.sh` installs the debug app on an emulator pointed at it. Or by hand:
+
 ```
 ./gradlew :server:run
 curl localhost:8080/health
