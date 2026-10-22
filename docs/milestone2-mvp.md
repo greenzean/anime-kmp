@@ -53,15 +53,16 @@ An app to keep track of the anime you watched, are watching and want to watch. I
 - **D21.** The MVP is Android only; iOS and web come later.
 - **D22.** The MVP includes putting the server online and publishing the app on Google Play. That brings in hosting, a privacy policy and account deletion (see below).
 
-## MAL API findings (checked 2026-10-20)
+## MAL API findings (checked 2026-10-20, tested 2026-10-22)
 
-Sources: [API v2 reference](https://myanimelist.net/apiconfig/references/api/v2), [authorization](https://myanimelist.net/apiconfig/references/authorization), [API license and developer agreement](https://myanimelist.net/static/apiagreement.html). The v2 reference is rendered by script and was read partly through search summaries; points marked *unconfirmed* are for the MAL spike to test with a real client ID.
+Sources: [API v2 reference](https://myanimelist.net/apiconfig/references/api/v2), [authorization](https://myanimelist.net/apiconfig/references/authorization), [API license and developer agreement](https://myanimelist.net/static/apiagreement.html). The points below were tested live in the M2-2 spike; details and what was not tested are in [ADR 0008](decisions/0008-mal-api.md).
 
-- **Personal suggestions:** `GET /anime/suggestions` returns suggestions for the logged-in user and an empty list for new users.
-- **Search and details without a user login:** expected to work with only the `X-MAL-CLIENT-ID` header. *Unconfirmed.*
-- **Per-anime recommendations:** a `recommendations` field on anime details. *Unconfirmed* (shape and size).
-- **Rate limits:** not published. One unofficial source reports about 5 requests per minute and a 1–2 hour block (HTTP 403). Cache results and back off on 403.
-- **OAuth:** authorization code with PKCE, `plain` method only; a client without a secret is allowed. Which app types MAL offers when registering a client is *unconfirmed*.
+- **Personal suggestions:** `GET /anime/suggestions` returns suggestions for the logged-in user (up to 100 per page). The empty list for a new user was *not tested* (the test account had a list).
+- **Search and details without a user login:** work with only the `X-MAL-CLIENT-ID` header. Confirmed.
+- **Per-anime recommendations:** a `recommendations` field on anime details, 10 entries of `{node, num_recommendations}`, about 2.5 KB. Confirmed.
+- **Rate limits:** not published. Tested: about 10 requests per second gets a 307 redirect to `/error.json` from the 5th request; about 2 per second passed 54 requests. Recovery took minutes. The 403 block (reported unofficially as 1–2 hours) was not triggered. Space requests, cache, and back off.
+- **OAuth:** authorization code with PKCE, `plain` method only, no client secret: confirmed. MAL offers an *Android app* type at registration, with no secret. Refresh tokens work with the client ID only.
+- **List:** read with `list_status` (including `updated_at`) and write with `PATCH`/`DELETE` on `/anime/{id}/my_list_status`: confirmed.
 - **Agreement** (summary, not legal advice):
   - Client-side caching only as long as reasonably necessary.
   - Remove content within 24 hours on request.

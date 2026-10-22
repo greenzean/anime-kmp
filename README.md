@@ -58,6 +58,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0005: Postgres access, migrations and test database](docs/decisions/0005-postgres-access.md)
 - [0006: Sync protocol](docs/decisions/0006-sync-protocol.md)
 - [0007: Client-side platform access](docs/decisions/0007-client-side-platform-access.md)
+- [0008: MAL API behaviour and how the app uses it](docs/decisions/0008-mal-api.md)
 
 ## Build
 
