@@ -27,3 +27,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0006 | [Sync protocol](0006-sync-protocol.md) | Accepted | M1-5 |
 | 0007 | [Client-side platform access](0007-client-side-platform-access.md) | Accepted | M2 MVP brief |
 | 0008 | [MAL API behaviour and how the app uses it](0008-mal-api.md) | Accepted | M2-2 |
+| 0009 | [Anime references: a server-side ID map keyed by platform IDs](0009-anime-id-map.md) | Accepted | M2-3 |

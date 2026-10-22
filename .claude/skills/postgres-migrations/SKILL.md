@@ -11,7 +11,7 @@ Decision and versions: ADR 0005. Flyway owns the schema; Exposed only queries.
 ## Layout
 
 ```
-server/src/main/resources/db/migration/   V1__create_anime.sql, V2__..., V3__...
+server/src/main/resources/db/migration/   V1__create_schema.sql (later: V2__..., V3__...)
 server/src/main/kotlin/.../server/db/     Database.kt (pool + Flyway + Exposed), Tables.kt
 server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 ```
@@ -19,8 +19,8 @@ server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 ## Rules
 
 - Files are `V<n>__snake_case_description.sql`, numbers consecutive. One concern per migration.
-- Never edit a migration that is merged. Fix forward with a new `V<n+1>`.
-- Seed data for dev lives in a migration only while there is no other way to load it; mark it `-- Dev seed data` in the file.
+- Nothing is deployed before M2-24, so until the first deploy migrations may be squashed or edited (wipe the local database with `docker compose down -v`). After the first deploy, never edit a migration: fix forward with a new `V<n+1>`.
+- No seed data in migrations. The server keeps no anime catalog (ADR 0009); the app seeds its own debug catalog.
 - Tables: singular snake_case names, `TIMESTAMPTZ` for times, `UUID` ids for client-created rows (list entries), identity `BIGINT` for server-owned rows (anime), `TEXT` + `CHECK` for enums.
 - Sync tables carry `updated_at` and a nullable `deleted_at` tombstone. Rows are soft-deleted, never removed, so pulls can report deletions.
 - Every column change in SQL gets the matching change in `db/Tables.kt`. Exposed does not create or alter tables.
@@ -32,7 +32,7 @@ server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 
 ## Tests
 
-`MigrationTest` starts `postgres:18-alpine` with Testcontainers, runs `connectDatabase()` and asserts on the schema and seed rows. It needs Docker locally; CI runners have it. Add a test for each new constraint.
+`MigrationTest` starts `postgres:18-alpine` with Testcontainers, runs `connectDatabase()` and asserts on the schema and constraints. It needs Docker locally; CI runners have it. Add a test for each new constraint.
 
 ## Verify
 
