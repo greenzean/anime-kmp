@@ -53,7 +53,7 @@ class SyncEngine(
                         pushed++
                     }
 
-                    PushOutcome.REJECTED_INVALID, PushOutcome.REJECTED_UNKNOWN_ANIME -> {
+                    PushOutcome.REJECTED_INVALID -> {
                         rejected += Rejection(change.id, result.outcome)
                     }
 

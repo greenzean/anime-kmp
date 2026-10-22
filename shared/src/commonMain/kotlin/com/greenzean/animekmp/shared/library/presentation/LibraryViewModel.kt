@@ -32,7 +32,7 @@ class LibraryViewModel(
 
     fun onAction(action: LibraryAction) {
         when (action) {
-            is LibraryAction.OnAddClick -> viewModelScope.launch { addToLibrary(action.animeId) }
+            is LibraryAction.OnAddClick -> viewModelScope.launch { addToLibrary(action.malId) }
         }
     }
 }

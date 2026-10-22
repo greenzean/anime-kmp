@@ -8,12 +8,12 @@ import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import kotlin.time.Instant
 import com.greenzean.animekmp.shared.core.data.db.Anime as AnimeRow
 
-fun AnimeRow.toAnime(): Anime = Anime(id = id, malId = mal_id.toInt(), title = title)
+fun AnimeRow.toAnime(): Anime = Anime(malId = mal_id.toInt(), title = title)
 
 fun SelectActiveWithAnime.toLibraryEntry(): LibraryEntry =
     LibraryEntry(
         id = id,
-        anime = Anime(id = anime_id, malId = mal_id.toInt(), title = title),
+        anime = Anime(malId = mal_id.toInt(), title = title),
         status = WatchStatus.valueOf(status),
         updatedAt = Instant.fromEpochMilliseconds(updated_at),
         syncState = SyncState.valueOf(sync_state),

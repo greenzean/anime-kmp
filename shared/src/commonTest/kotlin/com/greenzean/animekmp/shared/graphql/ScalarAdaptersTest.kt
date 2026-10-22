@@ -26,7 +26,7 @@ class ScalarAdaptersTest {
         val change =
             ListEntryChangeInput(
                 id = "00000000-0000-0000-0000-0000000000aa",
-                animeId = 1L,
+                malId = 1,
                 status = ListStatus.WATCHING,
                 updatedAt = instant,
                 deletedAt = Optional.Absent,

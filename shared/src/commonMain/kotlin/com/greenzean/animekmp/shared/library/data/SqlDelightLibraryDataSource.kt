@@ -39,22 +39,22 @@ class SqlDelightLibraryDataSource(
             .map { rows -> rows.map { it.toLibraryEntry() } }
 
     override suspend fun setStatus(
-        animeId: Long,
+        malId: Int,
         status: WatchStatus,
     ) = withContext(dispatcher) {
         val now = clock.now().toEpochMilliseconds()
         db.transaction {
-            db.listEntryQueries.updatePending(status.name, now, LOCAL_USER_ID, animeId)
-            db.listEntryQueries.insertPending(Uuid.random().toString(), LOCAL_USER_ID, animeId, status.name, now)
+            db.listEntryQueries.updatePending(status.name, now, LOCAL_USER_ID, malId.toLong())
+            db.listEntryQueries.insertPending(Uuid.random().toString(), LOCAL_USER_ID, malId.toLong(), status.name, now)
         }
     }
 
-    override suspend fun remove(animeId: Long) =
+    override suspend fun remove(malId: Int) =
         withContext(dispatcher) {
             db.listEntryQueries.softDelete(
                 now = clock.now().toEpochMilliseconds(),
                 userId = LOCAL_USER_ID,
-                animeId = animeId,
+                malId = malId.toLong(),
             )
             Unit
         }

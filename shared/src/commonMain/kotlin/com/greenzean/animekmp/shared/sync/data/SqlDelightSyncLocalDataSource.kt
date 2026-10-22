@@ -56,7 +56,7 @@ class SqlDelightSyncLocalDataSource(
         withContext(dispatcher) {
             db.transactionWithResult {
                 parked.selectAll().executeAsList().count { row ->
-                    val inCatalog = db.animeQueries.existsById(row.anime_id).executeAsOne() > 0L
+                    val inCatalog = db.animeQueries.existsByMalId(row.mal_id).executeAsOne() > 0L
                     if (inCatalog) parked.deleteById(row.id)
                     inCatalog && applyPulled(row.toSyncChange())
                 }
@@ -64,21 +64,21 @@ class SqlDelightSyncLocalDataSource(
         }
 
     private fun applyOrPark(change: SyncChange): Boolean =
-        if (db.animeQueries.existsById(change.animeId).executeAsOne() == 0L) {
+        if (db.animeQueries.existsByMalId(change.malId.toLong()).executeAsOne() == 0L) {
             park(change)
             false
         } else {
-            parked.deleteByAnimeId(change.animeId)
+            parked.deleteByMalId(change.malId.toLong())
             applyPulled(change)
         }
 
     /** Keeps only the newest parked change per anime, so a stale one cannot overwrite a newer one later. */
     private fun park(change: SyncChange) {
-        val existing = parked.selectByAnimeId(change.animeId).executeAsOneOrNull()
+        val existing = parked.selectByMalId(change.malId.toLong()).executeAsOneOrNull()
         if (existing == null || existing.updated_at < change.updatedAt.toEpochMilliseconds()) {
             parked.insertOrReplace(
                 change.id,
-                change.animeId,
+                change.malId.toLong(),
                 change.status.name,
                 change.updatedAt.toEpochMilliseconds(),
                 change.deletedAt?.toEpochMilliseconds(),
@@ -92,7 +92,7 @@ class SqlDelightSyncLocalDataSource(
      * The anime must already be in the local catalog (FK).
      */
     private fun applyPulled(change: SyncChange): Boolean {
-        val local = listEntries.selectByUserAndAnime(LOCAL_USER_ID, change.animeId).executeAsOneOrNull()
+        val local = listEntries.selectByUserAndMalId(LOCAL_USER_ID, change.malId.toLong()).executeAsOneOrNull()
         return if (local == null) insertPulled(change) else mergePulled(change, local)
     }
 
@@ -100,7 +100,7 @@ class SqlDelightSyncLocalDataSource(
         listEntries.insertPulled(
             change.id,
             LOCAL_USER_ID,
-            change.animeId,
+            change.malId.toLong(),
             change.status.name,
             change.updatedAt.toEpochMilliseconds(),
             change.deletedAt?.toEpochMilliseconds(),
@@ -130,7 +130,7 @@ class SqlDelightSyncLocalDataSource(
 private fun Parked_change.toSyncChange() =
     SyncChange(
         id = id,
-        animeId = anime_id,
+        malId = mal_id.toInt(),
         status = WatchStatus.valueOf(status),
         updatedAt = Instant.fromEpochMilliseconds(updated_at),
         deletedAt = deleted_at?.let(Instant::fromEpochMilliseconds),
@@ -139,7 +139,7 @@ private fun Parked_change.toSyncChange() =
 private fun List_entry.toSyncChange() =
     SyncChange(
         id = id,
-        animeId = anime_id,
+        malId = mal_id.toInt(),
         status = WatchStatus.valueOf(status),
         updatedAt = Instant.fromEpochMilliseconds(updated_at),
         deletedAt = deleted_at?.let(Instant::fromEpochMilliseconds),

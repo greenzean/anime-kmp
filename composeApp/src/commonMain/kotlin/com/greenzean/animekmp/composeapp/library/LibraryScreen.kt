@@ -57,8 +57,8 @@ fun LibraryScreen(
         if (state.addable.isEmpty()) {
             item { Text("Every anime is already in your library.") }
         }
-        items(state.addable, key = { "anime-${it.id}" }) { anime ->
-            AddableRow(anime = anime, onAdd = { onAction(LibraryAction.OnAddClick(anime.id)) })
+        items(state.addable, key = { "anime-${it.malId}" }) { anime ->
+            AddableRow(anime = anime, onAdd = { onAction(LibraryAction.OnAddClick(anime.malId)) })
         }
     }
 }

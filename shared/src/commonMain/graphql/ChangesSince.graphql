@@ -4,7 +4,7 @@ query ChangesSince($cursor: String, $limit: Int) {
     hasMore
     changes {
       id
-      animeId
+      malId
       status
       updatedAt
       deletedAt

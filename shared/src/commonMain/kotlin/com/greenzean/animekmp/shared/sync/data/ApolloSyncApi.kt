@@ -48,7 +48,7 @@ class ApolloSyncApi(
                         page.changes.map {
                             SyncChange(
                                 id = it.id,
-                                animeId = it.animeId,
+                                malId = it.malId,
                                 status = WatchStatus.valueOf(it.status.rawValue),
                                 updatedAt = it.updatedAt,
                                 deletedAt = it.deletedAt,
@@ -61,7 +61,7 @@ class ApolloSyncApi(
 private fun SyncChange.toInput() =
     ListEntryChangeInput(
         id = id,
-        animeId = animeId,
+        malId = malId,
         status = ListStatus.valueOf(status.name),
         updatedAt = updatedAt,
         deletedAt = Optional.presentIfNotNull(deletedAt),
@@ -74,8 +74,6 @@ private fun GqlPushOutcome.toDomain(): PushOutcome =
         GqlPushOutcome.IGNORED_STALE -> PushOutcome.IGNORED_STALE
 
         GqlPushOutcome.REJECTED_INVALID -> PushOutcome.REJECTED_INVALID
-
-        GqlPushOutcome.REJECTED_UNKNOWN_ANIME -> PushOutcome.REJECTED_UNKNOWN_ANIME
 
         // A newer server may add outcomes; treat them as invalid so the row stays PENDING and is surfaced.
         else -> PushOutcome.REJECTED_INVALID

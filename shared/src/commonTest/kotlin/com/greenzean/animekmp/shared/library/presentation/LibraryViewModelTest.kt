@@ -25,8 +25,8 @@ import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModelTest {
-    private val bebop = Anime(id = 1, malId = 1, title = "Cowboy Bebop")
-    private val steins = Anime(id = 3, malId = 9253, title = "Steins;Gate")
+    private val bebop = Anime(malId = 1, title = "Cowboy Bebop")
+    private val steins = Anime(malId = 9253, title = "Steins;Gate")
     private val local = FakeLibraryLocalDataSource(listOf(bebop, steins))
     private val scheduler = FakeSyncScheduler()
 
@@ -48,17 +48,17 @@ class LibraryViewModelTest {
         val state = viewModel().state.value
 
         assertEquals(emptyList(), state.entries)
-        assertEquals(listOf(AnimeUi(1, "Cowboy Bebop"), AnimeUi(3, "Steins;Gate")), state.addable)
+        assertEquals(listOf(AnimeUi(1, "Cowboy Bebop"), AnimeUi(9253, "Steins;Gate")), state.addable)
     }
 
     @Test
     fun addMovesAnimeToEntriesAsPendingAndRequestsSync() {
         val viewModel = viewModel()
 
-        viewModel.onAction(LibraryAction.OnAddClick(animeId = 3))
+        viewModel.onAction(LibraryAction.OnAddClick(malId = 9253))
 
         val state = viewModel.state.value
-        val expected = EntryUi("entry-3", "Steins;Gate", WatchStatus.PLAN_TO_WATCH, SyncState.PENDING)
+        val expected = EntryUi("entry-9253", "Steins;Gate", WatchStatus.PLAN_TO_WATCH, SyncState.PENDING)
         assertEquals(listOf(expected), state.entries)
         assertEquals(listOf(AnimeUi(1, "Cowboy Bebop")), state.addable)
         assertEquals(1, scheduler.requests)
@@ -67,9 +67,9 @@ class LibraryViewModelTest {
     @Test
     fun showsSyncedEntryFromLocalDatabase() {
         val viewModel = viewModel()
-        viewModel.onAction(LibraryAction.OnAddClick(animeId = 1))
+        viewModel.onAction(LibraryAction.OnAddClick(malId = 1))
 
-        local.markSynced(animeId = 1)
+        local.markSynced(malId = 1)
 
         assertEquals(
             SyncState.SYNCED,
@@ -99,23 +99,23 @@ private class FakeLibraryLocalDataSource(
     override fun observeLibrary(): Flow<List<LibraryEntry>> = library
 
     override suspend fun setStatus(
-        animeId: Long,
+        malId: Int,
         status: WatchStatus,
     ) {
-        val target = anime.value.first { it.id == animeId }
+        val target = anime.value.first { it.malId == malId }
         library.update { entries ->
-            entries.filterNot { it.anime.id == animeId } +
-                LibraryEntry("entry-$animeId", target, status, Instant.fromEpochMilliseconds(0), SyncState.PENDING)
+            entries.filterNot { it.anime.malId == malId } +
+                LibraryEntry("entry-$malId", target, status, Instant.fromEpochMilliseconds(0), SyncState.PENDING)
         }
     }
 
-    override suspend fun remove(animeId: Long) {
-        library.update { entries -> entries.filterNot { it.anime.id == animeId } }
+    override suspend fun remove(malId: Int) {
+        library.update { entries -> entries.filterNot { it.anime.malId == malId } }
     }
 
-    fun markSynced(animeId: Long) {
+    fun markSynced(malId: Int) {
         library.update { entries ->
-            entries.map { if (it.anime.id == animeId) it.copy(syncState = SyncState.SYNCED) else it }
+            entries.map { if (it.anime.malId == malId) it.copy(syncState = SyncState.SYNCED) else it }
         }
     }
 }

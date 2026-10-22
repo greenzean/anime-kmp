@@ -6,13 +6,13 @@ import kotlin.time.Instant
 /** A local list_entry row as the server sees it. [deletedAt] set means tombstone. */
 data class SyncChange(
     val id: String,
-    val animeId: Long,
+    val malId: Int,
     val status: WatchStatus,
     val updatedAt: Instant,
     val deletedAt: Instant?,
 )
 
-enum class PushOutcome { APPLIED, IGNORED_STALE, REJECTED_INVALID, REJECTED_UNKNOWN_ANIME }
+enum class PushOutcome { APPLIED, IGNORED_STALE, REJECTED_INVALID }
 
 data class PushResult(
     val id: String,

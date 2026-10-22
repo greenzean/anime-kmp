@@ -9,7 +9,7 @@ class ObserveAddableAnimeUseCase(
 ) {
     operator fun invoke(): Flow<List<Anime>> =
         combine(local.observeAnime(), local.observeLibrary()) { anime, entries ->
-            val added = entries.mapTo(mutableSetOf()) { it.anime.id }
-            anime.filter { it.id !in added }
+            val added = entries.mapTo(mutableSetOf()) { it.anime.malId }
+            anime.filter { it.malId !in added }
         }
 }

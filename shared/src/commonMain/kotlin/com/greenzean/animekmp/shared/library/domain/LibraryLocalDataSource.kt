@@ -9,10 +9,10 @@ interface LibraryLocalDataSource {
 
     /** Adds the anime to the library or changes its status. The entry becomes pending sync. */
     suspend fun setStatus(
-        animeId: Long,
+        malId: Int,
         status: WatchStatus,
     )
 
     /** Soft-deletes the entry (tombstone) so a later sync can push the deletion. */
-    suspend fun remove(animeId: Long)
+    suspend fun remove(malId: Int)
 }

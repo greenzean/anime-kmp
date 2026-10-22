@@ -3,28 +3,28 @@
 CREATE TABLE list_entry (
     id         TEXT    NOT NULL PRIMARY KEY,
     user_id    TEXT    NOT NULL,
-    anime_id   INTEGER NOT NULL REFERENCES anime (id),
+    mal_id     INTEGER NOT NULL REFERENCES anime (mal_id),
     status     TEXT    NOT NULL
         CHECK (status IN ('WATCHING', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'PLAN_TO_WATCH')),
     updated_at INTEGER NOT NULL,
     deleted_at INTEGER,
     sync_state TEXT    NOT NULL DEFAULT 'PENDING'
         CHECK (sync_state IN ('PENDING', 'SYNCED')),
-    UNIQUE (user_id, anime_id)
+    UNIQUE (user_id, mal_id)
 );
 
 CREATE INDEX list_entry_user_updated_idx ON list_entry (user_id, updated_at);
 
 selectActiveWithAnime:
-SELECT list_entry.id, list_entry.user_id, list_entry.anime_id, list_entry.status,
-       list_entry.updated_at, list_entry.sync_state, anime.mal_id, anime.title
+SELECT list_entry.id, list_entry.user_id, list_entry.mal_id, list_entry.status,
+       list_entry.updated_at, list_entry.sync_state, anime.title
 FROM list_entry
-JOIN anime ON anime.id = list_entry.anime_id
+JOIN anime ON anime.mal_id = list_entry.mal_id
 WHERE list_entry.user_id = ? AND list_entry.deleted_at IS NULL
 ORDER BY anime.title;
 
-selectByUserAndAnime:
-SELECT * FROM list_entry WHERE user_id = ? AND anime_id = ?;
+selectByUserAndMalId:
+SELECT * FROM list_entry WHERE user_id = ? AND mal_id = ?;
 
 selectPending:
 SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at;
@@ -35,16 +35,16 @@ SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at;
 updatePending:
 UPDATE list_entry
 SET status = :status, updated_at = :updatedAt, deleted_at = NULL, sync_state = 'PENDING'
-WHERE user_id = :userId AND anime_id = :animeId;
+WHERE user_id = :userId AND mal_id = :malId;
 
 insertPending:
-INSERT OR IGNORE INTO list_entry (id, user_id, anime_id, status, updated_at, deleted_at, sync_state)
+INSERT OR IGNORE INTO list_entry (id, user_id, mal_id, status, updated_at, deleted_at, sync_state)
 VALUES (?, ?, ?, ?, ?, NULL, 'PENDING');
 
 softDelete:
 UPDATE list_entry
 SET deleted_at = :now, updated_at = :now, sync_state = 'PENDING'
-WHERE user_id = :userId AND anime_id = :animeId AND deleted_at IS NULL;
+WHERE user_id = :userId AND mal_id = :malId AND deleted_at IS NULL;
 
 markSynced:
 UPDATE list_entry SET sync_state = 'SYNCED' WHERE id = ? AND updated_at = ?;
@@ -63,5 +63,5 @@ SET status = :status, updated_at = :updatedAt, deleted_at = :deletedAt, sync_sta
 WHERE id = :id;
 
 insertPulled:
-INSERT OR IGNORE INTO list_entry (id, user_id, anime_id, status, updated_at, deleted_at, sync_state)
+INSERT OR IGNORE INTO list_entry (id, user_id, mal_id, status, updated_at, deleted_at, sync_state)
 VALUES (?, ?, ?, ?, ?, ?, 'SYNCED');
