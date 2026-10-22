@@ -26,6 +26,8 @@ hikari = "7.1.0"
 postgresql = "42.7.13"
 flyway = "12.11.0"
 testcontainers = "2.0.5"
+auth0Jwt = "4.6.2"
+auth0Jwks = "0.24.1"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
@@ -51,6 +53,8 @@ hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+auth0-java-jwt = { module = "com.auth0:java-jwt", version.ref = "auth0Jwt" }
+auth0-jwks-rsa = { module = "com.auth0:jwks-rsa", version.ref = "auth0Jwks" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }

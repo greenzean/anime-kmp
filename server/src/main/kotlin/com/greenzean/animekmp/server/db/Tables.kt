@@ -21,3 +21,29 @@ object ListEntryTable : Table("list_entry") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+object AppUserTable : Table("app_user") {
+    val id = uuid("id").databaseGenerated()
+    val googleSub = text("google_sub").uniqueIndex()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object SignInNonceTable : Table("sign_in_nonce") {
+    val nonce = text("nonce")
+    val expiresAt = timestampWithTimeZone("expires_at")
+
+    override val primaryKey = PrimaryKey(nonce)
+}
+
+object RefreshTokenTable : Table("refresh_token") {
+    val id = uuid("id")
+    val userId = uuid("user_id").references(AppUserTable.id)
+    val familyId = uuid("family_id")
+    val tokenHash = binary("token_hash").uniqueIndex()
+    val createdAt = timestampWithTimeZone("created_at")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    val revokedAt = timestampWithTimeZone("revoked_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}

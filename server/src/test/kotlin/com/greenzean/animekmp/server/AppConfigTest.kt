@@ -12,8 +12,18 @@ class AppConfigTest {
 
     @Test
     fun overrides() {
-        val config = AppConfig.fromEnv(mapOf("PORT" to "9090", "HOST" to "127.0.0.1", "APP_ENV" to "PROD"))
-        assertEquals(AppConfig("127.0.0.1", 9090, AppEnv.PROD), config)
+        val auth = AuthConfig("cid", "0123456789abcdef0123456789abcdef")
+        val config =
+            AppConfig.fromEnv(
+                mapOf(
+                    "PORT" to "9090",
+                    "HOST" to "127.0.0.1",
+                    "APP_ENV" to "PROD",
+                    "GOOGLE_CLIENT_ID" to auth.googleClientId,
+                    "JWT_SECRET" to auth.jwtSecret,
+                ),
+            )
+        assertEquals(AppConfig("127.0.0.1", 9090, AppEnv.PROD, auth = auth), config)
     }
 
     @Test
@@ -39,5 +49,36 @@ class AppConfigTest {
     @Test
     fun invalidEnvRejected() {
         assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("APP_ENV" to "staging")) }
+    }
+
+    private val secret = "0123456789abcdef0123456789abcdef"
+
+    @Test
+    fun authConfigRead() {
+        val config = AppConfig.fromEnv(mapOf("GOOGLE_CLIENT_ID" to "cid", "JWT_SECRET" to secret))
+        assertEquals(AuthConfig("cid", secret), config.auth)
+    }
+
+    @Test
+    fun blankAuthVariablesCountAsUnset() {
+        assertEquals(null, AppConfig.fromEnv(mapOf("GOOGLE_CLIENT_ID" to "", "JWT_SECRET" to "")).auth)
+    }
+
+    @Test
+    fun authNeedsBothVariables() {
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("GOOGLE_CLIENT_ID" to "cid")) }
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("JWT_SECRET" to secret)) }
+    }
+
+    @Test
+    fun shortJwtSecretRejected() {
+        assertFailsWith<IllegalStateException> {
+            AppConfig.fromEnv(mapOf("GOOGLE_CLIENT_ID" to "cid", "JWT_SECRET" to "too-short"))
+        }
+    }
+
+    @Test
+    fun prodRequiresAuth() {
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("APP_ENV" to "prod")) }
     }
 }

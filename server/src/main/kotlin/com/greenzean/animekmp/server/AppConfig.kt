@@ -8,11 +8,20 @@ data class DatabaseConfig(
     val password: String,
 )
 
+/** `googleClientId` is the web/server OAuth client ID that Google ID tokens must be issued for (`aud`). */
+data class AuthConfig(
+    val googleClientId: String,
+    val jwtSecret: String,
+)
+
+private const val MIN_JWT_SECRET_BYTES = 32
+
 data class AppConfig(
     val host: String,
     val port: Int,
     val env: AppEnv,
     val database: DatabaseConfig? = null,
+    val auth: AuthConfig? = null,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()): AppConfig {
@@ -35,7 +44,33 @@ data class AppConfig(
                             env["DATABASE_PASSWORD"] ?: error("DATABASE_PASSWORD is required when DATABASE_URL is set"),
                     )
                 }
-            return AppConfig(host = env["HOST"] ?: "0.0.0.0", port = port, env = appEnv, database = database)
+            val auth = authFromEnv(env, appEnv)
+            return AppConfig(
+                host = env["HOST"] ?: "0.0.0.0",
+                port = port,
+                env = appEnv,
+                database = database,
+                auth = auth,
+            )
+        }
+
+        // Both or neither. Blank counts as unset (compose passes empty strings through). Prod requires both.
+        private fun authFromEnv(
+            env: Map<String, String>,
+            appEnv: AppEnv,
+        ): AuthConfig? {
+            val clientId = env["GOOGLE_CLIENT_ID"]?.trim().orEmpty()
+            val secret = env["JWT_SECRET"].orEmpty()
+            if (clientId.isEmpty() && secret.isEmpty()) {
+                check(appEnv != AppEnv.PROD) { "GOOGLE_CLIENT_ID and JWT_SECRET are required when APP_ENV=prod" }
+                return null
+            }
+            check(clientId.isNotEmpty()) { "GOOGLE_CLIENT_ID is required when JWT_SECRET is set" }
+            check(secret.isNotEmpty()) { "JWT_SECRET is required when GOOGLE_CLIENT_ID is set" }
+            check(secret.toByteArray().size >= MIN_JWT_SECRET_BYTES) {
+                "JWT_SECRET must be at least $MIN_JWT_SECRET_BYTES bytes"
+            }
+            return AuthConfig(clientId, secret)
         }
     }
 }

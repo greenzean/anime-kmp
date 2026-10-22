@@ -1,6 +1,10 @@
 package com.greenzean.animekmp.server
 
 import com.expediagroup.graphql.server.ktor.GraphQL
+import com.greenzean.animekmp.server.auth.AuthRepository
+import com.greenzean.animekmp.server.auth.AuthService
+import com.greenzean.animekmp.server.auth.GoogleIdTokenVerifier
+import com.greenzean.animekmp.server.auth.SessionTokens
 import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.graphql.GraphQLSchemaDefinition
 import com.greenzean.animekmp.server.graphql.SyncSchemaHooks
@@ -24,14 +28,28 @@ fun main() {
     // Must run before the first logger is created.
     if (config.env == AppEnv.PROD) System.setProperty("logback.configurationFile", "logback-prod.xml")
     val database = config.database?.let { connectDatabase(it) }
+    val auth = config.auth?.let { authService(it, database) }
     embeddedServer(Netty, port = config.port, host = config.host) {
-        module(database)
+        module(database, auth = auth)
     }.start(wait = true)
+}
+
+private fun authService(
+    config: AuthConfig,
+    database: Database?,
+): AuthService {
+    checkNotNull(database) { "Sign-in needs a database: set DATABASE_URL" }
+    return AuthService(
+        verifier = GoogleIdTokenVerifier(config.googleClientId, GoogleIdTokenVerifier.googleKeys()),
+        tokens = SessionTokens(config.jwtSecret),
+        repository = AuthRepository(database),
+    )
 }
 
 fun Application.module(
     database: Database? = null,
     clock: Clock = Clock.systemUTC(),
+    auth: AuthService? = null,
 ) {
     val sync = SyncRepository(database, clock)
     install(CallLogging)
@@ -39,7 +57,7 @@ fun Application.module(
         schema {
             packages = GraphQLSchemaDefinition.packages
             queries = GraphQLSchemaDefinition.queries(sync)
-            mutations = GraphQLSchemaDefinition.mutations(sync)
+            mutations = GraphQLSchemaDefinition.mutations(sync, auth)
             hooks = SyncSchemaHooks
         }
     }
