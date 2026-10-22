@@ -5,17 +5,23 @@ CREATE TABLE anime (
     mal_id INTEGER NOT NULL UNIQUE CHECK (mal_id > 0)
 );
 
+-- Accounts (ADR 0010). Keyed on Google's `sub`; the server stores no email or other profile data.
+CREATE TABLE app_user (
+    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    google_sub TEXT        NOT NULL UNIQUE CHECK (google_sub <> ''),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Sync cursor (ADR 0006). updated_at is client-set, so it cannot be a pull cursor: a late push with an old
 -- timestamp would land behind cursors other clients already hold. server_seq is assigned by the server on
 -- every insert and every applied update, so changesSince(cursor) never misses a row. That holds only because
 -- pushes of one user are serialized (advisory lock in SyncRepository.push): commit order must match seq order.
 CREATE SEQUENCE list_entry_sync_seq;
 
--- user_id is a placeholder: M2-5 authorizes sync per user and adds the foreign key to app_user.
 -- deleted_at is the tombstone: sync pulls must see deletions, so rows are never hard-deleted.
 CREATE TABLE list_entry (
     id         UUID        PRIMARY KEY,
-    user_id    UUID        NOT NULL,
+    user_id    UUID        NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
     anime_id   BIGINT      NOT NULL REFERENCES anime (id),
     status     TEXT        NOT NULL
         CHECK (status IN ('WATCHING', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'PLAN_TO_WATCH')),
@@ -28,13 +34,6 @@ CREATE TABLE list_entry (
 ALTER SEQUENCE list_entry_sync_seq OWNED BY list_entry.server_seq;
 
 CREATE INDEX list_entry_user_seq_idx ON list_entry (user_id, server_seq);
-
--- Accounts (ADR 0010). Keyed on Google's `sub`; the server stores no email or other profile data.
-CREATE TABLE app_user (
-    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    google_sub TEXT        NOT NULL UNIQUE CHECK (google_sub <> ''),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
 
 -- Single-use nonces handed out before a Google sign-in. Hard-deleted when consumed or expired.
 CREATE TABLE sign_in_nonce (
