@@ -6,7 +6,6 @@ import java.util.UUID
 enum class PushOutcome {
     APPLIED,
     IGNORED_STALE,
-    REJECTED_UNKNOWN_ANIME,
     REJECTED_INVALID,
 }
 

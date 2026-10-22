@@ -7,8 +7,8 @@ class AddToLibraryUseCase(
     private val local: LibraryLocalDataSource,
     private val scheduler: SyncScheduler,
 ) {
-    suspend operator fun invoke(animeId: Long) {
-        local.setStatus(animeId, WatchStatus.PLAN_TO_WATCH)
+    suspend operator fun invoke(malId: Int) {
+        local.setStatus(malId, WatchStatus.PLAN_TO_WATCH)
         scheduler.requestSync()
     }
 }

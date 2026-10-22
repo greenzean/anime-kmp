@@ -37,20 +37,20 @@ class SyncEngineTest {
     @AfterTest
     fun tearDown() = driver.close()
 
-    private fun row(animeId: Long) =
+    private fun row(malId: Int) =
         db.listEntryQueries
-            .selectByUserAndAnime(LOCAL_USER_ID, animeId)
+            .selectByUserAndMalId(LOCAL_USER_ID, malId.toLong())
             .executeAsOneOrNull()
 
     private fun pulled(
         id: String,
-        animeId: Long,
+        malId: Int,
         updatedAt: Long,
         status: WatchStatus = WatchStatus.COMPLETED,
         deletedAt: Long? = null,
     ) = SyncChange(
         id,
-        animeId,
+        malId,
         status,
         Instant.fromEpochMilliseconds(updatedAt),
         deletedAt?.let(Instant::fromEpochMilliseconds),
@@ -66,20 +66,20 @@ class SyncEngineTest {
     fun pushesPendingRowsAndMarksThemSynced() =
         runTest {
             library.setStatus(1, WatchStatus.WATCHING)
-            library.setStatus(3, WatchStatus.DROPPED)
+            library.setStatus(9253, WatchStatus.DROPPED)
 
             val result = engine.sync()
 
             assertEquals(2, assertIs<SyncResult.Success>(result).pushed)
             assertEquals(
-                listOf(1L, 3L),
+                listOf(1, 9253),
                 api.pushed
                     .flatten()
-                    .map { it.animeId }
+                    .map { it.malId }
                     .sorted(),
             )
             assertEquals("SYNCED", row(1)!!.sync_state)
-            assertEquals("SYNCED", row(3)!!.sync_state)
+            assertEquals("SYNCED", row(9253)!!.sync_state)
         }
 
     @Test
@@ -92,7 +92,7 @@ class SyncEngineTest {
             engine.sync()
 
             val change = api.pushed.flatten().last()
-            assertEquals(1L, change.animeId)
+            assertEquals(1, change.malId)
             assertIs<Instant>(change.deletedAt)
             assertEquals("SYNCED", row(1)!!.sync_state)
         }
@@ -129,7 +129,7 @@ class SyncEngineTest {
         runTest {
             library.setStatus(1, WatchStatus.WATCHING)
             val id = row(1)!!.id
-            api.pushOutcomes[id] = PushResult(id, PushOutcome.REJECTED_UNKNOWN_ANIME, id)
+            api.pushOutcomes[id] = PushResult(id, PushOutcome.REJECTED_INVALID, id)
 
             val result = assertIs<SyncResult.Success>(engine.sync())
 
@@ -177,7 +177,7 @@ class SyncEngineTest {
     fun pullsPagesUntilNoMoreAndStoresCursorPerPage() =
         runTest {
             api.pages.add(page("c1", true, pulled("a", 1, 1000)))
-            api.pages.add(page("c2", false, pulled("b", 2, 2000)))
+            api.pages.add(page("c2", false, pulled("b", 5114, 2000)))
 
             val result = assertIs<SyncResult.Success>(engine.sync())
 
@@ -216,7 +216,7 @@ class SyncEngineTest {
             engine.sync()
             assertEquals(null, row(99))
 
-            db.animeQueries.insertOrIgnore(99, 99, "Late Arrival")
+            db.animeQueries.insertOrIgnore(99, "Late Arrival")
             api.pages.add(page("c1", false))
             val result = engine.sync()
 

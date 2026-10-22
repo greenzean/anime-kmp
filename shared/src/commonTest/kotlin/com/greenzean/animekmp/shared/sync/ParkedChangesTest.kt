@@ -29,15 +29,15 @@ class ParkedChangesTest {
         deletedAt: Long? = null,
     ) = SyncChange(
         id = id,
-        animeId = ANIME_ID,
+        malId = ANIME_ID,
         status = status,
         updatedAt = Instant.fromEpochMilliseconds(updatedAt),
         deletedAt = deletedAt?.let(Instant::fromEpochMilliseconds),
     )
 
-    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID, 1L, "Cowboy Bebop")
+    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop")
 
-    private fun row() = db.listEntryQueries.selectByUserAndAnime(LOCAL_USER_ID, ANIME_ID).executeAsOneOrNull()
+    private fun row() = db.listEntryQueries.selectByUserAndMalId(LOCAL_USER_ID, ANIME_ID.toLong()).executeAsOneOrNull()
 
     private fun parkedCount() =
         db.parkedChangeQueries
@@ -115,6 +115,6 @@ class ParkedChangesTest {
         }
 
     private companion object {
-        const val ANIME_ID = 42L
+        const val ANIME_ID = 42
     }
 }

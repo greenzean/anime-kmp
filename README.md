@@ -45,7 +45,7 @@ Not implemented yet. Planned: Google sign-in for the optional server account (th
 
 ### Data model
 
-Anime catalog plus per-user `list_entry` rows (status, progress, score) that carry the sync columns (`server_seq`, tombstone). Server schema: Flyway migrations in `server/`; client schema: SQLDelight in `shared/`. Debug builds seed a small dev catalog.
+An ID-only `anime` map (internal id and `mal_id`, no titles) plus per-user `list_entry` rows (status, progress, score) that carry the sync columns (`server_seq`, tombstone). Server schema: Flyway migrations in `server/`; client schema: SQLDelight in `shared/`. Debug builds of the app seed a small local dev catalog of anime titles.
 
 ### Decisions
 
@@ -59,6 +59,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0006: Sync protocol](docs/decisions/0006-sync-protocol.md)
 - [0007: Client-side platform access](docs/decisions/0007-client-side-platform-access.md)
 - [0008: MAL API behaviour and how the app uses it](docs/decisions/0008-mal-api.md)
+- [0009: Anime references: a server-side ID map keyed by platform IDs](docs/decisions/0009-anime-id-map.md)
 
 ## Build
 

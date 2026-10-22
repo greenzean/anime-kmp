@@ -1,7 +1,6 @@
 package com.greenzean.animekmp.server.db
 
 import com.greenzean.animekmp.server.DatabaseConfig
-import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -35,29 +34,45 @@ class MigrationTest {
     }
 
     @Test
-    fun seedAnimeIsPresent() {
-        val titles = transaction(db) { AnimeTable.selectAll().map { it[AnimeTable.title] } }
-        assertEquals(4, titles.size)
-        assert("Cowboy Bebop" in titles)
+    fun devCatalogIsGoneAndAnimeHasNoTitle() {
+        assertEquals(0, transaction(db) { AnimeTable.selectAll().count() }.toInt())
+        val columns =
+            transaction(db) {
+                exec("SELECT column_name FROM information_schema.columns WHERE table_name = 'anime'") { rs ->
+                    generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+                }
+            }
+        assertEquals(setOf("id", "mal_id"), columns?.toSet())
     }
 
     @Test
     fun malIdIsUnique() {
+        transaction(db) { AnimeTable.insert { it[malId] = 7 } }
         assertFailsWith<SQLException> {
-            transaction(db) {
-                AnimeTable.insert {
-                    it[malId] = 1
-                    it[title] = "Duplicate"
-                }
-            }
+            transaction(db) { AnimeTable.insert { it[malId] = 7 } }
         }
     }
+
+    @Test
+    fun malIdMustBePositive() {
+        assertFailsWith<SQLException> {
+            transaction(db) { AnimeTable.insert { it[malId] = 0 } }
+        }
+    }
+
+    private var nextMalId = 1
+
+    /** Adds an anime to the ID map and returns its internal id. */
+    private fun newAnime(): Long =
+        transaction(db) {
+            AnimeTable.insert { it[malId] = nextMalId++ }[AnimeTable.id]
+        }
 
     @Test
     fun listEntrySupportsTombstone() {
         val entryId = Uuid.random()
         transaction(db) {
-            val animeId = AnimeTable.selectAll().where { AnimeTable.malId eq 1 }.single()[AnimeTable.id]
+            val animeId = newAnime()
             ListEntryTable.insert {
                 it[id] = entryId
                 it[userId] = Uuid.random()
@@ -75,7 +90,7 @@ class MigrationTest {
     fun invalidStatusRejected() {
         assertFailsWith<SQLException> {
             transaction(db) {
-                val animeId = AnimeTable.selectAll().first()[AnimeTable.id]
+                val animeId = newAnime()
                 ListEntryTable.insert {
                     it[id] = Uuid.random()
                     it[userId] = Uuid.random()
@@ -94,7 +109,7 @@ class MigrationTest {
             ListEntryTable.insert {
                 it[id] = entryId
                 it[userId] = Uuid.random()
-                it[animeId] = AnimeTable.selectAll().first()[AnimeTable.id]
+                it[animeId] = newAnime()
                 it[status] = "COMPLETED"
                 it[updatedAt] = OffsetDateTime.now()
             }
@@ -104,40 +119,20 @@ class MigrationTest {
     }
 
     @Test
-    fun v4BackfillsServerSeqForExistingRows() {
-        PostgreSQLContainer("postgres:18-alpine").use { fresh ->
-            fresh.start()
-            val ds = createDataSource(DatabaseConfig(fresh.jdbcUrl, fresh.username, fresh.password))
-
-            fun flyway(target: String) =
-                Flyway
-                    .configure()
-                    .dataSource(ds)
-                    .locations("classpath:db/migration")
-                    .target(target)
-                    .load()
-            flyway("3").migrate()
-            ds.connection.use { c ->
-                c.createStatement().use { st ->
-                    for (i in 1..3) {
-                        st.execute(
-                            "INSERT INTO list_entry (id, user_id, anime_id, status, updated_at) VALUES " +
-                                "(gen_random_uuid(), gen_random_uuid(), $i, 'WATCHING', now())",
-                        )
-                    }
+    fun serverSeqIsFilledAutomaticallyAndIncreases() {
+        repeat(2) {
+            transaction(db) {
+                ListEntryTable.insert {
+                    it[id] = Uuid.random()
+                    it[userId] = Uuid.random()
+                    it[this.animeId] = newAnime()
+                    it[status] = "WATCHING"
+                    it[updatedAt] = OffsetDateTime.now()
                 }
             }
-            flyway("4").migrate()
-            val seqs =
-                ds.connection.use { c ->
-                    c.createStatement().use { st ->
-                        st.executeQuery("SELECT server_seq FROM list_entry ORDER BY server_seq").use { rs ->
-                            generateSequence { if (rs.next()) rs.getLong(1) else null }.toList()
-                        }
-                    }
-                }
-            assertEquals(3, seqs.size)
-            assertEquals(3, seqs.toSet().size)
         }
+        val seqs = transaction(db) { ListEntryTable.selectAll().map { it[ListEntryTable.serverSeq] } }
+        assertEquals(2, seqs.size)
+        assert(seqs[0] < seqs[1])
     }
 }

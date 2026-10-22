@@ -1,6 +1,6 @@
+-- Local cache of anime details, keyed by the MAL id (ADR 0009). The server stores ids only, never titles.
 CREATE TABLE anime (
-    id     INTEGER NOT NULL PRIMARY KEY,
-    mal_id INTEGER NOT NULL UNIQUE,
+    mal_id INTEGER NOT NULL PRIMARY KEY,
     title  TEXT    NOT NULL
 );
 
@@ -10,12 +10,11 @@ SELECT * FROM anime ORDER BY title;
 selectByMalId:
 SELECT * FROM anime WHERE mal_id = ?;
 
--- id is the server anime.id, never a locally assigned rowid: list_entry.anime_id is synced as-is.
 insertOrIgnore:
-INSERT OR IGNORE INTO anime (id, mal_id, title) VALUES (?, ?, ?);
+INSERT OR IGNORE INTO anime (mal_id, title) VALUES (?, ?);
 
 countAll:
 SELECT count(*) FROM anime;
 
-existsById:
-SELECT count(*) FROM anime WHERE id = ?;
+existsByMalId:
+SELECT count(*) FROM anime WHERE mal_id = ?;

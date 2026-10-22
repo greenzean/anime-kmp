@@ -6,7 +6,6 @@ import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 object AnimeTable : Table("anime") {
     val id = long("id").autoIncrement()
     val malId = integer("mal_id").uniqueIndex()
-    val title = text("title")
 
     override val primaryKey = PrimaryKey(id)
 }

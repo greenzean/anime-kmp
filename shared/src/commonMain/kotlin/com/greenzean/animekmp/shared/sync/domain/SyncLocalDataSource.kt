@@ -20,7 +20,7 @@ interface SyncLocalDataSource {
 
     /**
      * Applies one pulled page and stores [nextCursor] in a single transaction. Returns rows applied.
-     * A change for an anime missing from the local catalog is parked, not dropped; see [retryParked].
+     * A change for an anime (by MAL id) missing from the local catalog is parked, not dropped; see [retryParked].
      */
     suspend fun applyPage(
         changes: List<SyncChange>,

@@ -13,10 +13,10 @@ data class EntryUi(
 )
 
 data class AnimeUi(
-    val id: Long,
+    val malId: Int,
     val title: String,
 )
 
 fun LibraryEntry.toEntryUi(): EntryUi = EntryUi(id = id, title = anime.title, status = status, syncState = syncState)
 
-fun Anime.toAnimeUi(): AnimeUi = AnimeUi(id = id, title = title)
+fun Anime.toAnimeUi(): AnimeUi = AnimeUi(malId = malId, title = title)

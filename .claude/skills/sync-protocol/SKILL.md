@@ -17,13 +17,13 @@ Decision and rationale: ADR 0006. Contract rules: `graphql-schema` skill. Server
 - Batch of up to 1000 changes, keyed by client UUID, applied in one transaction.
 - Applies a change only if `updatedAt` is strictly newer than the stored one (last-write-wins). Ties and older changes are ignored, which makes retries safe.
 - A change with `deletedAt` set is a tombstone. A newer change without it revives the row.
-- Per-change outcome, in order: `APPLIED`, `IGNORED_STALE`, `REJECTED_UNKNOWN_ANIME`, `REJECTED_INVALID` (also used for `updatedAt`/`deletedAt` more than 5 minutes in the future). Each result carries `entryId`: the id of the server row the change was applied to or compared with (for the two rejections it just echoes the sent id). Client: mark `SYNCED` on `APPLIED` and `IGNORED_STALE` (guard with `updated_at = ?` as `markSynced` does); whenever `entryId` differs from the sent id (the anime already had a row under another id; the change was merged into it by last-write-wins, `APPLIED` or `IGNORED_STALE`), rewrite the local id to `entryId` and keep the local content, then mark `SYNCED` as above; other rejections are bugs to surface, not retry.
+- Per-change outcome, in order: `APPLIED`, `IGNORED_STALE`, `REJECTED_INVALID` (also used for a `malId` of 0 or less, and for `updatedAt`/`deletedAt` more than 5 minutes in the future). The wire names an anime by `malId`; the server's internal anime id never leaves the server (ADR 0009), and an unseen `malId` is accepted and added to the server's ID map. Each result carries `entryId`: the id of the server row the change was applied to or compared with (for a rejection it just echoes the sent id). Client: mark `SYNCED` on `APPLIED` and `IGNORED_STALE` (guard with `updated_at = ?` as `markSynced` does); whenever `entryId` differs from the sent id (the anime already had a row under another id; the change was merged into it by last-write-wins, `APPLIED` or `IGNORED_STALE`), rewrite the local id to `entryId` and keep the local content, then mark `SYNCED` as above; other rejections are bugs to surface, not retry.
 
 - There is no cursor in the push result. Never derive a pull cursor from a push; store only `changesSince.nextCursor`.
 
 ## Pull (`changesSince(cursor, limit)`)
 - Returns changes (tombstones included) with `server_seq` above the cursor, ordered, plus `nextCursor` and `hasMore`. Null or empty cursor starts from the beginning. Treat the cursor as an opaque string and store it only after the page is applied locally.
-- One server row per (user, anime). If a pulled row has the same `(user, anime)` as a local row with a different id (local `UNIQUE (user_id, anime_id)`), rewrite the local id to the pulled one first, then apply the rule below.
+- One server row per (user, anime). If a pulled row has the same `(user, anime)` as a local row with a different id (local `UNIQUE (user_id, mal_id)`), rewrite the local id to the pulled one first, then apply the rule below.
 - Applying a pulled row locally: insert or replace only if it is newer than the local row or the local row is `SYNCED`; never overwrite a `PENDING` row that is newer.
 
 ## Adding a synced field

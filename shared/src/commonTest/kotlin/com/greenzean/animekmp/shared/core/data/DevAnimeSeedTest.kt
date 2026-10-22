@@ -18,12 +18,11 @@ class DevAnimeSeedTest {
 
         assertEquals(4L, db.animeQueries.countAll().executeAsOne())
         val steinsGate = db.animeQueries.selectByMalId(9253).executeAsOne()
-        assertEquals(3L, steinsGate.id)
         assertEquals("Steins;Gate", steinsGate.title)
     }
 
     @Test
-    fun seedingTwiceKeepsIds() {
+    fun seedingTwiceKeepsRows() {
         DevAnimeSeed.apply(db)
         val before = db.animeQueries.selectAll().executeAsList()
 

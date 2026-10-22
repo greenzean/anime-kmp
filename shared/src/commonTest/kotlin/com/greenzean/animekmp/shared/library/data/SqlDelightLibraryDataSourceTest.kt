@@ -19,11 +19,7 @@ class SqlDelightLibraryDataSourceTest {
     private val driver = createTestDriver()
     private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
     private val repository = SqlDelightLibraryDataSource(db, dispatcher = UnconfinedTestDispatcher())
-    private val bebopId =
-        db.animeQueries
-            .selectByMalId(1)
-            .executeAsOne()
-            .id
+    private val bebop = 1
 
     @AfterTest
     fun tearDown() = driver.close()
@@ -31,7 +27,7 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun setStatusForUnknownAnimeFailsForeignKey() =
         runTest {
-            assertFailsWith<Exception> { repository.setStatus(999L, WatchStatus.WATCHING) }
+            assertFailsWith<Exception> { repository.setStatus(999, WatchStatus.WATCHING) }
         }
 
     @Test
@@ -52,7 +48,7 @@ class SqlDelightLibraryDataSourceTest {
             repository.observeLibrary().test {
                 assertTrue(awaitItem().isEmpty())
 
-                repository.setStatus(bebopId, WatchStatus.WATCHING)
+                repository.setStatus(bebop, WatchStatus.WATCHING)
 
                 val entry = awaitItem().single()
                 assertEquals("Cowboy Bebop", entry.anime.title)
@@ -65,14 +61,14 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun setStatusTwiceUpdatesTheSameEntry() =
         runTest {
-            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            repository.setStatus(bebop, WatchStatus.WATCHING)
             val id =
                 db.listEntryQueries
                     .selectPending()
                     .executeAsOne()
                     .id
 
-            repository.setStatus(bebopId, WatchStatus.COMPLETED)
+            repository.setStatus(bebop, WatchStatus.COMPLETED)
 
             val row = db.listEntryQueries.selectPending().executeAsOne()
             assertEquals(id, row.id)
@@ -82,7 +78,7 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun markSyncedClearsPendingUntilNextLocalWrite() =
         runTest {
-            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            repository.setStatus(bebop, WatchStatus.WATCHING)
             val row = db.listEntryQueries.selectPending().executeAsOne()
 
             db.listEntryQueries.markSynced(row.id, row.updated_at)
@@ -93,7 +89,7 @@ class SqlDelightLibraryDataSourceTest {
                     .isEmpty(),
             )
 
-            repository.setStatus(bebopId, WatchStatus.DROPPED)
+            repository.setStatus(bebop, WatchStatus.DROPPED)
             assertEquals(
                 1,
                 db.listEntryQueries
@@ -106,9 +102,9 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun removeHidesEntryButKeepsPendingTombstone() =
         runTest {
-            repository.setStatus(bebopId, WatchStatus.WATCHING)
+            repository.setStatus(bebop, WatchStatus.WATCHING)
 
-            repository.remove(bebopId)
+            repository.remove(bebop)
 
             repository.observeLibrary().test {
                 assertTrue(awaitItem().isEmpty())
@@ -121,12 +117,12 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun readdingAfterRemoveRevivesTheEntry() =
         runTest {
-            repository.setStatus(bebopId, WatchStatus.WATCHING)
-            repository.remove(bebopId)
+            repository.setStatus(bebop, WatchStatus.WATCHING)
+            repository.remove(bebop)
 
-            repository.setStatus(bebopId, WatchStatus.PLAN_TO_WATCH)
+            repository.setStatus(bebop, WatchStatus.PLAN_TO_WATCH)
 
-            val row = db.listEntryQueries.selectByUserAndAnime(LOCAL_USER_ID, bebopId).executeAsOne()
+            val row = db.listEntryQueries.selectByUserAndMalId(LOCAL_USER_ID, bebop.toLong()).executeAsOne()
             assertEquals(null, row.deleted_at)
             assertEquals("PLAN_TO_WATCH", row.status)
         }
@@ -137,8 +133,8 @@ class SqlDelightLibraryDataSourceTest {
             // Plain INSERT: insertPending uses OR IGNORE, which would swallow the CHECK violation.
             driver.execute(
                 null,
-                "INSERT INTO list_entry (id, user_id, anime_id, status, updated_at) " +
-                    "VALUES ('id', 'u', $bebopId, 'BINGING', 0)",
+                "INSERT INTO list_entry (id, user_id, mal_id, status, updated_at) " +
+                    "VALUES ('id', 'u', $bebop, 'BINGING', 0)",
                 0,
             )
         }

@@ -3,7 +3,6 @@ package com.greenzean.animekmp.shared.library.domain
 import kotlin.time.Instant
 
 data class Anime(
-    val id: Long,
     val malId: Int,
     val title: String,
 )

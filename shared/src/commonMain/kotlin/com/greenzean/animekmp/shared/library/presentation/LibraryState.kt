@@ -7,6 +7,6 @@ data class LibraryState(
 
 sealed interface LibraryAction {
     data class OnAddClick(
-        val animeId: Long,
+        val malId: Int,
     ) : LibraryAction
 }
