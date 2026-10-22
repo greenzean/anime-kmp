@@ -42,6 +42,15 @@ android {
                 .orElse(localProperties.getProperty("animekmp.serverUrl") ?: "https://api.example.invalid/graphql")
                 .get()
         buildConfigField("String", "GRAPHQL_URL", "\"$serverUrl\"")
+
+        // The *web* OAuth client ID, the same value as the server's GOOGLE_CLIENT_ID. Empty means sign-in
+        // reports "not configured" and the rest of the app works.
+        val googleServerClientId =
+            providers
+                .gradleProperty("animekmp.googleServerClientId")
+                .orElse(localProperties.getProperty("animekmp.googleServerClientId") ?: "")
+                .get()
+        buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
     }
 
     buildFeatures {
@@ -61,4 +70,7 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 }
