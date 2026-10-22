@@ -8,7 +8,7 @@ enum class ListStatus { WATCHING, COMPLETED, ON_HOLD, DROPPED, PLAN_TO_WATCH }
 
 data class ListEntryChangeInput(
     val id: UUID,
-    val animeId: Long,
+    val malId: Int,
     val status: ListStatus,
     val updatedAt: Instant,
     /** Non-null makes this change a tombstone. */
@@ -17,7 +17,7 @@ data class ListEntryChangeInput(
 
 data class ListEntryChange(
     val id: UUID,
-    val animeId: Long,
+    val malId: Int,
     val status: ListStatus,
     val updatedAt: Instant,
     val deletedAt: Instant?,

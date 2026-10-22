@@ -36,6 +36,6 @@ class SyncMutation(
     }
 }
 
-private fun ListEntryChangeInput.toDomain() = EntryChange(id, animeId, status.name, updatedAt, deletedAt)
+private fun ListEntryChangeInput.toDomain() = EntryChange(id, malId, status.name, updatedAt, deletedAt)
 
-private fun EntryChange.toGraphQL() = ListEntryChange(id, animeId, ListStatus.valueOf(status), updatedAt, deletedAt)
+private fun EntryChange.toGraphQL() = ListEntryChange(id, malId, ListStatus.valueOf(status), updatedAt, deletedAt)

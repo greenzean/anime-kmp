@@ -49,9 +49,9 @@ type ChangesPage {
 }
 
 type ListEntryChange {
-  animeId: Long!
   deletedAt: Instant
   id: UUID!
+  malId: Int!
   status: ListStatus!
   updatedAt: Instant!
 }
@@ -81,22 +81,18 @@ enum PushOutcome {
   APPLIED
   IGNORED_STALE
   REJECTED_INVALID
-  REJECTED_UNKNOWN_ANIME
 }
 
 "A point in time as an ISO-8601 UTC string, e.g. 2026-10-19T12:00:00Z"
 scalar Instant
 
-"A 64-bit signed integer"
-scalar Long
-
 "A UUID in canonical string form"
 scalar UUID
 
 input ListEntryChangeInput {
-  animeId: Long!
   deletedAt: Instant
   id: UUID!
+  malId: Int!
   status: ListStatus!
   updatedAt: Instant!
 }

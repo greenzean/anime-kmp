@@ -58,7 +58,6 @@ apollo {
         // Custom scalars (ADR 0006). Server hooks: server/.../graphql/SyncSchemaHooks.kt.
         mapScalar("Instant", "kotlin.time.Instant", "com.greenzean.animekmp.shared.graphql.InstantAdapter")
         mapScalar("UUID", "kotlin.String")
-        mapScalar("Long", "kotlin.Long")
     }
 }
 

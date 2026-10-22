@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.server.sync
 
 import com.greenzean.animekmp.server.DatabaseConfig
+import com.greenzean.animekmp.server.db.AnimeTable
 import com.greenzean.animekmp.server.db.ListEntryTable
 import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.module
@@ -21,8 +22,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
@@ -37,7 +40,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.uuid.toKotlinUuid
 
-private const val CHANGE_FIELDS = "id animeId status updatedAt deletedAt"
+private const val CHANGE_FIELDS = "id malId status updatedAt deletedAt"
 
 /** One Postgres container for the whole class; the container is reaped by Testcontainers when the JVM exits. */
 private object SharedDb {
@@ -62,16 +65,16 @@ class SyncApiTest {
 
     // Fixed "now" so test timestamps are never in the future relative to the server (future timestamps are rejected).
     private val clock = Clock.fixed(Instant.parse("2026-10-20T00:00:00Z"), ZoneOffset.UTC)
-    private val bebop = 1L
-    private val fma = 2L
+    private val bebop = 1
+    private val fma = 5114
 
     private fun change(
         id: UUID,
-        animeId: Long,
+        malId: Int,
         status: String,
         updatedAt: String,
         deletedAt: String? = null,
-    ) = """{id:"$id",animeId:$animeId,status:$status,updatedAt:"$updatedAt",deletedAt:${deletedAt?.let {
+    ) = """{id:"$id",malId:$malId,status:$status,updatedAt:"$updatedAt",deletedAt:${deletedAt?.let {
         "\"$it\""
     } ?: "null"}}"""
 
@@ -211,14 +214,70 @@ class SyncApiTest {
         sync {
             val result =
                 client.push(
-                    change(UUID.randomUUID(), 9999, "WATCHING", "2026-10-19T12:00:00Z"),
+                    change(UUID.randomUUID(), 0, "WATCHING", "2026-10-19T12:00:00Z"),
                     change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z"),
                     change(UUID.randomUUID(), bebop, "COMPLETED", "2026-10-19T12:30:00Z"),
                 )
             // The third change is the same anime as the second, so it is merged into that row (newer, so APPLIED).
-            assertEquals(listOf("REJECTED_UNKNOWN_ANIME", "APPLIED", "APPLIED"), result.outcomes())
+            assertEquals(listOf("REJECTED_INVALID", "APPLIED", "APPLIED"), result.outcomes())
             assertEquals(1, client.pull(null).changes().size)
         }
+
+    @Test
+    fun negativeMalIdIsRejectedAndCreatesNoAnime() =
+        sync {
+            val result = client.push(change(UUID.randomUUID(), -5, "WATCHING", "2026-10-19T12:00:00Z"))
+            assertEquals(listOf("REJECTED_INVALID"), result.outcomes())
+            assertEquals(0L, animeRowsFor(-5))
+        }
+
+    @Test
+    fun unseenMalIdIsAcceptedAndPullsBackAsMalId() =
+        sync {
+            val unseen = 987654
+            val result = client.push(change(UUID.randomUUID(), unseen, "WATCHING", "2026-10-19T12:00:00Z"))
+            assertEquals(listOf("APPLIED"), result.outcomes())
+            assertEquals(1L, animeRowsFor(unseen))
+            assertEquals(
+                unseen.toString(),
+                client
+                    .pull(null)
+                    .changes()
+                    .single()
+                    .str("malId"),
+            )
+        }
+
+    @Test
+    fun twoUsersAddingTheSameAnimeShareOneMapRow() {
+        val repo = SyncRepository(db, clock)
+        val shared = 424242
+        val at = Instant.parse("2026-10-19T12:00:00Z")
+        val userA = UUID.randomUUID()
+        val userB = UUID.randomUUID()
+        repo.push(userA, listOf(EntryChange(UUID.randomUUID(), shared, "WATCHING", at, null)))
+        repo.push(userB, listOf(EntryChange(UUID.randomUUID(), shared, "COMPLETED", at, null)))
+        assertEquals(1L, animeRowsFor(shared))
+        assertEquals(
+            shared,
+            repo
+                .changesSince(userA, null, 10)
+                .changes
+                .single()
+                .malId,
+        )
+        assertEquals(
+            shared,
+            repo
+                .changesSince(userB, null, 10)
+                .changes
+                .single()
+                .malId,
+        )
+    }
+
+    private fun animeRowsFor(malId: Int): Long =
+        transaction(db) { AnimeTable.selectAll().where { AnimeTable.malId eq malId }.count() }
 
     @Test
     fun emptyCursorStartsFromBeginningAndBadCursorErrors() =
@@ -352,7 +411,7 @@ class SyncApiTest {
                 ListEntryTable.insert {
                     it[ListEntryTable.id] = foreign.toKotlinUuid()
                     it[userId] = UUID.randomUUID().toKotlinUuid()
-                    it[animeId] = fma
+                    it[animeId] = AnimeTable.selectAll().where { AnimeTable.malId eq fma }.single()[AnimeTable.id]
                     it[status] = "WATCHING"
                     it[updatedAt] = Instant.parse("2026-10-19T10:00:00Z").atOffset(ZoneOffset.UTC)
                 }
@@ -385,13 +444,13 @@ class SyncApiTest {
         }
 
     @Test
-    fun longScalarRejectsNonIntegersAndOverflow() =
+    fun malIdRejectsNonIntegersAndOverflow() =
         sync {
-            for (literal in listOf("99999999999999999999", "1.5")) {
+            for (literal in listOf("99999999999999999999", "1.5", "2147483648")) {
                 val id = UUID.randomUUID()
-                val input = """{id:"$id",animeId:$literal,status:WATCHING,updatedAt:"2026-10-19T12:00:00Z"}"""
+                val input = """{id:"$id",malId:$literal,status:WATCHING,updatedAt:"2026-10-19T12:00:00Z"}"""
                 val r = client.gql("mutation { pushChanges(changes: [$input]) { results { id } } }")
-                assertTrue(r.containsKey("errors"), "animeId $literal should be rejected")
+                assertTrue(r.containsKey("errors"), "malId $literal should be rejected")
             }
         }
 

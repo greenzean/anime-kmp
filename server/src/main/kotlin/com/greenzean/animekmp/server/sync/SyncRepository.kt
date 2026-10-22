@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.nextLongVal
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -31,7 +32,7 @@ val VALID_STATUSES = setOf("WATCHING", "COMPLETED", "ON_HOLD", "DROPPED", "PLAN_
 
 data class EntryChange(
     val id: UUID,
-    val animeId: Long,
+    val malId: Int,
     val status: String,
     val updatedAt: Instant,
     val deletedAt: Instant?,
@@ -91,6 +92,7 @@ class SyncRepository(
         return transaction(database) {
             val rows =
                 ListEntryTable
+                    .innerJoin(AnimeTable)
                     .selectAll()
                     .where {
                         (ListEntryTable.userId eq userId.toKotlinUuid()) and
@@ -118,11 +120,21 @@ class SyncRepository(
             } else {
                 null
             }
-        return when {
-            rejected != null -> ChangeResult(change.id, rejected, change.id)
-            byId != null -> update(userId, change, byId)
-            else -> applyToSlot(userId, change)
-        }
+        if (rejected != null) return ChangeResult(change.id, rejected, change.id)
+        val animeId = animeIdFor(change.malId)
+        return if (byId != null) update(userId, change, animeId, byId) else applyToSlot(userId, change, animeId)
+    }
+
+    /**
+     * The server never calls MAL, so it cannot tell a real MAL id from an invented one: it keeps whatever id it is
+     * given in the ID map (ADR 0009). Insert-if-absent then read, so two users adding the same anime at once agree.
+     */
+    private fun animeIdFor(malId: Int): Long {
+        AnimeTable.insertIgnore { it[AnimeTable.malId] = malId }
+        return AnimeTable
+            .select(AnimeTable.id)
+            .where { AnimeTable.malId eq malId }
+            .single()[AnimeTable.id]
     }
 
     // One row per (user, anime). The same anime added under another id (two devices, or a re-add after a delete)
@@ -130,14 +142,15 @@ class SyncRepository(
     private fun applyToSlot(
         userId: UUID,
         change: EntryChange,
+        animeId: Long,
     ): ChangeResult {
         val slot =
             ListEntryTable
                 .selectAll()
                 .where {
-                    (ListEntryTable.userId eq userId.toKotlinUuid()) and (ListEntryTable.animeId eq change.animeId)
+                    (ListEntryTable.userId eq userId.toKotlinUuid()) and (ListEntryTable.animeId eq animeId)
                 }.singleOrNull()
-        return if (slot == null) insert(userId, change) else update(userId, change, slot)
+        return if (slot == null) insert(userId, change, animeId) else update(userId, change, animeId, slot)
     }
 
     private fun rejection(change: EntryChange): PushOutcome? {
@@ -152,8 +165,9 @@ class SyncRepository(
                 PushOutcome.REJECTED_INVALID
             }
 
-            AnimeTable.select(AnimeTable.id).where { AnimeTable.id eq change.animeId }.empty() -> {
-                PushOutcome.REJECTED_UNKNOWN_ANIME
+            // MAL ids are positive; 0 or less is a client bug, not an anime.
+            change.malId <= 0 -> {
+                PushOutcome.REJECTED_INVALID
             }
 
             else -> {
@@ -166,6 +180,7 @@ class SyncRepository(
     private fun update(
         userId: UUID,
         change: EntryChange,
+        animeId: Long,
         existing: ResultRow,
     ): ChangeResult {
         val entryId = existing[ListEntryTable.id]
@@ -175,7 +190,7 @@ class SyncRepository(
                     PushOutcome.REJECTED_INVALID
                 }
 
-                existing[ListEntryTable.animeId] != change.animeId -> {
+                existing[ListEntryTable.animeId] != animeId -> {
                     PushOutcome.REJECTED_INVALID
                 }
 
@@ -199,11 +214,12 @@ class SyncRepository(
     private fun insert(
         userId: UUID,
         change: EntryChange,
+        animeId: Long,
     ): ChangeResult {
         ListEntryTable.insert {
             it[ListEntryTable.id] = change.id.toKotlinUuid()
             it[ListEntryTable.userId] = userId.toKotlinUuid()
-            it[animeId] = change.animeId
+            it[ListEntryTable.animeId] = animeId
             it[status] = change.status
             it[updatedAt] = change.updatedAt.toOffset()
             it[deletedAt] = change.deletedAt?.toOffset()
@@ -220,7 +236,7 @@ class SyncRepository(
     private fun ResultRow.toChange() =
         EntryChange(
             id = this[ListEntryTable.id].toJavaUuid(),
-            animeId = this[ListEntryTable.animeId],
+            malId = this[AnimeTable.malId],
             status = this[ListEntryTable.status],
             updatedAt = this[ListEntryTable.updatedAt].toInstant(),
             deletedAt = this[ListEntryTable.deletedAt]?.toInstant(),
