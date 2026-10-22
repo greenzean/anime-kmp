@@ -135,4 +135,54 @@ class MigrationTest {
         assertEquals(2, seqs.size)
         assert(seqs[0] < seqs[1])
     }
+
+    private fun newUser(sub: String): Uuid =
+        transaction(db) {
+            AppUserTable.insert { it[googleSub] = sub }
+            AppUserTable.selectAll().where { AppUserTable.googleSub eq sub }.single()[AppUserTable.id]
+        }
+
+    private fun insertRefresh(
+        user: Uuid,
+        hash: ByteArray,
+    ) = transaction(db) {
+        RefreshTokenTable.insert {
+            it[id] = Uuid.random()
+            it[userId] = user
+            it[familyId] = Uuid.random()
+            it[tokenHash] = hash
+            it[createdAt] = OffsetDateTime.now()
+            it[expiresAt] = OffsetDateTime.now().plusDays(30)
+        }
+    }
+
+    @Test
+    fun googleSubIsUniqueAndNotEmpty() {
+        newUser("sub-1")
+        assertFailsWith<SQLException> { newUser("sub-1") }
+        assertFailsWith<SQLException> { newUser("") }
+    }
+
+    @Test
+    fun userHasNoEmailColumn() {
+        val columns =
+            transaction(db) {
+                exec("SELECT column_name FROM information_schema.columns WHERE table_name = 'app_user'") { rs ->
+                    generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+                }
+            }
+        assertEquals(setOf("id", "google_sub", "created_at"), columns?.toSet())
+    }
+
+    @Test
+    fun refreshTokenHashIsUnique() {
+        val user = newUser("sub-1")
+        insertRefresh(user, byteArrayOf(1, 2, 3))
+        assertFailsWith<SQLException> { insertRefresh(user, byteArrayOf(1, 2, 3)) }
+    }
+
+    @Test
+    fun refreshTokenNeedsAnExistingUser() {
+        assertFailsWith<SQLException> { insertRefresh(Uuid.random(), byteArrayOf(9)) }
+    }
 }

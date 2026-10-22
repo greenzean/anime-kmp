@@ -11,7 +11,7 @@ CREATE TABLE anime (
 -- pushes of one user are serialized (advisory lock in SyncRepository.push): commit order must match seq order.
 CREATE SEQUENCE list_entry_sync_seq;
 
--- user_id is a placeholder until auth lands (no users table yet).
+-- user_id is a placeholder: M2-5 authorizes sync per user and adds the foreign key to app_user.
 -- deleted_at is the tombstone: sync pulls must see deletions, so rows are never hard-deleted.
 CREATE TABLE list_entry (
     id         UUID        PRIMARY KEY,
@@ -28,3 +28,30 @@ CREATE TABLE list_entry (
 ALTER SEQUENCE list_entry_sync_seq OWNED BY list_entry.server_seq;
 
 CREATE INDEX list_entry_user_seq_idx ON list_entry (user_id, server_seq);
+
+-- Accounts (ADR 0010). Keyed on Google's `sub`; the server stores no email or other profile data.
+CREATE TABLE app_user (
+    id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    google_sub TEXT        NOT NULL UNIQUE CHECK (google_sub <> ''),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Single-use nonces handed out before a Google sign-in. Hard-deleted when consumed or expired.
+CREATE TABLE sign_in_nonce (
+    nonce      TEXT        PRIMARY KEY,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+-- Only the SHA-256 of a refresh token is stored. A rotated token keeps its row with revoked_at set, so that
+-- presenting it again (token theft) is detectable and revokes the whole family.
+CREATE TABLE refresh_token (
+    id         UUID        PRIMARY KEY,
+    user_id    UUID        NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    family_id  UUID        NOT NULL,
+    token_hash BYTEA       NOT NULL UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ
+);
+
+CREATE INDEX refresh_token_family_idx ON refresh_token (family_id);

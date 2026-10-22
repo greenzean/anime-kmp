@@ -23,6 +23,8 @@ dependencies {
     implementation(libs.hikaricp)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
+    implementation(libs.auth0.java.jwt)
+    implementation(libs.auth0.jwks.rsa)
     runtimeOnly(libs.postgresql)
 
     testImplementation(libs.kotlin.test)

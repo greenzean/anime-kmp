@@ -36,6 +36,13 @@ directive @specifiedBy(
     url: String!
   ) on SCALAR
 
+type AuthPayload {
+  accessToken: String!
+  accessTokenExpiresAt: Instant!
+  refreshToken: String!
+  refreshTokenExpiresAt: Instant!
+}
+
 type ChangeResult {
   entryId: UUID!
   id: UUID!
@@ -58,6 +65,9 @@ type ListEntryChange {
 
 type Mutation {
   pushChanges(changes: [ListEntryChangeInput!]!): PushResult!
+  refreshSession(refreshToken: String!): AuthPayload!
+  signInNonce: String!
+  signInWithGoogle(idToken: String!): AuthPayload!
 }
 
 type PushResult {

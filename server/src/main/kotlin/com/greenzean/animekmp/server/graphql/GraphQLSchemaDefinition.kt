@@ -5,6 +5,8 @@ import com.expediagroup.graphql.generator.TopLevelObject
 import com.expediagroup.graphql.generator.toSchema
 import com.expediagroup.graphql.server.operations.Mutation
 import com.expediagroup.graphql.server.operations.Query
+import com.greenzean.animekmp.server.auth.AuthService
+import com.greenzean.animekmp.server.graphql.auth.AuthMutation
 import com.greenzean.animekmp.server.graphql.sync.SyncMutation
 import com.greenzean.animekmp.server.graphql.sync.SyncQuery
 import com.greenzean.animekmp.server.sync.SyncRepository
@@ -20,7 +22,10 @@ object GraphQLSchemaDefinition {
     /** `sync` is only invoked by resolvers; the schema export builds without a database. */
     fun queries(sync: SyncRepository = SyncRepository()): List<Query> = listOf(HelloQuery(), SyncQuery(sync))
 
-    fun mutations(sync: SyncRepository = SyncRepository()): List<Mutation> = listOf(SyncMutation(sync))
+    fun mutations(
+        sync: SyncRepository = SyncRepository(),
+        auth: AuthService? = null,
+    ): List<Mutation> = listOf(SyncMutation(sync), AuthMutation(auth))
 
     fun buildSchema(): GraphQLSchema =
         toSchema(
