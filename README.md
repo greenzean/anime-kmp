@@ -41,7 +41,7 @@ Offline-first: the UI reads and writes only the local SQLDelight database. Chang
 
 ### Auth
 
-Not implemented yet. Planned: Google sign-in for the optional server account (the server verifies the Google ID token and issues its own token), and MAL OAuth with PKCE on each device, with tokens kept on the device. For now every request is treated as a single hardcoded dev user, so any install pulls the same library.
+Google sign-in for the optional server account works on Android: Credential Manager returns a Google ID token (with a server-issued nonce), the server verifies it and issues its own session, and the app keeps that session encrypted with an Android Keystore key. Planned: MAL OAuth with PKCE on each device, with tokens kept on the device. For now every request is treated as a single hardcoded dev user, so any install pulls the same library.
 
 ### Data model
 
@@ -106,6 +106,10 @@ The server URL comes from the `animekmp.serverUrl` Gradle property (default: a p
 - `androidApp/src/debug/res/xml/network_security_config.xml`: a `<network-security-config>` with a `<domain-config cleartextTrafficPermitted="true">` for the domain `10.0.2.2`
 
 Release builds use the same property and must use HTTPS.
+
+### Google sign-in on the emulator
+
+Sign-in is optional and the app works without it. To try it, set `animekmp.googleServerClientId=<web client ID>` in `local.properties` (the same value as the server's `GOOGLE_CLIENT_ID`; empty means sign-in says "not set up in this build"). In Google Cloud Console (APIs & Services, Credentials), also create an OAuth client of type **Android** for package `com.greenzean.animekmp` with the SHA-1 of your debug keystore (`./gradlew :androidApp:signingReport`), and use an emulator image with Google Play and a Google account added. The server needs `GOOGLE_CLIENT_ID` and `JWT_SECRET` set. The session is kept encrypted with a key in the Android Keystore.
 
 ## Local environment (Docker)
 

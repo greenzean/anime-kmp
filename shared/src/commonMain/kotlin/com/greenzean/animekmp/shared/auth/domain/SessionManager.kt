@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.auth.domain
 
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
@@ -15,8 +16,11 @@ data class Session(
     val refreshToken: String,
 )
 
-/** Where the session lives. M2-6 adds a persistent, encrypted implementation; until then it is in memory. */
+/** Where the session lives: encrypted on the device on Android, in memory elsewhere (and in tests). */
 interface SessionStore {
+    /** The current session, or null when signed out. Emits again when the session is saved, renewed or cleared. */
+    val session: Flow<Session?>
+
     suspend fun get(): Session?
 
     suspend fun save(session: Session)
