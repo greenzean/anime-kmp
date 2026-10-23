@@ -21,6 +21,9 @@ Ideas left out of the [M2 MVP](milestone2-mvp.md), with the decision they came f
 ## Account
 - More ways to log in: email and password; Sign in with Apple when iOS arrives, required by App Store guideline 4.8 next to Google sign-in (D24).
 
+## Appearance
+- A way to change themes in Settings: light, dark or system, and a choice of color palettes, with dynamic color as one option. The M2-6a design system keeps colors in one theme so this can be added later.
+
 ## Other
 - Streaming links.
 - New-episode notifications.

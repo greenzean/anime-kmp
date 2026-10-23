@@ -8,6 +8,7 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 - **Stage new files right away:** `git add` every file you create as soon as it exists, so it is tracked. Staging is not committing; the rule above still applies.
 - **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it.
 - **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
+- **Design is part of every view ticket:** a ticket with `composeApp` screens includes their visual design in its acceptance criteria (previews in light and dark, accessibility, screenshots), built on the design system from M2-6a (#86), the only separate design ticket.
 - **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.
 - **Models:** default is `sonnet` (plans and executes small tickets). Tickets labeled `opus-plan` are planned with `/model opusplan` (Opus in plan mode, Sonnet after approval). Switch at the start of a session, not mid-session.
 - Verify versions, prices, API terms and library support with a search; say what could not be verified.
