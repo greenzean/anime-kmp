@@ -5,14 +5,12 @@ import com.greenzean.animekmp.shared.core.domain.Result
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Client sync loop (ADR 0006): push pending rows, then pull pages until caught up. */
 class SyncEngine(
     private val api: SyncApi,
     private val local: SyncLocalDataSource,
 ) {
     private val mutex = Mutex()
 
-    /** Concurrent callers wait for the run in progress instead of starting a second one. */
     suspend fun sync(): SyncResult =
         mutex.withLock {
             val rejected = mutableListOf<Rejection>()
@@ -27,11 +25,12 @@ class SyncEngine(
             }
         }
 
+    suspend fun <T> exclusive(block: suspend () -> T): T = mutex.withLock { block() }
+
     private suspend fun pushPending(rejected: MutableList<Rejection>): Result<Int, DataError.Network> {
         var pushed = 0
         val seen = mutableSetOf<String>()
         while (true) {
-            // Rejected rows stay PENDING; skip them so one bad row cannot loop the push forever.
             val batch =
                 local
                     .pendingChanges(PUSH_BATCH_SIZE + seen.size)
@@ -57,7 +56,6 @@ class SyncEngine(
                         rejected += Rejection(change.id, result.outcome)
                     }
 
-                    // No result for this id: leave it PENDING, the next run retries.
                     null -> {
                         Unit
                     }
@@ -78,7 +76,7 @@ class SyncEngine(
             pulled += local.applyPage(page.changes, page.nextCursor)
             cursor = page.nextCursor
         } while (page.hasMore)
-        // Changes parked for an unknown anime apply once the catalog has it, even with nothing new to pull.
+
         pulled += local.retryParked()
         return Result.Success(pulled)
     }

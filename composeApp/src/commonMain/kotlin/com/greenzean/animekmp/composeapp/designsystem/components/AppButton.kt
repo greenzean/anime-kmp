@@ -25,10 +25,6 @@ import com.greenzean.animekmp.composeapp.designsystem.MinTouchTarget
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
 
-/**
- * Standard button. While [loading] it shows a spinner, stays the same size and ignores taps.
- * Height is at least [MinTouchTarget].
- */
 @Composable
 fun AppButton(
     text: String,
@@ -45,10 +41,30 @@ fun AppButton(
     val active = enabled && !loading
     val content: @Composable () -> Unit = { ButtonContent(text = text, loading = loading) }
     when (style) {
-        AppButtonStyle.Filled -> Button(onClick, buttonModifier, enabled = active) { content() }
-        AppButtonStyle.Tonal -> FilledTonalButton(onClick, buttonModifier, enabled = active) { content() }
-        AppButtonStyle.Outlined -> OutlinedButton(onClick, buttonModifier, enabled = active) { content() }
-        AppButtonStyle.Text -> TextButton(onClick, buttonModifier, enabled = active) { content() }
+        AppButtonStyle.Filled -> {
+            Button(onClick, buttonModifier, enabled = active) { content() }
+        }
+
+        AppButtonStyle.Tonal -> {
+            FilledTonalButton(onClick, buttonModifier, enabled = active) { content() }
+        }
+
+        AppButtonStyle.Outlined -> {
+            OutlinedButton(onClick, buttonModifier, enabled = active) { content() }
+        }
+
+        AppButtonStyle.Text -> {
+            TextButton(onClick, buttonModifier, enabled = active) { content() }
+        }
+
+        AppButtonStyle.Destructive -> {
+            TextButton(
+                onClick,
+                buttonModifier,
+                enabled = active,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { content() }
+        }
     }
 }
 
@@ -92,6 +108,7 @@ private fun AppButtonPreview(darkTheme: Boolean) {
             AppButton("Tonal", onClick = {}, style = AppButtonStyle.Tonal)
             AppButton("Outlined", onClick = {}, style = AppButtonStyle.Outlined)
             AppButton("Text", onClick = {}, style = AppButtonStyle.Text)
+            AppButton("Destructive", onClick = {}, style = AppButtonStyle.Destructive)
             AppButton("Loading", onClick = {}, loading = true)
             AppButton("Disabled", onClick = {}, enabled = false)
         }

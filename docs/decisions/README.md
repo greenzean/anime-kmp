@@ -29,3 +29,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0008 | [MAL API behaviour and how the app uses it](0008-mal-api.md) | Accepted | M2-2 |
 | 0009 | [Anime references: a server-side ID map keyed by platform IDs](0009-anime-id-map.md) | Accepted | M2-3 |
 | 0010 | [Server sign-in and session tokens](0010-server-sign-in.md) | Accepted | M2-4 |
+| 0011 | [Sign-out and who owns the library on the device](0011-sign-out-and-library-ownership.md) | Accepted | M2-7 |

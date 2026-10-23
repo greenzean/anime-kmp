@@ -162,3 +162,9 @@ Depends on: all other M2 tickets.
 Acceptance: on a clean install with no account: add anime, search, filter, rate, export and import a file; sign in with Google on two devices and see the same library; log in to MAL, import, change on both sides and resolve a conflict; delete the account; result note in `docs/m2-result.md`; CI, lint and tests pass on main.
 Out of scope: new features; fixes go in follow-up bug tickets unless trivial.
 Checkpoint: every D1-D24 verified or listed as not met."
+M2-29,Server: sign-out revokes the refresh token,feature,M2,"feature,phase-1",sonnet,"server, shared","Goal: signing out also ends the session on the server, so a refresh token copied off the device stops working at once instead of after its 30 days.
+Depends on: M2-4, M2-7.
+Acceptance: a `signOut` mutation (authenticated by the refresh token) revokes the whole token family and returns a result that does not reveal whether the token existed; repeating it, or sending an unknown or already revoked token, is not an error; the SDL file and the schema drift test are updated and the Apollo operation is added; the app calls it during sign-out (after the keep-or-delete choice) and signs out locally even when the call fails or the device is offline; server tests cover revoke, repeat and a refresh with the revoked token (`UNAUTHENTICATED`); app tests cover the offline sign-out; ADR 0011 consequences and ADR 0010 are updated through a new ADR or a superseding note, not by rewriting an accepted one.
+Out of scope: ""sign out everywhere"" (revoking every device's family), cleaning up expired token rows, rate limiting, changing the keep-or-delete behaviour.
+Covers: follow-up to D20 (ADR 0011). Skill: graphql-schema, ktor-server-conventions.
+Order: server schema first, then the app."

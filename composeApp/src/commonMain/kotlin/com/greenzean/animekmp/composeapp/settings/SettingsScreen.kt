@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
+import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppCard
@@ -54,6 +55,14 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    state.signOutPrompt?.let { prompt ->
+        SignOutDialog(
+            prompt = prompt,
+            onKeep = { onAction(AccountAction.OnKeepLibraryClick) },
+            onDelete = { onAction(AccountAction.OnDeleteLibraryClick) },
+            onDismiss = { onAction(AccountAction.OnDismissSignOut) },
+        )
+    }
     AppScaffold(title = "Settings", onNavigateBack = onNavigateBack, modifier = modifier) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = MaterialTheme.spacing.lg),
@@ -67,17 +76,35 @@ fun SettingsScreen(
             )
             AppCard {
                 if (state.isSignedIn) {
-                    SignedInAccount()
+                    SignedInAccount(onSignOut = { onAction(AccountAction.OnSignOutClick) })
                 } else {
                     SignedOutAccount(state = state, onAction = onAction)
                 }
             }
+            MergeStatus(
+                merge = state.merge,
+                onRetry = { onAction(AccountAction.OnRetryMerge) },
+                onDismiss = { onAction(AccountAction.OnDismissMerge) },
+            )
         }
     }
 }
 
 @Composable
-private fun SignedInAccount() {
+private fun SignedInAccount(onSignOut: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
+        AccountSummary()
+        AppButton(
+            text = "Sign out",
+            onClick = onSignOut,
+            style = AppButtonStyle.Outlined,
+            modifier = Modifier.align(Alignment.End),
+        )
+    }
+}
+
+@Composable
+private fun AccountSummary() {
     Row(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
@@ -128,22 +155,7 @@ private fun ErrorBanner(
     message: String,
     onDismiss: () -> Unit,
 ) {
-    val spacing = MaterialTheme.spacing
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.errorContainer, MaterialTheme.shapes.medium)
-                .padding(start = spacing.lg, top = spacing.md, end = spacing.sm)
-                .semantics { liveRegion = LiveRegionMode.Polite },
-        horizontalAlignment = Alignment.End,
-    ) {
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-            modifier = Modifier.fillMaxWidth(),
-        )
+    AppBanner(message = message) {
         AppButton(text = "Dismiss", onClick = onDismiss, style = AppButtonStyle.Text)
     }
 }

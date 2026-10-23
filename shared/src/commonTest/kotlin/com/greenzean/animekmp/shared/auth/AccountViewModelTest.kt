@@ -1,17 +1,25 @@
 package com.greenzean.animekmp.shared.auth
 
 import com.greenzean.animekmp.shared.auth.data.InMemorySessionStore
-import com.greenzean.animekmp.shared.auth.domain.AuthApi
-import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
-import com.greenzean.animekmp.shared.auth.domain.Session
+import com.greenzean.animekmp.shared.auth.domain.MergeLibraryUseCase
+import com.greenzean.animekmp.shared.auth.domain.MergeSummary
 import com.greenzean.animekmp.shared.auth.domain.SignInError
 import com.greenzean.animekmp.shared.auth.domain.SignInWithGoogleUseCase
+import com.greenzean.animekmp.shared.auth.domain.SignOutUseCase
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
+import com.greenzean.animekmp.shared.auth.presentation.MergeState
+import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
+import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.createTestDriver
+import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
-import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
+import com.greenzean.animekmp.shared.sync.FakeServerSyncApi
+import com.greenzean.animekmp.shared.sync.data.SqlDelightAccountLibraryDataSource
+import com.greenzean.animekmp.shared.sync.data.SqlDelightSyncLocalDataSource
+import com.greenzean.animekmp.shared.sync.domain.SyncEngine
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,9 +34,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Instant
-
-private val SESSION = Session("access", Instant.parse("2026-10-22T12:15:00Z"), "refresh")
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AccountViewModelTest {
@@ -36,14 +41,29 @@ class AccountViewModelTest {
     private val api = FakeAuthApi()
     private val provider = FakeGoogleIdTokenProvider()
     private val scheduler = FakeSyncScheduler()
+    private val server = FakeServerSyncApi()
+    private val driver = createTestDriver()
+    private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    private val local = SqlDelightSyncLocalDataSource(db, UnconfinedTestDispatcher())
+    private val accountLibrary = SqlDelightAccountLibraryDataSource(db, UnconfinedTestDispatcher())
+    private val engine = SyncEngine(server, local)
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
     @AfterTest
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        Dispatchers.resetMain()
+        driver.close()
+    }
 
-    private fun viewModel() = AccountViewModel(store, SignInWithGoogleUseCase(provider, api, store, scheduler))
+    private fun viewModel() =
+        AccountViewModel(
+            sessionStore = store,
+            signInWithGoogle = SignInWithGoogleUseCase(provider, api, store),
+            mergeLibrary = MergeLibraryUseCase(engine, accountLibrary, scheduler),
+            signOut = SignOutUseCase(store, engine, accountLibrary),
+        )
 
     @Test
     fun startsSignedOut() {
@@ -61,7 +81,8 @@ class AccountViewModelTest {
         }
 
     @Test
-    fun signingInSavesTheSessionAndRequestsSync() {
+    fun signingInSavesTheSessionAndMergesTheLibrary() {
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
         val viewModel = viewModel()
         viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
 
@@ -70,8 +91,108 @@ class AccountViewModelTest {
         assertNull(viewModel.state.value.error)
         assertEquals("nonce-1", provider.nonces.single())
         assertEquals("id-token", api.idTokens.single())
-        assertEquals(1, scheduler.requests)
+        assertEquals(MergeState.Done(MergeSummary(sent = 1, rejected = 0, total = 1)), viewModel.state.value.merge)
+        assertEquals(0, scheduler.requests)
     }
+
+    @Test
+    fun aMergeWithoutConnectionStaysSignedInAndCanBeRetried() {
+        server.offline = true
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        val viewModel = viewModel()
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertEquals(MergeState.Failed(DataError.Network.NO_INTERNET), viewModel.state.value.merge)
+        assertEquals(1, scheduler.requests)
+
+        server.offline = false
+        viewModel.onAction(AccountAction.OnRetryMerge)
+        assertEquals(MergeState.Done(MergeSummary(sent = 1, rejected = 0, total = 1)), viewModel.state.value.merge)
+
+        viewModel.onAction(AccountAction.OnDismissMerge)
+        assertEquals(MergeState.Idle, viewModel.state.value.merge)
+    }
+
+    @Test
+    fun signOutAsksFirstThenKeepsTheLibrary() {
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        val viewModel = signedInViewModel()
+
+        viewModel.onAction(AccountAction.OnSignOutClick)
+        assertEquals(SignOutPrompt.Ready(unsyncedCount = 0), viewModel.state.value.signOutPrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
+
+        viewModel.onAction(AccountAction.OnKeepLibraryClick)
+        assertNull(viewModel.state.value.signOutPrompt)
+        assertFalse(viewModel.state.value.isSignedIn)
+        assertEquals(1L, db.listEntryQueries.countActive().executeAsOne())
+    }
+
+    @Test
+    fun signOutWithDeleteEmptiesTheLibrary() {
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        val viewModel = signedInViewModel()
+
+        viewModel.onAction(AccountAction.OnSignOutClick)
+        viewModel.onAction(AccountAction.OnDeleteLibraryClick)
+
+        assertFalse(viewModel.state.value.isSignedIn)
+        assertEquals(MergeState.Idle, viewModel.state.value.merge)
+        assertEquals(0L, db.listEntryQueries.countActive().executeAsOne())
+    }
+
+    @Test
+    fun signOutOfflineWarnsAboutUnsyncedChanges() {
+        val viewModel = signedInViewModel()
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        server.offline = true
+
+        viewModel.onAction(AccountAction.OnSignOutClick)
+
+        assertEquals(SignOutPrompt.Ready(unsyncedCount = 1), viewModel.state.value.signOutPrompt)
+    }
+
+    @Test
+    fun cancellingSignOutChangesNothing() {
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        val viewModel = signedInViewModel()
+
+        viewModel.onAction(AccountAction.OnSignOutClick)
+        viewModel.onAction(AccountAction.OnDismissSignOut)
+
+        assertNull(viewModel.state.value.signOutPrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertEquals(1L, db.listEntryQueries.countActive().executeAsOne())
+    }
+
+    @Test
+    fun dismissingWhileTheLibraryIsStillSyncingClosesTheDialogForGood() {
+        val viewModel = signedInViewModel()
+        val gate = CompletableDeferred<Unit>()
+        server.pullGate = gate
+
+        viewModel.onAction(AccountAction.OnSignOutClick)
+        assertEquals(SignOutPrompt.Preparing, viewModel.state.value.signOutPrompt)
+        viewModel.onAction(AccountAction.OnDismissSignOut)
+        gate.complete(Unit)
+
+        assertNull(viewModel.state.value.signOutPrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
+    }
+
+    @Test
+    fun aSessionThatEndsOnItsOwnClearsTheMergeCard() {
+        val viewModel = signedInViewModel()
+        assertTrue(viewModel.state.value.merge is MergeState.Done)
+
+        runTest { store.clear() }
+
+        assertFalse(viewModel.state.value.isSignedIn)
+        assertEquals(MergeState.Idle, viewModel.state.value.merge)
+    }
+
+    private fun signedInViewModel() = viewModel().also { it.onAction(AccountAction.OnSignInWithGoogleClick) }
 
     @Test
     fun isSigningInWhileGoogleIsOpen() {
@@ -153,37 +274,4 @@ class AccountViewModelTest {
 
             assertFalse(viewModel.state.value.isSignedIn)
         }
-}
-
-private class FakeAuthApi : AuthApi {
-    var nonceResult: Result<String, DataError.Network> = Result.Success("nonce-1")
-    var signInResult: Result<Session, DataError.Network> = Result.Success(SESSION)
-    val idTokens = mutableListOf<String>()
-
-    override suspend fun signInNonce() = nonceResult
-
-    override suspend fun signInWithGoogle(idToken: String): Result<Session, DataError.Network> {
-        idTokens += idToken
-        return signInResult
-    }
-}
-
-private class FakeGoogleIdTokenProvider : GoogleIdTokenProvider {
-    var result: Result<String, GoogleSignInError> = Result.Success("id-token")
-    var gate: CompletableDeferred<Unit>? = null
-    val nonces = mutableListOf<String>()
-
-    override suspend fun getIdToken(nonce: String): Result<String, GoogleSignInError> {
-        nonces += nonce
-        gate?.await()
-        return result
-    }
-}
-
-private class FakeSyncScheduler : SyncScheduler {
-    var requests = 0
-
-    override fun requestSync() {
-        requests++
-    }
 }

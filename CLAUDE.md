@@ -5,6 +5,7 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 ## Working rules (always apply)
 
 - **No commits, pushes, or PRs** until the user explicitly says so.
+- **Split commits by layer:** when the user says to commit, make several commits (server, shared, composeApp, docs and config), each one building on its own, never one commit per ticket. Procedure: `commit-split` skill.
 - **Stage new files right away:** `git add` every file you create as soon as it exists, so it is tracked. Staging is not committing; the rule above still applies.
 - **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it.
 - **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
@@ -32,6 +33,7 @@ Details of where things live: `codebase-overview` skill.
 - Local DB is the source of truth; the UI reads and writes only locally.
 - Only the app talks to MAL and other platforms; the server never does and stores no platform tokens or platform user data (ADR 0007). The app works without an account.
 - Treat the client as untrusted on our server. Never commit secrets (`.env`, keystores).
+- **No comments in code:** no KDoc, no `//` or `/* */`, no SQL `--`. Names and tests carry the meaning; reasons go in ADRs and PR text. When you touch a file, remove the comments that are already in it. This overrides matching the comment style of surrounding code.
 
 ## Delegation
 

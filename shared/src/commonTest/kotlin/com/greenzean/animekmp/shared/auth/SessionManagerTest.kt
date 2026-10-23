@@ -43,7 +43,8 @@ private fun session(
 class SessionManagerTest {
     private val store = InMemorySessionStore()
     private val refresher = FakeRefresher()
-    private val manager = SessionManager(store, refresher, FixedClock())
+    private var sessionsEnded = 0
+    private val manager = SessionManager(store, refresher, FixedClock(), onSessionEnded = { sessionsEnded++ })
 
     @Test
     fun noSessionIsUnauthorizedWithoutARefresh() =
@@ -108,6 +109,7 @@ class SessionManagerTest {
             refresher.result = Result.Error(DataError.Network.UNAUTHORIZED)
             assertEquals(Result.Error(DataError.Network.UNAUTHORIZED), manager.accessToken())
             assertNull(store.get())
+            assertEquals(1, sessionsEnded)
         }
 
     @Test
@@ -118,5 +120,6 @@ class SessionManagerTest {
             refresher.result = Result.Error(DataError.Network.NO_INTERNET)
             assertEquals(Result.Error(DataError.Network.NO_INTERNET), manager.accessToken())
             assertEquals(expired, store.get())
+            assertEquals(0, sessionsEnded)
         }
 }
