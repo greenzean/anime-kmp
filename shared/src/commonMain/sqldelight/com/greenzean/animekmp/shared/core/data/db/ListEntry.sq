@@ -1,6 +1,5 @@
--- Same shape as the server list_entry table plus sync_state. One library per device: no user id, the server
--- takes the user from the session token.
--- Timestamps are epoch milliseconds. deleted_at is the tombstone: rows are never hard-deleted.
+
+
 CREATE TABLE list_entry (
     id         TEXT    NOT NULL PRIMARY KEY,
     mal_id     INTEGER NOT NULL REFERENCES anime (mal_id),
@@ -29,9 +28,6 @@ SELECT * FROM list_entry WHERE mal_id = ?;
 selectPending:
 SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at;
 
--- No ON CONFLICT upsert: minSdk 26 ships SQLite 3.18 (upsert needs 3.24). Callers run
--- updatePending then insertPending in one transaction.
--- A local write always leaves the row pending. Re-adding a tombstoned anime clears deleted_at.
 updatePending:
 UPDATE list_entry
 SET status = :status, updated_at = :updatedAt, deleted_at = NULL, sync_state = 'PENDING'
@@ -52,11 +48,9 @@ UPDATE list_entry SET sync_state = 'SYNCED' WHERE id = ? AND updated_at = ?;
 selectPendingBatch:
 SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at LIMIT :limit;
 
--- The server kept another id for the same anime: adopt it, content unchanged.
 rewriteId:
 UPDATE list_entry SET id = :newId WHERE id = :oldId;
 
--- Pulled rows are server state, so they land SYNCED. Callers decide whether to apply (see applyPage).
 updatePulled:
 UPDATE list_entry
 SET status = :status, updated_at = :updatedAt, deleted_at = :deletedAt, sync_state = 'SYNCED'
@@ -65,3 +59,18 @@ WHERE id = :id;
 insertPulled:
 INSERT OR IGNORE INTO list_entry (id, mal_id, status, updated_at, deleted_at, sync_state)
 VALUES (?, ?, ?, ?, ?, 'SYNCED');
+
+countPending:
+SELECT COUNT(*) FROM list_entry WHERE sync_state = 'PENDING';
+
+deleteSyncedTombstones:
+DELETE FROM list_entry WHERE deleted_at IS NOT NULL AND sync_state = 'SYNCED';
+
+markAllPending:
+UPDATE list_entry SET sync_state = 'PENDING';
+
+deleteAll:
+DELETE FROM list_entry;
+
+countActive:
+SELECT COUNT(*) FROM list_entry WHERE deleted_at IS NULL;

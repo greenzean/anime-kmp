@@ -1,5 +1,5 @@
--- Pulled list_entry changes whose anime is not in the local catalog yet (FK on mal_id). Parked instead of dropped
--- so the pull cursor can move on; retried on every sync. One row per anime, the newest change wins.
+
+
 CREATE TABLE parked_change (
     id         TEXT    NOT NULL PRIMARY KEY,
     mal_id     INTEGER NOT NULL UNIQUE,
@@ -14,7 +14,6 @@ SELECT * FROM parked_change;
 selectByMalId:
 SELECT * FROM parked_change WHERE mal_id = ?;
 
--- Replaces any row with the same id or mal_id; callers keep the newer change (see park).
 insertOrReplace:
 INSERT OR REPLACE INTO parked_change (id, mal_id, status, updated_at, deleted_at)
 VALUES (?, ?, ?, ?, ?);
@@ -22,6 +21,8 @@ VALUES (?, ?, ?, ?, ?);
 deleteById:
 DELETE FROM parked_change WHERE id = ?;
 
--- A change pulled after the anime arrived supersedes anything parked for it.
 deleteByMalId:
 DELETE FROM parked_change WHERE mal_id = ?;
+
+deleteAll:
+DELETE FROM parked_change;
