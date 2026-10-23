@@ -1,35 +1,40 @@
 package com.greenzean.animekmp.composeapp.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
+import com.greenzean.animekmp.composeapp.designsystem.components.AppCard
+import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
+import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
 import com.greenzean.animekmp.shared.auth.domain.SignInError
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountState
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
 import com.greenzean.animekmp.shared.core.domain.DataError
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -49,23 +54,50 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    AppScaffold(title = "Settings", onNavigateBack = onNavigateBack, modifier = modifier) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = MaterialTheme.spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
-            Text("Settings", style = MaterialTheme.typography.headlineSmall)
-            TextButton(onClick = onNavigateBack) { Text("Back") }
+            Text(
+                "Account",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = MaterialTheme.spacing.xs).semantics { heading() },
+            )
+            AppCard {
+                if (state.isSignedIn) {
+                    SignedInAccount()
+                } else {
+                    SignedOutAccount(state = state, onAction = onAction)
+                }
+            }
         }
-        Text("Account", style = MaterialTheme.typography.titleMedium)
-        if (state.isSignedIn) {
-            Text("Signed in with Google. Your library syncs to your account.")
-        } else {
-            SignedOutAccount(state = state, onAction = onAction)
+    }
+}
+
+@Composable
+private fun SignedInAccount() {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(AppIcons.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Column {
+            Text("Signed in with Google", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Your library syncs to your account.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -75,29 +107,44 @@ private fun SignedOutAccount(
     state: AccountState,
     onAction: (AccountAction) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("An account is optional. Sign in to sync your library between your devices.")
-        Button(
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
+        Text(
+            "An account is optional. Sign in to sync your library between your devices.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        GoogleSignInButton(
             onClick = { onAction(AccountAction.OnSignInWithGoogleClick) },
-            enabled = !state.isSigningIn,
-            modifier = Modifier.semantics { contentDescription = "Sign in with Google" },
-        ) {
-            if (state.isSigningIn) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Text("Sign in with Google")
-            }
-        }
+            loading = state.isSigningIn,
+        )
         state.error?.let { error ->
-            Row(
-                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(error.message(), color = MaterialTheme.colorScheme.error, modifier = Modifier.weight(1f))
-                TextButton(onClick = { onAction(AccountAction.OnDismissError) }) { Text("Dismiss") }
-            }
+            ErrorBanner(message = error.message(), onDismiss = { onAction(AccountAction.OnDismissError) })
         }
+    }
+}
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    onDismiss: () -> Unit,
+) {
+    val spacing = MaterialTheme.spacing
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.errorContainer, MaterialTheme.shapes.medium)
+                .padding(start = spacing.lg, top = spacing.md, end = spacing.sm)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        horizontalAlignment = Alignment.End,
+    ) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        AppButton(text = "Dismiss", onClick = onDismiss, style = AppButtonStyle.Text)
     }
 }
 
@@ -119,33 +166,3 @@ private fun SignInError.message(): String =
             }
         }
     }
-
-@Preview
-@Composable
-private fun SettingsScreenSignedOutPreview() {
-    AppTheme {
-        Surface { SettingsScreen(state = AccountState(), onAction = {}, onNavigateBack = {}) }
-    }
-}
-
-@Preview
-@Composable
-private fun SettingsScreenErrorPreview() {
-    AppTheme {
-        Surface {
-            SettingsScreen(
-                state = AccountState(error = SignInError.Google(GoogleSignInError.NO_CREDENTIAL)),
-                onAction = {},
-                onNavigateBack = {},
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun SettingsScreenSignedInPreview() {
-    AppTheme {
-        Surface { SettingsScreen(state = AccountState(isSignedIn = true), onAction = {}, onNavigateBack = {}) }
-    }
-}

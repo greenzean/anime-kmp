@@ -17,6 +17,8 @@ kotlin {
             libs.versions.android.minSdk
                 .get()
                 .toInt()
+        // Packages Compose Multiplatform resources (composeResources/) into the Android build.
+        androidResources.enable = true
     }
 
     if (providers.gradleProperty("animekmp.enableIos").get().toBoolean()) {
@@ -31,6 +33,7 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.lifecycle.runtime.compose)
