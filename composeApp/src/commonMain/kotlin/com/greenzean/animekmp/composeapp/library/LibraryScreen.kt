@@ -11,14 +11,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.AnimeUi
@@ -26,7 +29,6 @@ import com.greenzean.animekmp.shared.library.presentation.EntryUi
 import com.greenzean.animekmp.shared.library.presentation.LibraryAction
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -51,21 +53,31 @@ fun LibraryScreen(
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
+    AppScaffold(
+        title = "My library",
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
+        actions = { AppButton(text = "Settings", onClick = onNavigateToSettings, style = AppButtonStyle.Text) },
+    ) { padding ->
+        LibraryList(state = state, onAction = onAction, contentPadding = padding)
+    }
+}
+
+@Composable
+private fun LibraryList(
+    state: LibraryState,
+    onAction: (LibraryAction) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    LazyColumn(
+        contentPadding =
+            PaddingValues(
+                start = 16.dp,
+                top = contentPadding.calculateTopPadding() + 16.dp,
+                end = 16.dp,
+                bottom = contentPadding.calculateBottomPadding() + 16.dp,
+            ),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("My library", style = MaterialTheme.typography.headlineSmall)
-                TextButton(onClick = onNavigateToSettings) { Text("Settings") }
-            }
-        }
         if (state.entries.isEmpty()) {
             item { Text("Nothing here yet. Add an anime below.") }
         }
