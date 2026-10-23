@@ -127,6 +127,17 @@ curl localhost:8080/health
 - Stop with `docker compose down`; add `-v` to also delete the database volume.
 - To run the server from Gradle against the Compose database: `docker compose up postgres`, then `DATABASE_URL=jdbc:postgresql://localhost:5432/animekmp DATABASE_USER=animekmp DATABASE_PASSWORD=animekmp ./gradlew :server:run`.
 
+### Run the Compose stack on another machine (LAN, dev only)
+
+To keep Docker off your laptop, run the same Compose stack on a spare Linux box on your home network:
+
+1. Copy `compose.yaml`, `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `gradle/`, `config/` and `server/` to the box (for example with `rsync`).
+2. On the box, create `.env` next to `compose.yaml` with `chmod 600`: `POSTGRES_PASSWORD` and `JWT_SECRET` (generate them there with `openssl rand -hex 32`), `GOOGLE_CLIENT_ID`, `APP_ENV=dev` and `SERVER_BIND=0.0.0.0`. Never copy your laptop's `.env` or commit one.
+3. `docker compose up -d --build`, then `curl http://<box-address>:8080/health` from your laptop.
+4. Set `animekmp.serverUrl=http://<box-address>:8080/graphql` in `local.properties` and add `<box-address>` as another cleartext domain in the debug network security config (see above). Give the box a fixed address (a DHCP reservation on your router).
+
+`SERVER_BIND` defaults to `127.0.0.1`; Postgres always stays on `127.0.0.1`. Plain HTTP sends sign-in and session tokens unencrypted, so use this only on a network you trust. Production hosting and HTTPS are a separate decision.
+
 ## Quick start (emulator)
 
 1. `docker compose up --build -d` and check `curl localhost:8080/health`.
