@@ -27,7 +27,7 @@ Backlog, Ready, In Progress, In Review, Done. A ticket is not Done until it work
 3. Main session implements. Use `build-runner` for builds and tests.
 4. `reviewer` only if the user asks.
 5. `/clear` before the next ticket.
-6. The user decides when to commit, push and open the PR.
+6. The user decides when to commit, push and open the PR. When they do, commit as in the `commit-split` skill.
 
 ## No-commit rule
 Never commit, push, or open a PR (including via `gh pr`) until the user explicitly says so. Permission rules prompt for these as a safety net.

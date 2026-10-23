@@ -61,6 +61,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0008: MAL API behaviour and how the app uses it](docs/decisions/0008-mal-api.md)
 - [0009: Anime references: a server-side ID map keyed by platform IDs](docs/decisions/0009-anime-id-map.md)
 - [0010: Server sign-in and session tokens](docs/decisions/0010-server-sign-in.md)
+- [0011: Sign-out and who owns the library on the device](docs/decisions/0011-sign-out-and-library-ownership.md)
 
 ## Build
 

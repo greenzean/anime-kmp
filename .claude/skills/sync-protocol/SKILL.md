@@ -32,5 +32,10 @@ Decision and rationale: ADR 0006. Contract rules: `graphql-schema` skill. Server
 3. `./gradlew :server:test -PupdateSchema`, then the `.graphql` operations in `shared`.
 4. Add a server test in `SyncApiTest`.
 
+## Accounts on the device (ADR 0011)
+- The local library has no user id. Merge on first login is one `SyncEngine.sync()` run. Sign-out is local only.
+- Keep: inside `SyncEngine.exclusive`, delete synced tombstones, mark all rows `PENDING`, drop cursor and parked changes (`AccountLibraryDataSource.detachFromAccount`). Delete: remove entries, parked changes and cursor (`clearLibrary`). A session ended by the server detaches the same way.
+- Any new code that ends a session or changes the account must detach or clear the library, or the old cursor skips rows of the next account.
+
 ## Not yet
-Auth (`DevUser` is a placeholder), field-level merge, subscriptions, the client loop (M1-6).
+Field-level merge, subscriptions, server-side sign-out (revoke).
