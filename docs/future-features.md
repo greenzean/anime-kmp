@@ -23,6 +23,8 @@ Ideas left out of the [M2 MVP](milestone2-mvp.md), with the decision they came f
 
 ## Appearance
 - A way to change themes in Settings: light, dark or system, and a choice of color palettes, with dynamic color as one option. The M2-6a design system keeps colors in one theme so this can be added later.
+- Check the screens with TalkBack (reading order, labels, focus after navigation).
+- Check dynamic color on Android 12+ (API 31+): contrast of text and the fixed Google button on wallpaper-based schemes.
 
 ## Other
 - Streaming links.

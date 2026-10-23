@@ -73,4 +73,9 @@ Source: https://developers.google.com/identity/branding-guidelines (checked 2026
 - The "G" is Google's own logo file (`g-logo.png`, 200x204, from the guidelines page), shipped unchanged as `composeResources/drawable/google_g.png` and scaled with its aspect ratio kept. Never recolor, stretch or redraw it.
 - Loading: spinner replaces the content, button stays the same size and disabled.
 
-Not verified: the Android-specific Credential Manager branding page (the guidelines page has no Android-only rules beyond the padding), and licence terms for the downloadable asset bundle (the guidelines page is CC BY 4.0; no separate terms were found for the bundle or the logo file, and brand use beyond the page needs Google's written consent). Recheck both before a Play Store release.
+Checked 2026-10-23 against the guidelines page and the Android Credential Manager page (both read through page summaries, not raw pages), and against the official Android + Web SVG buttons in Google's asset bundle:
+
+- Match: light and dark colors, 1 dp stroke, padding 12/10/12, label text, standard-color "G" unchanged. The official SVG button is 40 px high with a 20x20 "G" at 12 px and a pill shape; ours is a pill with a 20 dp "G" and a 48 dp minimum height (the touch target rule).
+- Android page: a button drawn in Compose is accepted ("this can be done with a Jetpack Compose button"). No Play review rule for the button was found.
+- Open: Google specifies Google Sans Medium 14/20; the system font is used (size and weight match). The label is English only; localize it when the app is localized (Google allows and encourages it). Google gives no minimum width, corner radius or height, so the 220 dp minimum width is our own choice.
+- Not verified: licence terms for the logo file. The guidelines page states none, and says use not covered by the page needs Google's written consent. Recheck before a Play Store release.
