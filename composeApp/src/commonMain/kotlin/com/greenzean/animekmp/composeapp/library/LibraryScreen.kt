@@ -1,32 +1,27 @@
 package com.greenzean.animekmp.composeapp.library
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
-import com.greenzean.animekmp.composeapp.designsystem.AppTheme
-import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
-import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
+import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
+import com.greenzean.animekmp.composeapp.designsystem.components.AnimeCover
+import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
+import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
+import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
+import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
-import com.greenzean.animekmp.shared.library.presentation.AnimeUi
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
-import com.greenzean.animekmp.shared.library.presentation.LibraryAction
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -38,88 +33,49 @@ fun LibraryRoot(
     viewModel: LibraryViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LibraryScreen(
-        state = state,
-        onAction = viewModel::onAction,
-        onNavigateToSettings = onNavigateToSettings,
-        modifier = modifier,
-    )
+    LibraryScreen(state = state, onNavigateToSettings = onNavigateToSettings, modifier = modifier)
 }
 
 @Composable
 fun LibraryScreen(
     state: LibraryState,
-    onAction: (LibraryAction) -> Unit,
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AppScaffold(
         title = "My library",
         modifier = modifier,
-        actions = { AppButton(text = "Settings", onClick = onNavigateToSettings, style = AppButtonStyle.Text) },
+        actions = {
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(AppIcons.Settings, contentDescription = "Settings")
+            }
+        },
     ) { padding ->
-        LibraryList(state = state, onAction = onAction, contentPadding = padding)
+        if (state.entries.isEmpty()) {
+            EmptyState(
+                title = "Your library is empty",
+                message = "Find an anime in the Search tab and add it here.",
+                modifier = Modifier.padding(padding).padding(MaterialTheme.spacing.lg),
+            )
+        } else {
+            LibraryList(state = state, contentPadding = padding)
+        }
     }
 }
 
 @Composable
 private fun LibraryList(
     state: LibraryState,
-    onAction: (LibraryAction) -> Unit,
     contentPadding: PaddingValues,
 ) {
-    LazyColumn(
-        contentPadding =
-            PaddingValues(
-                start = 16.dp,
-                top = contentPadding.calculateTopPadding() + 16.dp,
-                end = 16.dp,
-                bottom = contentPadding.calculateBottomPadding() + 16.dp,
-            ),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (state.entries.isEmpty()) {
-            item { Text("Nothing here yet. Add an anime below.") }
+    LazyColumn(contentPadding = contentPadding) {
+        items(state.entries, key = { it.id }) { entry ->
+            AppListRow(
+                title = entry.title,
+                supportingText = "${entry.status.label()} · ${entry.syncState.label()}",
+                leading = { AnimeCover(entry.imageUrl) },
+            )
         }
-        items(state.entries, key = { it.id }) { entry -> EntryRow(entry) }
-        item { Text("Add anime", style = MaterialTheme.typography.headlineSmall) }
-        if (state.addable.isEmpty()) {
-            item { Text("Every anime is already in your library.") }
-        }
-        items(state.addable, key = { "anime-${it.malId}" }) { anime ->
-            AddableRow(anime = anime, onAdd = { onAction(LibraryAction.OnAddClick(anime.malId)) })
-        }
-    }
-}
-
-@Composable
-private fun EntryRow(
-    entry: EntryUi,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(entry.title, modifier = Modifier.weight(1f).padding(end = 8.dp))
-        Text("${entry.status.label()} · ${entry.syncState.label()}", style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-@Composable
-private fun AddableRow(
-    anime: AnimeUi,
-    onAdd: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(anime.title, modifier = Modifier.weight(1f).padding(end = 8.dp))
-        Button(onClick = onAdd) { Text("Add") }
     }
 }
 
@@ -140,27 +96,33 @@ private fun SyncState.label(): String =
 
 @Preview
 @Composable
-private fun LibraryScreenPreview() {
-    AppTheme(darkTheme = false) { LibraryScreenPreviewContent() }
-}
+private fun LibraryScreenLightPreview() = LibraryScreenPreview(darkTheme = false)
 
 @Preview
 @Composable
-private fun LibraryScreenDarkPreview() {
-    AppTheme(darkTheme = true) { LibraryScreenPreviewContent() }
-}
+private fun LibraryScreenDarkPreview() = LibraryScreenPreview(darkTheme = true)
+
+@Preview
+@Composable
+private fun LibraryEmptyLightPreview() = LibraryScreenPreview(darkTheme = false, state = LibraryState())
+
+@Preview
+@Composable
+private fun LibraryEmptyDarkPreview() = LibraryScreenPreview(darkTheme = true, state = LibraryState())
 
 @Composable
-private fun LibraryScreenPreviewContent() {
-    Surface {
-        LibraryScreen(
-            state =
-                LibraryState(
-                    entries = listOf(EntryUi("1", "Steins;Gate", WatchStatus.PLAN_TO_WATCH, SyncState.PENDING)),
-                    addable = listOf(AnimeUi(1, "Cowboy Bebop")),
-                ),
-            onAction = {},
-            onNavigateToSettings = {},
-        )
-    }
+private fun LibraryScreenPreview(
+    darkTheme: Boolean,
+    state: LibraryState = previewLibrary,
+) {
+    ThemedPreview(darkTheme) { LibraryScreen(state = state, onNavigateToSettings = {}) }
 }
+
+private val previewLibrary =
+    LibraryState(
+        entries =
+            listOf(
+                EntryUi("1", "Frieren: Beyond Journey's End", null, WatchStatus.PLAN_TO_WATCH, SyncState.PENDING),
+                EntryUi("2", "Steins;Gate", null, WatchStatus.COMPLETED, SyncState.SYNCED),
+            ),
+    )

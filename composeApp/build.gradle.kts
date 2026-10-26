@@ -17,7 +17,6 @@ kotlin {
             libs.versions.android.minSdk
                 .get()
                 .toInt()
-        // Packages Compose Multiplatform resources (composeResources/) into the Android build.
         androidResources.enable = true
     }
 
@@ -35,14 +34,18 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.lifecycle.runtime.compose)
             implementation(libs.navigation.compose)
+        }
+        androidMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }
 
 dependencies {
-    // Android Studio preview renderer (ComposeViewAdapter); kept off the release runtime classpath.
     androidRuntimeClasspath(compose.uiTooling)
 }

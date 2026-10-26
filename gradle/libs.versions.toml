@@ -16,6 +16,7 @@ ktlint = "1.8.0"
 detekt = "2.0.0-alpha.6"
 composeRules = "0.6.7"
 ktor = "3.6.0"
+coil = "3.6.3"
 logback = "1.6.3"
 logstashEncoder = "9.0"
 graphqlKotlin = "11.0.0"
@@ -81,6 +82,8 @@ androidx-credentials-play-services-auth = { module = "androidx.credentials:crede
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation" }
 
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
