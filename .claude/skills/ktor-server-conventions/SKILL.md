@@ -56,6 +56,14 @@ fun healthReturnsOk() =
 
 - Config logic is tested as plain unit tests with a fake env map.
 
+### Docker for the Postgres tests
+
+`AuthApiTest`, `SyncApiTest` and `MigrationTest` use Testcontainers and need a Docker daemon. The Mac does not run Docker; the daemon lives on another machine and is configured only in the developer's home directory, never in this repo (it is public):
+
+- Run the server tests with the user's private `server-tests` command (in their `PATH`, outside the repo). It opens the connection to the remote Docker if needed and runs Gradle with the Testcontainers settings, for example `server-tests :server:test`. Its contents, addresses and users must not be copied into the repo, ADRs, tickets, PR text or commit messages.
+- If it fails to reach Docker, stop and tell the user the remote Docker is unreachable; do not start Docker locally and do not skip the tests.
+- The user's memory notes describe the private setup.
+
 ## Dependencies
 
 Ktor, Logback and the logstash encoder versions live in `gradle/libs.versions.toml`; `server/build.gradle.kts` references the catalog only.

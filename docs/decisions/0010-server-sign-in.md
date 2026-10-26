@@ -1,7 +1,7 @@
 # 0010: Server sign-in and session tokens
 
 ## Status
-Accepted (M2-4)
+Accepted (M2-4); sign-out revocation added by [0012](0012-sign-out-revokes-refresh-token.md)
 
 ## Context
 D24: users log in to our server with Google sign-in only. The app gets a Google ID token (Credential Manager, M2-6) and the server must verify it and issue its own session. The server never calls MAL and stores no platform tokens (ADR 0007), so Google is only an identity check.
