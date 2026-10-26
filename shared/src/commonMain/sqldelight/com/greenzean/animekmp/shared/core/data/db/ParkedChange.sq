@@ -26,3 +26,8 @@ DELETE FROM parked_change WHERE mal_id = ?;
 
 deleteAll:
 DELETE FROM parked_change;
+
+selectMissingAnime:
+SELECT parked_change.mal_id FROM parked_change
+LEFT JOIN anime ON anime.mal_id = parked_change.mal_id
+WHERE anime.mal_id IS NULL;

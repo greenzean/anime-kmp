@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +42,9 @@ import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountState
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
 import com.greenzean.animekmp.shared.core.domain.DataError
+import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
+import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsState
+import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -48,8 +53,10 @@ fun SettingsRoot(
     modifier: Modifier = Modifier,
     openDeleteAccount: Boolean = false,
     viewModel: AccountViewModel = koinViewModel(),
+    displayViewModel: DisplaySettingsViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val displayState by displayViewModel.state.collectAsStateWithLifecycle()
     var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }
     LaunchedEffect(state.sessionChecked, state.isSignedIn, pendingDeleteAccount) {
         if (pendingDeleteAccount && state.sessionChecked) {
@@ -57,7 +64,14 @@ fun SettingsRoot(
             if (state.isSignedIn) viewModel.onAction(AccountAction.OnDeleteAccountClick)
         }
     }
-    SettingsScreen(state = state, onAction = viewModel::onAction, onNavigateBack = onNavigateBack, modifier = modifier)
+    SettingsScreen(
+        state = state,
+        onAction = viewModel::onAction,
+        onNavigateBack = onNavigateBack,
+        modifier = modifier,
+        displayState = displayState,
+        onDisplayAction = displayViewModel::onAction,
+    )
 }
 
 @Composable
@@ -66,6 +80,8 @@ fun SettingsScreen(
     onAction: (AccountAction) -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    displayState: DisplaySettingsState = DisplaySettingsState(),
+    onDisplayAction: (DisplaySettingsAction) -> Unit = {},
 ) {
     state.signOutPrompt?.let { prompt ->
         SignOutDialog(
@@ -84,7 +100,12 @@ fun SettingsScreen(
     }
     AppScaffold(title = "Settings", onNavigateBack = onNavigateBack, modifier = modifier) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = MaterialTheme.spacing.lg),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(padding)
+                    .padding(horizontal = MaterialTheme.spacing.lg),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
             Text(
@@ -108,6 +129,7 @@ fun SettingsScreen(
                 onRetry = { onAction(AccountAction.OnRetryMerge) },
                 onDismiss = { onAction(AccountAction.OnDismissMerge) },
             )
+            DisplaySection(state = displayState, onAction = onDisplayAction)
         }
     }
 }

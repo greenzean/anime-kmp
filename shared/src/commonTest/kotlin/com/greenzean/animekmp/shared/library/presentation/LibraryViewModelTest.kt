@@ -1,14 +1,13 @@
 package com.greenzean.animekmp.shared.library.presentation
 
-import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
-import com.greenzean.animekmp.shared.library.domain.ObserveAddableAnimeUseCase
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
-import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
+import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
+import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -25,10 +24,10 @@ import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModelTest {
-    private val bebop = Anime(malId = 1, title = "Cowboy Bebop")
-    private val steins = Anime(malId = 9253, title = "Steins;Gate")
-    private val local = FakeLibraryLocalDataSource(listOf(bebop, steins))
-    private val scheduler = FakeSyncScheduler()
+    private val frieren = Anime(52991, "Sousou no Frieren", "Frieren: Beyond Journey's End", "https://img/52991.jpg")
+    private val bebop = Anime(1, "Cowboy Bebop")
+    private val local = FakeLibraryLocalDataSource()
+    private val settings = FakeDisplaySettings()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -36,40 +35,68 @@ class LibraryViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() =
-        LibraryViewModel(
-            ObserveLibraryUseCase(local),
-            ObserveAddableAnimeUseCase(local),
-            AddToLibraryUseCase(local, scheduler),
+    private fun viewModel() = LibraryViewModel(ObserveLibraryUseCase(local), settings)
+
+    @Test
+    fun startsEmpty() {
+        assertEquals(emptyList(), viewModel().state.value.entries)
+    }
+
+    @Test
+    fun showsEntriesWithTheEnglishTitleAndCover() {
+        local.put(frieren, SyncState.PENDING)
+
+        val entry =
+            viewModel()
+                .state.value.entries
+                .single()
+
+        assertEquals(
+            EntryUi(
+                "entry-52991",
+                "Frieren: Beyond Journey's End",
+                "https://img/52991.jpg",
+                WatchStatus.PLAN_TO_WATCH,
+                SyncState.PENDING,
+            ),
+            entry,
         )
-
-    @Test
-    fun showsAllAnimeAsAddableWhenLibraryIsEmpty() {
-        val state = viewModel().state.value
-
-        assertEquals(emptyList(), state.entries)
-        assertEquals(listOf(AnimeUi(1, "Cowboy Bebop"), AnimeUi(9253, "Steins;Gate")), state.addable)
     }
 
     @Test
-    fun addMovesAnimeToEntriesAsPendingAndRequestsSync() {
-        val viewModel = viewModel()
+    fun fallsBackToTheMainTitleWhenThereIsNoEnglishTitle() {
+        local.put(bebop, SyncState.SYNCED)
 
-        viewModel.onAction(LibraryAction.OnAddClick(malId = 9253))
+        val entry =
+            viewModel()
+                .state.value.entries
+                .single()
 
-        val state = viewModel.state.value
-        val expected = EntryUi("entry-9253", "Steins;Gate", WatchStatus.PLAN_TO_WATCH, SyncState.PENDING)
-        assertEquals(listOf(expected), state.entries)
-        assertEquals(listOf(AnimeUi(1, "Cowboy Bebop")), state.addable)
-        assertEquals(1, scheduler.requests)
+        assertEquals("Cowboy Bebop", entry.title)
+        assertEquals(null, entry.imageUrl)
     }
 
     @Test
-    fun showsSyncedEntryFromLocalDatabase() {
+    fun switchingTheTitleLanguageChangesTheTitles() {
+        local.put(frieren, SyncState.SYNCED)
         val viewModel = viewModel()
-        viewModel.onAction(LibraryAction.OnAddClick(malId = 1))
 
-        local.markSynced(malId = 1)
+        settings.setTitleLanguage(TitleLanguage.MAIN)
+
+        assertEquals(
+            "Sousou no Frieren",
+            viewModel.state.value.entries
+                .single()
+                .title,
+        )
+    }
+
+    @Test
+    fun followsChangesInTheLibrary() {
+        val viewModel = viewModel()
+
+        local.put(bebop, SyncState.PENDING)
+        local.put(bebop, SyncState.SYNCED)
 
         assertEquals(
             SyncState.SYNCED,
@@ -80,42 +107,36 @@ class LibraryViewModelTest {
     }
 }
 
-private class FakeSyncScheduler : SyncScheduler {
-    var requests = 0
-
-    override fun requestSync() {
-        requests++
-    }
-}
-
-private class FakeLibraryLocalDataSource(
-    anime: List<Anime>,
-) : LibraryLocalDataSource {
-    private val anime = MutableStateFlow(anime)
+class FakeLibraryLocalDataSource : LibraryLocalDataSource {
+    val savedAnime = mutableListOf<Anime>()
     private val library = MutableStateFlow<List<LibraryEntry>>(emptyList())
 
-    override fun observeAnime(): Flow<List<Anime>> = anime
-
     override fun observeLibrary(): Flow<List<LibraryEntry>> = library
+
+    override suspend fun saveAnime(anime: Anime) {
+        savedAnime += anime
+    }
 
     override suspend fun setStatus(
         malId: Int,
         status: WatchStatus,
     ) {
-        val target = anime.value.first { it.malId == malId }
-        library.update { entries ->
-            entries.filterNot { it.anime.malId == malId } +
-                LibraryEntry("entry-$malId", target, status, Instant.fromEpochMilliseconds(0), SyncState.PENDING)
-        }
+        val anime = savedAnime.last { it.malId == malId }
+        put(anime, SyncState.PENDING, status)
     }
 
     override suspend fun remove(malId: Int) {
         library.update { entries -> entries.filterNot { it.anime.malId == malId } }
     }
 
-    fun markSynced(malId: Int) {
+    fun put(
+        anime: Anime,
+        syncState: SyncState,
+        status: WatchStatus = WatchStatus.PLAN_TO_WATCH,
+    ) {
         library.update { entries ->
-            entries.map { if (it.anime.malId == malId) it.copy(syncState = SyncState.SYNCED) else it }
+            entries.filterNot { it.anime.malId == anime.malId } +
+                LibraryEntry("entry-${anime.malId}", anime, status, Instant.fromEpochMilliseconds(0), syncState)
         }
     }
 }

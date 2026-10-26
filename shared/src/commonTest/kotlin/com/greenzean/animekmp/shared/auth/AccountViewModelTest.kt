@@ -13,7 +13,7 @@ import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
 import com.greenzean.animekmp.shared.auth.presentation.DeletePrompt
 import com.greenzean.animekmp.shared.auth.presentation.MergeState
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
-import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.TestAnimeCatalog
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
@@ -45,7 +45,7 @@ class AccountViewModelTest {
     private val scheduler = FakeSyncScheduler()
     private val server = FakeServerSyncApi()
     private val driver = createTestDriver()
-    private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    private val db = AnimeDatabase(driver).also(TestAnimeCatalog::apply)
     private val local = SqlDelightSyncLocalDataSource(db, UnconfinedTestDispatcher())
     private val accountLibrary = SqlDelightAccountLibraryDataSource(db, UnconfinedTestDispatcher())
     private val engine = SyncEngine(server, local)

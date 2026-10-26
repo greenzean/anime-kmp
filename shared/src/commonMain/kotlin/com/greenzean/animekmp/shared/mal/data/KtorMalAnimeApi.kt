@@ -24,9 +24,10 @@ import kotlinx.serialization.json.Json
 
 private const val BASE_URL = "https://api.myanimelist.net/v2"
 private const val CLIENT_ID_HEADER = "X-MAL-CLIENT-ID"
-private const val SEARCH_FIELDS = "id,title,main_picture,mean,media_type,num_episodes,status"
+private const val SEARCH_FIELDS = "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status"
 private const val DETAILS_FIELDS =
-    "id,title,main_picture,mean,media_type,num_episodes,status,synopsis,genres,start_date,rank,recommendations"
+    "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status,synopsis,genres,start_date,rank," +
+        "recommendations"
 private const val NOT_FOUND = 404
 private const val FORBIDDEN = 403
 private const val TOO_MANY_REQUESTS = 429
@@ -40,6 +41,11 @@ private val json = Json { ignoreUnknownKeys = true }
 private data class PictureDto(
     val medium: String? = null,
     val large: String? = null,
+)
+
+@Serializable
+private data class AlternativeTitlesDto(
+    val en: String? = null,
 )
 
 @Serializable
@@ -63,6 +69,7 @@ private data class RecommendationDto(
 private data class AnimeDto(
     val id: Int,
     val title: String,
+    @SerialName("alternative_titles") val alternativeTitles: AlternativeTitlesDto? = null,
     @SerialName("main_picture") val mainPicture: PictureDto? = null,
     val mean: Double? = null,
     @SerialName("media_type") val mediaType: String? = null,
@@ -93,7 +100,17 @@ private data class SearchResponse(
 
 private fun PictureDto?.url(): String? = this?.large ?: this?.medium
 
-private fun AnimeDto.toSummary() = MalAnimeSummary(id, title, mainPicture.url(), mean, mediaType, numEpisodes, status)
+private fun AnimeDto.toSummary() =
+    MalAnimeSummary(
+        malId = id,
+        title = title,
+        titleEn = alternativeTitles?.en?.takeIf { it.isNotBlank() },
+        imageUrl = mainPicture.url(),
+        mean = mean,
+        mediaType = mediaType,
+        numEpisodes = numEpisodes,
+        status = status,
+    )
 
 private fun AnimeDto.toDetails() =
     MalAnimeDetails(
@@ -125,6 +142,7 @@ class KtorMalAnimeApi(
                     parameter("limit", limit)
                     parameter("offset", offset)
                     parameter("fields", SEARCH_FIELDS)
+                    parameter("nsfw", "false")
                 }
             },
             parse = { body ->

@@ -1,23 +1,21 @@
 package com.greenzean.animekmp.shared.core.data
 
-import android.content.Context
-import android.content.pm.ApplicationInfo
 import app.cash.sqldelight.db.SqlDriver
 import com.greenzean.animekmp.shared.auth.data.KeystoreSessionStore
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.mal.data.KeystoreMalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
+import com.greenzean.animekmp.shared.settings.data.SharedPreferencesDisplaySettings
+import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 import java.security.SecureRandom
 
 actual val platformModule =
     module {
-        single<SqlDriver> {
-            val context = androidContext()
-            DatabaseDriverFactory(context, seedDevData = context.isDebuggable()).create()
-        }
+        single<SqlDriver> { DatabaseDriverFactory(androidContext()).create() }
+        single<DisplaySettings> { SharedPreferencesDisplaySettings(androidContext()) }
         single<SessionStore> { KeystoreSessionStore(androidContext()) }
         single<MalTokenStore> { KeystoreMalTokenStore(androidContext()) }
         single<RandomBytes> {
@@ -25,5 +23,3 @@ actual val platformModule =
             RandomBytes { size -> ByteArray(size).also(random::nextBytes) }
         }
     }
-
-private fun Context.isDebuggable(): Boolean = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0

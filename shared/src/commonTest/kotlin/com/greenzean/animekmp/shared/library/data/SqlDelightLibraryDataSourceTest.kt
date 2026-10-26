@@ -1,9 +1,10 @@
 package com.greenzean.animekmp.shared.library.data
 
 import app.cash.turbine.test
-import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.TestAnimeCatalog
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
+import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -16,7 +17,7 @@ import kotlin.test.assertTrue
 
 class SqlDelightLibraryDataSourceTest {
     private val driver = createTestDriver()
-    private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    private val db = AnimeDatabase(driver).also(TestAnimeCatalog::apply)
     private val repository = SqlDelightLibraryDataSource(db, dispatcher = UnconfinedTestDispatcher())
     private val bebop = 1
 
@@ -30,15 +31,33 @@ class SqlDelightLibraryDataSourceTest {
         }
 
     @Test
-    fun observeAnimeEmitsSeededRowsByTitle() =
+    fun saveAnimeStoresTitlesAndImageForTheLibrary() =
         runTest {
-            repository.observeAnime().test {
-                assertEquals(
-                    listOf("Cowboy Bebop", "Fullmetal Alchemist: Brotherhood", "Shingeki no Kyojin", "Steins;Gate"),
-                    awaitItem().map { it.title },
-                )
+            repository.saveAnime(
+                Anime(52991, "Sousou no Frieren", "Frieren: Beyond Journey's End", "https://img/52991.jpg"),
+            )
+
+            repository.setStatus(52991, WatchStatus.PLAN_TO_WATCH)
+
+            repository.observeLibrary().test {
+                val anime = awaitItem().single().anime
+                assertEquals("Sousou no Frieren", anime.title)
+                assertEquals("Frieren: Beyond Journey's End", anime.titleEn)
+                assertEquals("https://img/52991.jpg", anime.imageUrl)
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+
+    @Test
+    fun saveAnimeAgainKeepsTheImageWhenTheNewCopyHasNone() =
+        runTest {
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", "Frieren", "https://img/52991.jpg"))
+
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", null, null))
+
+            val row = db.animeQueries.selectByMalId(52991).executeAsOne()
+            assertEquals("Frieren", row.title_en)
+            assertEquals("https://img/52991.jpg", row.image_url)
         }
 
     @Test

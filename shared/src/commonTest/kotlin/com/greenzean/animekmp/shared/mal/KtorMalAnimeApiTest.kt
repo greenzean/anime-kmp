@@ -41,9 +41,9 @@ class KtorMalAnimeApiTest {
     private val searchBody =
         """
         {"data":[
-          {"node":{"id":1,"title":"Cowboy Bebop","main_picture":{"medium":"m1","large":"l1"},"mean":8.75,
+          {"node":{"id":1,"title":"Cowboy Bebop","alternative_titles":{"en":"Cowboy Bebop EN"},"main_picture":{"medium":"m1","large":"l1"},"mean":8.75,
                    "media_type":"tv","num_episodes":26,"status":"finished_airing"}},
-          {"node":{"id":2,"title":"Other"}}
+          {"node":{"id":2,"title":"Other","alternative_titles":{"en":""}}}
         ],"paging":{"next":"https://api.myanimelist.net/v2/anime?offset=20"}}
         """.trimIndent()
 
@@ -66,7 +66,11 @@ class KtorMalAnimeApiTest {
             assertEquals("bebop", request.url.parameters["q"])
             assertEquals("20", request.url.parameters["limit"])
             assertEquals("40", request.url.parameters["offset"])
-            assertEquals("id,title,main_picture,mean,media_type,num_episodes,status", request.url.parameters["fields"])
+            assertEquals(
+                "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status",
+                request.url.parameters["fields"],
+            )
+            assertEquals("false", request.url.parameters["nsfw"])
         }
 
     @Test
@@ -78,7 +82,16 @@ class KtorMalAnimeApiTest {
                 MalSearchPage(
                     items =
                         listOf(
-                            MalAnimeSummary(1, "Cowboy Bebop", "l1", 8.75, "tv", 26, "finished_airing"),
+                            MalAnimeSummary(
+                                1,
+                                "Cowboy Bebop",
+                                "l1",
+                                8.75,
+                                "tv",
+                                26,
+                                "finished_airing",
+                                "Cowboy Bebop EN",
+                            ),
                             MalAnimeSummary(2, "Other", null, null, null, null, null),
                         ),
                     hasMore = true,
@@ -103,7 +116,7 @@ class KtorMalAnimeApiTest {
             assertEquals("client-1", request.headers["X-MAL-CLIENT-ID"])
             assertEquals("https://api.myanimelist.net/v2/anime/21", request.url.toString().substringBefore('?'))
             assertEquals(
-                "id,title,main_picture,mean,media_type,num_episodes,status," +
+                "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status," +
                     "synopsis,genres,start_date,rank,recommendations",
                 request.url.parameters["fields"],
             )

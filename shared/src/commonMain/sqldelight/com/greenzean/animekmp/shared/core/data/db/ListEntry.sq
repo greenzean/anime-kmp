@@ -16,7 +16,7 @@ CREATE INDEX list_entry_updated_idx ON list_entry (updated_at);
 
 selectActiveWithAnime:
 SELECT list_entry.id, list_entry.mal_id, list_entry.status,
-       list_entry.updated_at, list_entry.sync_state, anime.title
+       list_entry.updated_at, list_entry.sync_state, anime.title, anime.title_en, anime.image_url
 FROM list_entry
 JOIN anime ON anime.mal_id = list_entry.mal_id
 WHERE list_entry.deleted_at IS NULL
