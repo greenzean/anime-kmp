@@ -1,7 +1,7 @@
 # 0011: Sign-out and who owns the library on the device
 
 ## Status
-Accepted (M2-7)
+Accepted (M2-7); the server call is added by [0012](0012-sign-out-revokes-refresh-token.md)
 
 ## Context
 D18 and D20: the first login on a device that already has a library merges it into the account, and on logout the app asks whether to keep or delete the library on the device. The local library has no user id ([ADR 0006](0006-sync-protocol.md)): `list_entry` rows carry only `sync_state`, and `sync_cursor` holds one cursor. `server_seq` is one sequence for all users ([ADR 0010](0010-server-sign-in.md)), so a cursor from account A skips rows of account B that have a lower number. There is no server sign-out yet, so refresh tokens stay valid until they expire (30 days).

@@ -7,9 +7,9 @@ import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.graphql.SignInNonceMutation
 import com.greenzean.animekmp.shared.graphql.SignInWithGoogleMutation
+import com.greenzean.animekmp.shared.graphql.SignOutMutation
 import com.greenzean.animekmp.shared.sync.data.toResult
 
-/** `client` must not add the session token: the user is signing in. */
 class ApolloAuthApi(
     private val client: ApolloClient,
 ) : AuthApi {
@@ -23,4 +23,7 @@ class ApolloAuthApi(
             .toResult { data ->
                 with(data.signInWithGoogle) { Session(accessToken, accessTokenExpiresAt, this.refreshToken) }
             }
+
+    override suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network> =
+        client.mutation(SignOutMutation(refreshToken)).execute().toResult { }
 }

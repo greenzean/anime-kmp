@@ -62,6 +62,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0009: Anime references: a server-side ID map keyed by platform IDs](docs/decisions/0009-anime-id-map.md)
 - [0010: Server sign-in and session tokens](docs/decisions/0010-server-sign-in.md)
 - [0011: Sign-out and who owns the library on the device](docs/decisions/0011-sign-out-and-library-ownership.md)
+- [0012: Sign-out revokes the refresh token](docs/decisions/0012-sign-out-revokes-refresh-token.md)
 
 ## Build
 
@@ -138,6 +139,16 @@ To keep Docker off your laptop, run the same Compose stack on a spare Linux box 
 4. Set `animekmp.serverUrl=http://<box-address>:8080/graphql` in `local.properties` and add `<box-address>` as another cleartext domain in the debug network security config (see above). Give the box a fixed address (a DHCP reservation on your router).
 
 `SERVER_BIND` defaults to `127.0.0.1`; Postgres always stays on `127.0.0.1`. Plain HTTP sends sign-in and session tokens unencrypted, so use this only on a network you trust. Production hosting and HTTPS are a separate decision.
+
+### Server tests with Docker on another machine
+
+`./gradlew :server:test` starts a throwaway Postgres with Testcontainers, so it needs a Docker daemon. To use the one on the box instead of a local one (Testcontainers does not support `ssh://` hosts, so forward the socket):
+
+1. `ssh -fNT -L /tmp/box-docker.sock:/var/run/docker.sock <box>`
+2. In `~/.testcontainers.properties`: `docker.host=unix:///tmp/box-docker.sock`
+3. `TESTCONTAINERS_HOST_OVERRIDE=<box-address> TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock ./gradlew :server:test`
+
+The box's published container ports must be reachable from your laptop. Keep these settings outside the repository.
 
 ## Quick start (emulator)
 

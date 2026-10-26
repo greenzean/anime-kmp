@@ -30,7 +30,6 @@ import kotlin.uuid.toKotlinUuid
 private const val NONCE_BYTES = 32
 private val NONCE_TTL: Duration = Duration.ofMinutes(5)
 
-/** Outcome of presenting a refresh token. Reuse is a result, not an exception: the revocation must be committed. */
 sealed interface RotationResult {
     data class Rotated(
         val userId: UUID,
@@ -39,11 +38,9 @@ sealed interface RotationResult {
 
     data object Invalid : RotationResult
 
-    /** A revoked token was presented again: the whole family has been revoked. */
     data object ReuseDetected : RotationResult
 }
 
-/** `database` null means Exposed's default (last connected) database. */
 class AuthRepository(
     private val database: Database? = null,
     private val clock: Clock = Clock.systemUTC(),
@@ -64,7 +61,6 @@ class AuthRepository(
         return nonce
     }
 
-    /** True if the nonce was issued by us, is unexpired and not used before. Deleting it makes it single use. */
     fun consumeNonce(nonce: String): Boolean =
         transaction(database) {
             SignInNonceTable.deleteWhere {
@@ -73,7 +69,6 @@ class AuthRepository(
                 1
         }
 
-    /** Finds or creates the user for a Google `sub`. Insert-if-absent then read, so concurrent sign-ins agree. */
     fun userIdForSub(sub: String): UUID =
         transaction(database) {
             AppUserTable.insertIgnore { it[googleSub] = sub }
@@ -93,10 +88,6 @@ class AuthRepository(
         transaction(database) { insertRefresh(userId, familyId, tokenHash, expiresAt) }
     }
 
-    /**
-     * Revokes the presented token and stores its successor in the same family. A token that was already rotated
-     * means two parties hold it, so the whole family is revoked (the user signs in again).
-     */
     fun rotate(
         presentedHash: ByteArray,
         successorHash: ByteArray,
@@ -134,6 +125,20 @@ class AuthRepository(
                 }
             }
         }
+
+    fun revokeFamily(tokenHash: ByteArray) {
+        transaction(database) {
+            val familyId =
+                RefreshTokenTable
+                    .select(RefreshTokenTable.familyId)
+                    .where { RefreshTokenTable.tokenHash eq tokenHash }
+                    .singleOrNull()
+                    ?.get(RefreshTokenTable.familyId) ?: return@transaction
+            RefreshTokenTable.update({
+                (RefreshTokenTable.familyId eq familyId) and RefreshTokenTable.revokedAt.isNull()
+            }) { it[revokedAt] = now().toOffset() }
+        }
+    }
 
     private fun insertRefresh(
         userId: UUID,
