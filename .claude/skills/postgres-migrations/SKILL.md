@@ -19,7 +19,7 @@ server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 ## Rules
 
 - Files are `V<n>__snake_case_description.sql`, numbers consecutive. One concern per migration.
-- Nothing is deployed before M2-24, so until the first deploy migrations may be squashed or edited (wipe the local database with `docker compose down -v`). After the first deploy, never edit a migration: fix forward with a new `V<n+1>`.
+- Nothing is deployed before M2-25, so until the first deploy migrations may be squashed or edited (wipe the local database with `docker compose down -v`). After the first deploy, never edit a migration: fix forward with a new `V<n+1>`.
 - No seed data in migrations. The server keeps no anime catalog (ADR 0009); the app seeds its own debug catalog.
 - Tables: singular snake_case names, `TIMESTAMPTZ` for times, `UUID` ids for client-created rows (list entries), identity `BIGINT` for server-owned rows (anime), `TEXT` + `CHECK` for enums.
 - Sync tables carry `updated_at` and a nullable `deleted_at` tombstone. Rows are soft-deleted, never removed, so pulls can report deletions.

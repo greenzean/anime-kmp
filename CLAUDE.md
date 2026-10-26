@@ -11,6 +11,9 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 - **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
 - **Design is part of every view ticket:** a ticket with `composeApp` screens includes their visual design in its acceptance criteria (previews in light and dark, accessibility, screenshots), built on the design system from M2-6a (#86), the only separate design ticket.
 - **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.
+- **Every feature ticket ends usable:** the user can reach it from the app (a button, a tab or a Settings row). No API-only or view-only tickets: the API and the view that shows it are one ticket. Tickets are numbered in work order and depend only on lower numbers.
+- **Plain ticket titles:** say what the user can do, in at most 6 words (for example "Connect your MAL account").
+- **Questions are answered when a ticket is written,** in its Decisions section. When a ticket starts, ask only if the code contradicts the ticket.
 - **Models:** default is `sonnet` (plans and executes small tickets). Tickets labeled `opus-plan` are planned with `/model opusplan` (Opus in plan mode, Sonnet after approval). Switch at the start of a session, not mid-session.
 - **Where things run:** only the Android app, the emulator and Gradle builds run on the Mac. The server, PostgreSQL and Docker (compose, Testcontainers) run on the mini PC, never on the Mac: do not start Docker Desktop or `docker compose` locally. Docker is denied for Claude Code on the Mac. Server tests: `server-tests` (script outside the repo); when they pass it runs `server-deploy`, which deploys the server and DB to the mini PC without asking (ADR 0014); no deploy when the tests fail or were not run. The host and address details stay out of the repo (it is public).
 - Verify versions, prices, API terms and library support with a search; say what could not be verified.
@@ -45,9 +48,10 @@ The main session is the orchestrator and implements tickets itself. Subagents st
 - `researcher`: versions, prices, API terms.
 - `docs`: formatting ADRs, README sections, ticket text from decisions already made.
 - `reviewer`, `security-reviewer`: **only when the user asks.**
-- Area agents (`shared-kmp`, `server`, `compose-ui`, `tester`, `build-ci`) only for large features. They run their own Gradle checks, because subagents cannot call `build-runner`.
+- `shared-kmp` and `compose-ui` **in parallel** for every ticket that touches both `shared` and `composeApp`: the plan fixes the ticket's Contract (State, Action, Event) first, then `shared-kmp` builds the API, data and view model while `compose-ui` builds the screens and previews from fake states. The main session wires DI and navigation and checks the result.
+- Other area agents (`server`, `tester`, `build-ci`) only for large features. Area agents run their own Gradle checks, because subagents cannot call `build-runner`.
 
-Subagents never delegate further. Feature order for large features: server schema first, then app back end, then views (views in parallel only when the view model interface is fixed up front), then tests.
+Subagents never delegate further. Order inside a ticket: server schema and SDL first (when the server changes), then app back end and views in parallel, then tests.
 
 ## Token habits
 

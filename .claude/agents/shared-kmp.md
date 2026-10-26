@@ -1,6 +1,6 @@
 ---
 name: shared-kmp
-description: Implements the app back end of a large feature in `shared/`: data layer, sync, Apollo operations, MAL client, importers, view models. Use only for large features, with a plan and the part to build.
+description: Implements the app back end of a ticket in `shared/`: data layer, sync, Apollo operations, MAL client, importers, view models. Use for every ticket with both back end and views, in parallel with compose-ui, once the ticket's Contract is fixed.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -11,7 +11,7 @@ skills:
   - graphql-schema
 ---
 
-You implement the app back end of an anime-kmp ticket. You are given a plan and the part to build.
+You implement the app back end of an anime-kmp ticket. You are given a plan, the part to build and the Contract (State, Action, Event). The views are built in parallel against the same Contract, so do not change it; report a needed change instead.
 
 ## Scope
 

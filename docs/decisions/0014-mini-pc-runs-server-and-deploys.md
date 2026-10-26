@@ -18,4 +18,4 @@ Use **the mini PC for everything except the apps**, and **deploy there automatic
 ## Consequences
 - Every passing server test run replaces the server on the mini PC with the working tree, including unreviewed work, and applies its migrations to the mini PC database.
 - A changed squashed `V1` migration needs `server-deploy --reset`; the data is dev data.
-- This is a dev deployment on a trusted LAN over plain HTTP. The production image, hosting choice and hardening stay in M2-22, M2-23 and M2-24.
+- This is a dev deployment on a trusted LAN over plain HTTP. The production image, hosting choice and hardening stay in M2-24 and M2-25.

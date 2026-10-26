@@ -80,88 +80,414 @@ Depends on: M2-2.
 Acceptance: Ktor MAL client with the `X-MAL-CLIENT-ID` header; search and details calls with the fields chosen in ADR 0008; results cached in SQLDelight with an expiry (client-side caching only as long as reasonably necessary); backoff and stop on HTTP 403; offline returns a typed `NoConnection` error; tests with MockEngine and an in-memory database.
 Out of scope: screens (M2-11).
 Covers: D5, D10. Skills: kmp-data-layer, kmp-error-handling."
-M2-11,Search for new anime screen,feature,M2,"feature,phase-1",sonnet,"shared (view model), composeApp","Goal: the user searches MAL and adds an anime to their library.
-Depends on: M2-10, M2-14.
-Acceptance: search screen with debounce, results with image, title and add action; offline shows that searching for new anime needs a connection; adding writes to the local database only; previews and accessibility labels; view model tests.
-Out of scope: library search (M2-13).
-Covers: D10. Skills: kmp-presentation-mvi, kmp-compose-ui, kmp-navigation."
-M2-12,Personal suggestions screen,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: show MAL's personal suggestions for the logged-in user.
-Depends on: M2-9, M2-10.
-Acceptance: `GET /anime/suggestions` call and screen; without a MAL login, or with an empty list, the screen explains why and shows nothing; items can be added to the library; view model tests for logged out, empty, error and success.
-Out of scope: per-anime recommendations (future features).
-Covers: D11. Skills: kmp-presentation-mvi, kmp-compose-ui."
-M2-13,"Library search, filter and sort on the device",feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: find entries in the user's own library, offline.
-Acceptance: SQLDelight queries for title search, status filter and sort by title, score or last updated; UI on the library screen; tombstoned entries never shown; tests with an in-memory database.
-Out of scope: filters by genre, year or type (future features).
-Covers: D9. Skills: kmp-data-layer, kmp-presentation-mvi."
-M2-14,Library entry: five statuses and score 1-10,feature,M2,"feature,phase-1",sonnet,"shared, composeApp, server","Goal: the entry model matches MAL: status, episode progress and score.
-Acceptance: statuses Watching, Completed, On hold, Dropped, Plan to watch (map to MAL's values) in the local database, sync and server; score 1-10 (or unset) validated on the client and in `pushChanges`; edit UI for status, progress and score; migrations for existing data; SDL committed; tests.
-Out of scope: dates, rewatch count, notes (future features).
-Covers: D6, D7, D12. Skills: sync-protocol, graphql-schema, postgres-migrations."
-M2-15,Import a MAL export file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: the user imports an exported MAL list from a file, no login needed.
-Depends on: M2-14.
-Acceptance: file picker behind an interface; parser for MAL's XML export (including gzip) with tests on a sample file; entries merged into the local library; entries that already exist and differ are reported, handled by the conflict feature once M2-20 lands (until then the local entry is kept); summary of added, skipped and invalid entries.
-Out of scope: API import (M2-17).
-Covers: D16. Skills: kmp-data-layer, kmp-testing."
-M2-16,Export the library as a MAL file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: the user saves their library in MAL's export format.
-Depends on: M2-14.
-Acceptance: writer for MAL's XML format; save through a platform file API behind an interface; round trip test (export, import, same entries); only this format.
-Out of scope: CSV or JSON export (future features).
-Covers: D16, D23. Skill: kmp-data-layer."
-M2-17,Import the library from MAL by login,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","Goal: a logged-in user pulls their MAL list into the app.
-Depends on: M2-9, M2-14, M2-18.
-Acceptance: paged read of `/users/@me/animelist` respecting backoff; mapped to local entries; entries that differ go to the conflict flow from M2-18; progress shown; resumable after a failure; tests with MockEngine.
-Out of scope: automatic ongoing sync (M2-19, M2-20).
-Covers: D16. Skills: kmp-data-layer, kmp-error-handling."
-M2-18,Design: user decides on conflicts,spike,M2,"spike,opus-plan,phase-1",opusplan,"docs, shared (sketch)","Goal: a written design for D15 before sync code depends on it. Time-box 1 day.
-Depends on: M2-2.
-Acceptance: ADR 0009 states what counts as a conflict (same anime, different status, progress or score; timestamps available from MAL), what the user can choose (keep app, keep MAL, per entry or for all), where unresolved conflicts are stored, how this interacts with last-write-wins on our server and with MAL linked on one device only; UI sketch; test cases listed.
-Out of scope: implementation (M2-20).
-Covers: D15. Skills: adr, sync-protocol."
-M2-19,Send app changes to MAL automatically,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, androidApp","Goal: every change made on this device reaches MAL when the user is logged in to MAL.
-Depends on: M2-9, M2-14.
-Acceptance: outbox of changes to push to MAL in SQLDelight; sender runs as background work behind an interface (WorkManager on Android) with connectivity constraint and retry with backoff; only changes made on this device are sent, not changes pulled from our server (D17); idempotent; failures keep the change queued; tests with fakes for the scheduler and MAL client.
-Out of scope: pulling MAL changes (M2-20).
-Covers: D13, D17. Skills: kmp-data-layer, sync-protocol."
-M2-20,Two-way MAL sync with conflict choice,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, androidApp, composeApp","Goal: changes made on MAL's website come into the app; conflicts are decided by the user.
-Depends on: M2-18, M2-19.
-Acceptance: periodic background pull of the MAL list; differences applied automatically when there is no conflict; conflicts shown and resolved as designed in ADR 0009; resolved choice is synced to MAL and our server; tests for no conflict, conflict kept local, conflict kept MAL, and offline.
-Out of scope: devices without MAL (M2-21).
-Covers: D14, D15. Skills: sync-protocol, kmp-presentation-mvi."
-M2-21,MAL on several devices,feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","Goal: the account knows MAL is linked, and a device without MAL asks the user what to do.
-Depends on: M2-5, M2-9, M2-20.
-Acceptance: server stores only the platform name (""MAL"") as linked for the user, no username or ID (D19); device with synced entries but no MAL login offers: log in to MAL, or keep the library local to our account; changes pulled from our server are never pushed to MAL by that device (D17); server and client tests; SDL committed.
-Out of scope: other platforms.
-Covers: D15, D17, D19. Skills: sync-protocol, graphql-schema, postgres-migrations."
-M2-22,Server hardening: query limits and input validation,feature,M2,"feature,phase-1",sonnet,server,"Goal: the public GraphQL endpoint resists abuse.
-Depends on: M2-5.
-Acceptance: query depth and complexity limits, batch-size limit on `pushChanges`, request size limit, rate limiting per user and IP; input validation for every field (lengths, ranges, enums); introspection decision documented; tests for each limit.
-Out of scope: hosting (M2-23, M2-24).
-Covers: D22. Skills: graphql-schema, ktor-server-conventions."
-M2-23,Spike: where to host the server,spike,M2,"spike,opus-plan,phase-1",opusplan,docs,"Goal: pick the host for the Ktor server and Postgres. Time-box 1 day.
-Acceptance: ADR 0010 compares at least three options on price, free tier limits, Postgres backups, HTTPS, region and effort (verified with the researcher agent, with dates); decision and monthly cost estimate.
-Out of scope: deploying.
-Covers: D22. Skill: adr."
-M2-24,Deploy the server,chore,M2,"chore,phase-1",sonnet,"server, build-ci, docs","Goal: the server runs online with HTTPS and a managed database.
-Depends on: M2-22, M2-23.
-Acceptance: production Dockerfile; environment config documented (no secrets in the repo); Flyway migrations run on start; JSON logs; health check; database backups verified by a restore; the app has a release server URL; deploy steps in the README.
-Out of scope: CD automation unless trivial.
-Covers: D22. Skills: ktor-server-conventions, postgres-migrations."
-M2-25,Privacy policy and MAL agreement compliance,chore,M2,"chore,phase-1",sonnet,"docs, server (static page)","Goal: the legal pages Play and MAL require exist.
-Depends on: M2-8.
-Acceptance: privacy policy (data stored on the server: Google `sub`, library entries and anime IDs, linked platform name; data on the device; MAL data and caching; deletion) served from a public URL; MAL consent shown before MAL login; checklist against the MAL agreement (no credentials stored, cache only as needed, removal within 24 hours on request, no scraping, no revenue); contact for removal requests.
-Out of scope: legal review.
-Covers: D22. Skill: adr."
-M2-26,Release build and Google Play listing,chore,M2,"chore,phase-1",sonnet,"androidApp, build-ci, docs","Goal: the app is on a Play test track.
-Depends on: M2-24, M2-25.
-Acceptance: release build type with R8 and a keystore kept out of the repo; signed AAB built in CI from secrets; applicationId and version set; store listing, screenshots, Data safety form and account-deletion URL; content rating; internal testing track published; target API level meets Play's current requirement (verified).
-Out of scope: production rollout.
-Covers: D21, D22. Skill: kmp-module-structure."
-M2-27,M2 checkpoint: end-to-end,chore,M2,"chore,phase-1",sonnet,"all modules, docs","Goal: prove the MVP.
-Depends on: all other M2 tickets.
-Acceptance: on a clean install with no account: add anime, search, filter, rate, export and import a file; sign in with Google on two devices and see the same library; log in to MAL, import, change on both sides and resolve a conflict; delete the account; result note in `docs/m2-result.md`; CI, lint and tests pass on main.
-Out of scope: new features; fixes go in follow-up bug tickets unless trivial.
-Checkpoint: every D1-D24 verified or listed as not met."
+M2-10a,Rework the M2 tickets,chore,M2,"chore,phase-1",sonnet,"docs, CLAUDE.md, .claude","**Goal:** the remaining M2 tickets are usable features, in work order, with plain titles and no open questions.
+
+**Where in the app:** nowhere. Tickets, docs and process only.
+
+**Acceptance:**
+- Old open tickets #63-#79 closed as ""not planned"", each pointing to its replacement. New tickets #109-#126 (M2-11..M2-27, M2-31), numbered in work order and depending only on lower numbers.
+- Each new ticket says where the user reaches it in the app, has a Contract (State, Action, Event, SDL) and a Decisions section.
+- `docs/m2-roadmap.md` and `docs/tickets-m2.csv` match the new tickets. `docs/milestone2-mvp.md` gains D25-D27 and the strict D17 note.
+- Old ticket numbers in ADRs 0008, 0009, 0013, 0014, `docs/data-safety.md` and the postgres-migrations skill are updated.
+- Process: CLAUDE.md and the `ticket-workflow` skill require usable tickets, plain titles and up-front decisions, and run back end and views in parallel. The `shared-kmp` and `compose-ui` agents are set up for parallel work against the Contract. The Definition of Done holds the design criteria.
+
+**Decisions:**
+- Navigation is a bottom bar (Library, Search, For you), with Settings in the Library top bar.
+- Titles are English by default, with a Settings option (D25). Status follows progress like on MAL (D26). Connecting MAL merges both ways (D27).
+- D17 stays strict: changes made on a device without MAL never reach MAL.
+- The host is chosen in M2-25, before Play (M2-27). The privacy contact is a dedicated address from the user. The user already has a Play developer account.
+
+**Depends on:** M2-10.
+**Out of scope:** code changes."
+M2-11,Add anime from MAL search,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** the user finds an anime on MyAnimeList and adds it to their library.
+
+**Where in the app:** a new bottom bar with **Library**, **Search** and **For you** (a ""coming soon"" placeholder until M2-16). Settings stays as an icon in the Library top bar. In Search, type a title and tap **Add** on a result.
+
+**Contract** (fixed in the plan, before work starts):
+- `SearchState(query, results: List<SearchResultUi>, status)`, where status is Idle, Loading, Results, Empty, Offline or Error
+- `SearchResultUi(malId, title, imageUrl, inLibrary)`
+- Actions: `OnQueryChange(text)`, `OnAddClick(malId)`, `OnRetryClick`
+
+**Acceptance:**
+- Search uses the existing `MalAnimeRepository`, which needs no MAL login (client ID only). Typing is debounced.
+- Add saves the entry (status Plan to watch), the anime's title and its image URL locally. The result then shows ""In library"".
+- An entry synced from another device, for an anime this device has not seen yet, gets its title and image from MAL.
+- Offline, the screen says that searching needs a connection. The library keeps working.
+- The dev seed list is gone (`DevAnimeSeed` and the ""addable"" list on the library screen).
+- Library rows show the cover image.
+- Settings › Display › **Title language**: English (default) or Main title.
+- View model tests for every status.
+
+**Depends on:** nothing open.
+**Out of scope:** the details screen (M2-12) and searching your own library (M2-14).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- The bottom bar is built once here, with all three tabs.
+- `anime` gets `title_en` and `image_url` (SQLDelight migration). MAL fields include `alternative_titles`.
+- Title language is stored on the device only. English falls back to the main title when MAL has no English title.
+- Search starts at 3 characters (MAL's minimum), with a 400 ms debounce. Pages of 20, more on scroll, `nsfw=false`.
+- A new entry starts as Plan to watch.
+- Rows waiting in `parked_change` (#41) are resolved by fetching the title and image from MAL details. Seeded anime rows already on devices stay. The seed code is deleted.
+- Images use Coil 3 with the Ktor engine. Check the latest stable version with a search."
+M2-12,Anime details screen,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** the user sees what an anime is about, before or after adding it.
+
+**Where in the app:** tap a result in Search or an entry in Library.
+
+**Contract:**
+- `DetailsState(details: AnimeDetailsUi?, inLibrary, status)`, where status is Loading, Loaded, Offline or Error
+- `AnimeDetailsUi(malId, title, imageUrl, synopsis, episodes, meanScore, genres, airingStatus)`
+- Actions: `OnAddClick`, `OnRetryClick`, `OnBackClick`
+
+**Acceptance:**
+- Uses the existing `MalAnimeRepository.details`, with its cache. No MAL login.
+- Offline, it shows the cached details, or says a connection is needed when there are none.
+- **Add** works the same way as in Search.
+- A type-safe route that takes the MAL ID.
+- View model tests for every status.
+
+**Depends on:** M2-11.
+**Out of scope:** editing the entry (M2-13) and per-anime recommendations.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Fields: cover, title in the chosen language with the other title below it, synopsis, episodes, airing status, MAL mean score, genres, start date.
+- A **View on MyAnimeList** link opens the browser, for attribution.
+- Offline with nothing cached: the same offline view as Search. Cache rules: the existing `MalAnimeRepository` ones."
+M2-13,"Track status, episodes and score",feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","**Goal:** the user records where they are in an anime and what they think of it.
+
+**Where in the app:** on the details screen of an anime that is in the library: a status selector, episodes watched with + and −, a score from 1 to 10 (or none), and **Remove from library**. Library rows show status, progress, score and sync state.
+
+**Contract** (server first):
+- SDL: `progress: Int!` and `score: Int` on the list entry in the push and pull operations
+- `EntryEditUi(status, progress, totalEpisodes, score)`
+- Actions: `OnStatusChange`, `OnProgressChange`, `OnScoreChange`, `OnRemoveClick`
+
+**Acceptance:**
+- Server: a Flyway migration adds progress and score. `pushChanges` rejects a score outside 1-10 and a negative progress. SDL committed, server tests pass.
+- App: a SQLDelight migration. Sync sends and receives the new fields. The same validation runs in the app, and progress cannot go past the episode count when it is known.
+- Remove creates a tombstone that syncs.
+- Tests: server validation, a sync round trip, the view model.
+
+**Order inside the ticket:** server and SDL first, then shared and composeApp in parallel.
+**Depends on:** M2-12.
+**Out of scope:** dates, rewatch count and notes.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Automatic status, like MAL: progress above 0 on Plan to watch sets Watching. Progress reaching the episode total sets Completed. Choosing Completed sets progress to the total, when it is known.
+- Score: a 1-10 selector plus ""No score"". Progress: + and −, or tap the number to type it.
+- Library rows with status Watching get a **+1** button.
+- Remove has no dialog. A snackbar offers **Undo**.
+- The server keeps last-write-wins on the whole entry. No per-field merge.
+- Server limits: progress 0-10000 (the server does not know the total), score 1-10 or null."
+M2-14,"Search, filter and sort your library",feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** the user finds entries in their own library, offline.
+
+**Where in the app:** the library screen: a search field, status filter chips and a sort menu.
+
+**Contract:**
+- `LibraryState` gets `query`, `statusFilter: WatchStatus?` and `sort` (Title, Score or LastUpdated)
+- Actions: `OnQueryChange`, `OnStatusFilterClick`, `OnSortChange`
+
+**Acceptance:**
+- SQLDelight queries do the search, filter and sort. Removed entries never show.
+- ""No results"" looks different from ""your library is empty"".
+- Tests with an in-memory database, plus view model tests.
+
+**Depends on:** M2-13 (sort by score).
+**Out of scope:** filters by genre, year or type.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- The status filter is single select: All plus the five statuses, like MAL's tabs.
+- Sort: Last updated (default, newest first), Title, Score (unscored last). The sort is remembered on the device; the query is not.
+- Search matches the English and main titles, case-insensitive."
+M2-15,Connect your MAL account,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** the user links their MyAnimeList account on this device.
+
+**Where in the app:** a new **MyAnimeList** section in Settings.
+
+**Contract:**
+- `MalAccountState(status)`, where status is NotConnected, Connecting, Connected or Error(reason)
+- Actions: `OnConnectClick`, `OnDisconnectClick`
+
+**Acceptance:**
+- Before connecting, the section explains what the app does with MAL (reads and updates your list on this device, nothing is stored on our server), and the user agrees. The MAL agreement requires this consent.
+- **Connect** runs the existing `MalAuthManager.login()` (PKCE in a browser tab).
+- Cancelled, denied and network errors each get a clear message.
+- **Disconnect** clears the tokens and the MAL cache.
+- The state survives an app restart.
+- View model tests for every status.
+
+**Depends on:** nothing open. Can be done at any point.
+**Out of scope:** the privacy policy page (M2-26 adds the link).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- The consent is shown once, before the first connect, and stored on the device. It is shown again after Disconnect.
+- Connected state shows the MAL username from `GET /users/@me`, stored on the device only.
+- **Merge on connect:** connecting starts the MAL import (M2-20) and the upload of app-only entries (M2-21). Those tickets add the hook; until they exist, this only connects.
+- Disconnect clears tokens, the username and the MAL cache. The library stays."
+M2-16,Suggestions from MAL,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** the user gets MAL's personal suggestions and adds the ones they like.
+
+**Where in the app:** a **For you** tab in the bottom bar.
+
+**Contract:**
+- `SuggestionsState(items: List<SearchResultUi>, status)`, where status is NotConnected, Loading, Loaded, Empty, Offline or Error
+- Actions: `OnConnectClick`, `OnAddClick(malId)`, `OnItemClick(malId)`, `OnRetryClick`
+
+**Acceptance:**
+- Calls `GET /anime/suggestions` with the user's token, cached and throttled like search.
+- Not connected: the tab explains why and shows a **Connect MAL** button (the M2-15 flow).
+- Empty: the tab explains that MAL needs some rated anime first.
+- Cards look like the search results. **Add** works, and tapping a card opens the details screen.
+- MockEngine tests for the call, plus view model tests.
+
+**Depends on:** M2-12, M2-15.
+**Out of scope:** per-anime recommendations.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Replaces the ""coming soon"" placeholder in the For you tab.
+- Pages of 20 with load more, up to MAL's 100.
+- Anime already in the library are hidden.
+- Refreshed when the tab opens if the cache is older than 1 day."
+M2-17,Export your library to a MAL file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp, androidApp","**Goal:** the user saves their library as a file MyAnimeList can import.
+
+**Where in the app:** Settings › Library › **Export to MAL file**.
+
+**Contract:**
+- `ExportState(status)`, where status is Idle, Exporting, Done(count) or Error
+- Actions: `OnExportClick`, `OnFileChosen`
+
+**Acceptance:**
+- A writer for MAL's XML export format, with status, progress and score for each entry.
+- The Android save dialog sits behind an interface.
+- Tests on the XML output.
+
+**Depends on:** M2-13.
+**Out of scope:** CSV or JSON.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Plain XML (no gzip), file name `animekmp-mal-export-YYYY-MM-DD.xml`.
+- A minimal `<myinfo>` with counts. `update_on_import` is set to 1.
+- Removed entries are not exported.
+- Manual check: import the file on a MAL test account and note the result in the PR."
+M2-18,Import a MAL export file,feature,M2,"feature,phase-1",sonnet,"shared, composeApp, androidApp","**Goal:** the user brings in a list exported from MyAnimeList, with no login.
+
+**Where in the app:** Settings › Library › **Import MAL file**.
+
+**Contract:**
+- `ImportFileState(status)`, where status is Idle, Importing(progress), Done(added, keptYours, invalid) or Error
+- Actions: `OnImportClick`, `OnFileChosen`
+
+**Acceptance:**
+- The file picker sits behind an interface.
+- The parser reads MAL's XML, plain or gzip.
+- New entries are added.
+- For entries that are already in the library but differ, the app's version is kept and counted in the summary. M2-19 turns these into choices for the user.
+- Tests on a sample file, plus a round trip: export with M2-17, import, get the same entries.
+
+**Depends on:** M2-17.
+**Out of scope:** importing through a MAL login (M2-20).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Accepts `.xml` and `.xml.gz`.
+- For anime not on the device, an `anime` row is made from the file's title, and the image is fetched like parked rows (M2-11).
+- Equal entries are skipped. Differing entries, including ones removed in the app, keep the app's version and count as ""kept yours"".
+- Imported entries are local changes, so they sync to our server, and to MAL once M2-21 exists.
+- Invalid rows (unknown status, missing ID) are counted and skipped."
+M2-19,Choose which version to keep,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, composeApp, docs","**Goal:** when the app and MyAnimeList disagree about an anime, the user picks which version to keep.
+
+**Where in the app:** a banner on the library (""N anime need your choice"") and a row in Settings open the **conflicts** screen.
+
+**Contract:**
+- `ConflictsState(items: List<ConflictUi>)`, with `ConflictUi(malId, title, app: EntryValues, mal: EntryValues)`
+- Actions: `OnKeepAppClick(malId)`, `OnKeepMalClick(malId)`, `OnKeepAllAppClick`, `OnKeepAllMalClick`
+
+**Acceptance:**
+- An ADR (next free number) states what counts as a conflict (same anime, different status, progress or score), where open conflicts are stored, and that a choice is an ordinary local change that syncs to our server.
+- Conflicts are stored locally and survive a restart.
+- File import (M2-18) now creates conflicts instead of silently keeping the app's version.
+- Each conflict shows both versions side by side. There is a ""nothing to resolve"" state.
+- Tests: keep app, keep MAL, and keep all.
+
+**Depends on:** M2-18.
+**Out of scope:** conflicts from MAL account import and from MAL sync. M2-20 and M2-22 reuse this screen.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- A conflict means the same MAL ID with a different status, progress, score or removed state.
+- While a conflict waits, the entry keeps the app's version and syncs normally. The other version is stored in a `conflict` table.
+- Keep app: delete the conflict. Keep other: write it as a new local change, then delete the conflict.
+- Every difference is a conflict, with no automatic newest-wins (D15).
+- The banner cannot be dismissed while conflicts exist. A new import replaces an older conflict for the same anime."
+M2-20,Import your list from MAL,feature,M2,"feature,phase-1",sonnet,"shared, composeApp","**Goal:** a user connected to MyAnimeList pulls their MAL list into the app.
+
+**Where in the app:** Settings › MyAnimeList › **Import my MAL list**, shown while connected.
+
+**Contract:**
+- `MalImportState(status)`, where status is Idle, Importing(done, total), Done(added, conflicts) or Error
+- Actions: `OnImportClick`, `OnRetryClick`
+
+**Acceptance:**
+- A paged read of `/users/@me/animelist` with the list status, through the existing throttle and backoff.
+- New entries are added. Differences become conflicts (M2-19).
+- After a failure, the import resumes where it stopped.
+- MockEngine tests, plus view model tests.
+
+**Depends on:** M2-15, M2-19.
+**Out of scope:** ongoing sync (M2-21, M2-22).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Runs automatically right after connecting MAL (merge on connect), and also from the button.
+- Pages of 100 through `MalThrottle`. The stored offset lets it resume after a failure.
+- Anime that exist only in the app are left for M2-21.
+- Imported entries are marked `on_mal`, which M2-22 needs to detect removals on MAL."
+M2-21,Send your changes to MAL,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, composeApp, androidApp","**Goal:** changes made in the app show up on MyAnimeList automatically.
+
+**Where in the app:** this runs in the background. Settings › MyAnimeList shows ""Up to date"", ""N changes waiting"" or ""Sending failed"" with a **Retry** button.
+
+**Contract:**
+- The MAL section state gets `pendingCount` and `lastError`
+- Action: `OnRetryClick`
+
+**Acceptance:**
+- A local outbox table. While connected, every add, edit and remove made on this device is queued.
+- Changes pulled from our server are never queued, so another device's change is not sent twice (D17).
+- A background sender sits behind an interface (WorkManager on Android) and runs with a network constraint and backoff. It uses `PATCH` and `DELETE` on `my_list_status`.
+- Failed sends stay in the queue. Sending is idempotent.
+- Tests with fakes for the scheduler and the MAL client.
+
+**Depends on:** M2-13, M2-15.
+**Out of scope:** getting changes from MAL (M2-22).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Strict D17: only changes made on this device while connected are queued. Nothing pulled from our server is queued, including changes from devices without MAL.
+- On connect, app-only entries (not `on_mal`) are queued once (merge on connect).
+- Remove in the app sends `DELETE` to MAL.
+- WorkManager: a one-time job on each change (network constraint, exponential backoff) plus a 6-hour periodic retry. About 1 request per second through `MalThrottle`.
+- Disconnect clears the queue."
+M2-22,Get changes made on MAL,feature,M2,"feature,opus-plan,phase-1",opusplan,"shared, composeApp, androidApp","**Goal:** changes made on MyAnimeList's website come into the app.
+
+**Where in the app:** this runs in the background. Settings › MyAnimeList also gets a **Sync now** button and a ""last synced"" time.
+
+**Contract:**
+- The MAL section state gets `lastSyncedAt` and `syncing`
+- Action: `OnSyncNowClick`
+
+**Acceptance:**
+- A periodic background pull of the MAL list, reusing the reader from M2-20 and MAL's `updated_at`.
+- A difference with no pending local change is applied, then synced to our server.
+- A difference that has a pending local change becomes a conflict (M2-19).
+- The user's choice is sent to MAL (M2-21) and to our server.
+- Tests: no conflict, conflict, offline.
+
+**Depends on:** M2-20, M2-21.
+**Out of scope:** devices without MAL (M2-23).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Pull on app start (when the last pull is older than 15 minutes), every 6 hours with WorkManager, and from **Sync now**.
+- An `on_mal` entry missing from the MAL list was removed on MAL. It is removed in the app, unless it has a pending local change; then it becomes a conflict.
+- A choice the user makes is a local change, so M2-21 sends it to MAL."
+M2-23,MAL on a second device,feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","**Goal:** with the same Google account on several devices, a device without MyAnimeList knows what to do.
+
+**Where in the app:** on a signed-in device that is not connected to MAL, while the account has MAL linked, a library banner and the Settings MAL section ask: **Connect MAL on this device** or **Not on this device**.
+
+**Contract** (server first):
+- SDL: `linkedPlatforms: [Platform!]!` on the account, plus mutations to link and unlink
+- The MAL section state gets `linkedElsewhere`
+- Actions: `OnConnectClick`, `OnNotOnThisDeviceClick`
+
+**Acceptance:**
+- The server stores only the platform name, no username or ID (D19). Flyway migration, SDL committed, server tests pass.
+- Connecting MAL on any device sets the flag. Only **Unlink MAL from account** in Settings clears it.
+- This device never sends changes pulled from our server to MAL (D17).
+- The user's choice is remembered.
+- Client tests.
+
+**Order inside the ticket:** server and SDL first, then shared and composeApp in parallel.
+**Depends on:** M2-22.
+**Out of scope:** platforms other than MAL.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Strict D17: a device without MAL never sends anything to MAL. Its changes reach our server only, and the prompt says so.
+- **Not on this device** is stored on the device and hides the prompt.
+- Disconnecting on one device does not clear the server flag."
+M2-24,Server limits and input validation,feature,M2,"feature,phase-1",sonnet,server,"**Goal:** the public GraphQL endpoint resists abuse.
+
+**Where in the app:** nowhere. Server only.
+
+**Acceptance:**
+- Query depth and complexity limits.
+- A batch-size limit on `pushChanges` and a request size limit.
+- Rate limits per user and per IP.
+- Every input field validated (lengths, ranges, enums).
+- The decision on introspection written down.
+- A test for each limit. `server-tests` pass.
+
+**Depends on:** nothing open. Can be done at any point.
+**Out of scope:** hosting (M2-25).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Depth 10, complexity 1000. Push batch lowered from 1000 to 500, matching the pull page. Request body 256 KB.
+- Ktor RateLimit: 60 per minute per user and 120 per minute per IP. Too many returns 429.
+- Introspection is on in dev and off in production, decided by an env var."
+M2-25,Put the server online,chore,M2,"chore,opus-plan,phase-1",opusplan,"server, build-ci, docs","**Goal:** the release build of the app talks to our server on the internet over HTTPS.
+
+**Acceptance:**
+- An ADR compares at least three hosts (the mini PC from M2-28 and M2-30 is one of them) on price, HTTPS, Postgres backups and effort, with prices checked and dated. It picks one.
+- The chosen host is set up: a production Docker image, migrations on start, JSON logs, a health check.
+- Config is documented, with no secrets or private host details in the repo.
+- A backup is restored once, to prove backups work.
+- The release build points to the server URL.
+- Deploy steps are in the README.
+
+**Depends on:** M2-24.
+**Out of scope:** CD automation, unless trivial.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- The ADR compares the mini PC (behind an HTTPS tunnel) with at least two paid hosts, and the user picks.
+- Without an own domain, use the host's or the tunnel's subdomain.
+- Done before M2-27."
+M2-26,Privacy policy,chore,M2,"chore,phase-1",sonnet,"docs, composeApp","**Goal:** the privacy policy that Google Play and MyAnimeList require is public and reachable from the app.
+
+**Where in the app:** Settings › **Privacy policy**, and a link in the MAL consent text (M2-15).
+
+**Acceptance:**
+- The page is at a public URL. It covers what our server stores (Google `sub`, library entries with anime IDs, the linked platform name), what stays on the device, MAL data and caching, deletion, and a contact for removal requests.
+- A checklist in `docs/` against the MAL agreement: no stored credentials, cache only as needed, removal within 24 hours, no scraping, no revenue.
+- The Settings row opens the page.
+
+**Depends on:** nothing open. Can be done at any point. If M2-15 is done, add the link to its consent text.
+**Out of scope:** legal review.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- The page lives in the existing GitHub Pages repo, next to `assetlinks.json` and the account deletion page.
+- Contact: a dedicated address the user creates and provides before the ticket starts. Stop and ask if it is missing."
+M2-27,Publish to Google Play internal testing,chore,M2,"chore,phase-1",sonnet,"androidApp, build-ci, docs","**Goal:** the app is on the Google Play internal testing track.
+
+**Acceptance:**
+- A release build with R8. The keystore stays out of the repo.
+- CI builds a signed AAB from secrets. `applicationId` and version are set.
+- The target API level meets Play's current requirement (checked with a search).
+- The Play App Signing SHA-256 is added to `/.well-known/assetlinks.json` in the Pages repo, and the MAL App Link is verified on a release build.
+- Store listing, screenshots, the Data safety form, the account-deletion URL, the privacy policy URL and the content rating are done.
+- The internal testing track is published.
+
+**Depends on:** M2-25, M2-26.
+**Out of scope:** production rollout.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Uses the user's existing Play developer account. `applicationId` stays `com.greenzean.animekmp`.
+- The store listing text is drafted in the PR, for the user to approve before upload."
+M2-31,End-to-end check of the MVP,chore,M2,"chore,phase-1",sonnet,"all modules, docs","**Goal:** prove the MVP works, starting from a clean install.
+
+**Acceptance:**
+- With no account: search, add, open details, track status, episodes and score, filter, export and import a file.
+- Sign in with Google on two devices and see the same library.
+- Connect MAL: import, change something on both sides, resolve a conflict, see the second-device prompt.
+- Delete the account.
+- The result goes in `docs/m2-result.md`, with every decision D1-D27 marked as met or listed as not met.
+- CI, lint and tests pass on `main`.
+
+**Depends on:** all other M2 tickets.
+**Out of scope:** new features. Fixes go in bug tickets unless trivial.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- None open."
 M2-29,Server: sign-out revokes the refresh token,feature,M2,"feature,phase-1",sonnet,"server, shared","Goal: signing out also ends the session on the server, so a refresh token copied off the device stops working at once instead of after its 30 days.
 Depends on: M2-4, M2-7.
 Acceptance: a `signOut` mutation (authenticated by the refresh token) revokes the whole token family and returns a result that does not reveal whether the token existed; repeating it, or sending an unknown or already revoked token, is not an error; the SDL file and the schema drift test are updated and the Apollo operation is added; the app calls it during sign-out (after the keep-or-delete choice) and signs out locally even when the call fails or the device is offline; server tests cover revoke, repeat and a refresh with the revoked token (`UNAUTHENTICATED`); app tests cover the offline sign-out; ADR 0011 consequences and ADR 0010 are updated through a new ADR or a superseding note, not by rewriting an accepted one.
