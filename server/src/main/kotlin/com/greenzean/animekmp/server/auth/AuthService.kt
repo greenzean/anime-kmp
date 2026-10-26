@@ -14,7 +14,6 @@ data class Session(
 
 private val log = LoggerFactory.getLogger(AuthService::class.java)
 
-/** Sign-in flow (ADR 0010): Google ID token plus a server-issued nonce in, our own session out. */
 class AuthService(
     private val verifier: GoogleIdTokenVerifier,
     private val tokens: SessionTokens,
@@ -22,7 +21,6 @@ class AuthService(
 ) {
     fun signInNonce(): String = repository.issueNonce()
 
-    /** The token is verified first, so a caller without a valid Google token cannot burn nonces. */
     fun signInWithGoogle(idToken: String): Session =
         failing {
             val identity = verifier.verify(idToken)
@@ -54,6 +52,10 @@ class AuthService(
                 RotationResult.ReuseDetected -> throw AuthFailure("Refresh token reuse detected, family revoked")
             }
         }
+
+    fun signOut(refreshToken: String) {
+        repository.revokeFamily(SessionTokens.hash(refreshToken))
+    }
 
     private fun session(
         userId: UUID,

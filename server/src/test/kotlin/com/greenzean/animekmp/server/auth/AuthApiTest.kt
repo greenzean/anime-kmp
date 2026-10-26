@@ -15,6 +15,7 @@ import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -97,6 +98,9 @@ class AuthApiTest {
     private suspend fun HttpClient.refresh(refreshToken: String): JsonObject =
         gql("""mutation { refreshSession(refreshToken: "$refreshToken") { $PAYLOAD_FIELDS } }""")
 
+    private suspend fun HttpClient.signOut(refreshToken: String): JsonObject =
+        gql("""mutation { signOut(refreshToken: "$refreshToken") }""")
+
     private fun JsonObject.payload(field: String) = this["data"]!!.jsonObject[field]!!.jsonObject
 
     private fun JsonObject.str(key: String) = this[key]!!.jsonPrimitive.content
@@ -163,7 +167,6 @@ class AuthApiTest {
         authApp {
             val token = idToken(client.nonce())
             clock.now = TEST_NOW.plus(Duration.ofMinutes(6))
-            // Move the ID token's own validity along too, so only the nonce can fail.
             val fresh =
                 googleIdToken(
                     key.second,
@@ -192,7 +195,6 @@ class AuthApiTest {
                 tokens.verifyAccess(first.str("accessToken")),
                 tokens.verifyAccess(second.str("accessToken")),
             )
-            // The successor works too.
             assertNull(client.refresh(second.str("refreshToken"))["errors"])
         }
 
@@ -203,11 +205,48 @@ class AuthApiTest {
             val second = client.refresh(first.str("refreshToken")).payload("refreshSession")
 
             client.refresh(first.str("refreshToken")).assertUnauthenticated()
-            // The successor is dead as well: the thief and the owner both have to sign in again.
             client.refresh(second.str("refreshToken")).assertUnauthenticated()
             val live =
                 transaction(db) { RefreshTokenTable.selectAll().count { it[RefreshTokenTable.revokedAt] == null } }
             assertEquals(0, live)
+        }
+
+    @Test
+    fun signOutRevokesTheWholeFamily() =
+        authApp {
+            val first = client.signIn(idToken(client.nonce())).payload("signInWithGoogle")
+            val second = client.refresh(first.str("refreshToken")).payload("refreshSession")
+
+            val result = client.signOut(second.str("refreshToken"))
+
+            assertNull(result["errors"])
+            assertEquals(true, result["data"]!!.jsonObject["signOut"]!!.jsonPrimitive.boolean)
+            client.refresh(second.str("refreshToken")).assertUnauthenticated()
+            client.refresh(first.str("refreshToken")).assertUnauthenticated()
+        }
+
+    @Test
+    fun signOutLeavesOtherSessionsAlone() =
+        authApp {
+            val phone = client.signIn(idToken(client.nonce())).payload("signInWithGoogle")
+            val tablet = client.signIn(idToken(client.nonce())).payload("signInWithGoogle")
+
+            client.signOut(phone.str("refreshToken"))
+
+            assertNull(client.refresh(tablet.str("refreshToken"))["errors"])
+        }
+
+    @Test
+    fun signOutIsNotAnErrorForRepeatedUnknownOrMalformedTokens() =
+        authApp {
+            val session = client.signIn(idToken(client.nonce())).payload("signInWithGoogle")
+            val unknown = "A".repeat(session.str("refreshToken").length)
+
+            listOf(session.str("refreshToken"), session.str("refreshToken"), unknown, "short").forEach { token ->
+                val result = client.signOut(token)
+                assertNull(result["errors"])
+                assertEquals(true, result["data"]!!.jsonObject["signOut"]!!.jsonPrimitive.boolean)
+            }
         }
 
     @Test
