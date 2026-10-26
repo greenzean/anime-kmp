@@ -113,6 +113,20 @@ Release builds use the same property and must use HTTPS.
 
 Sign-in is optional and the app works without it. To try it, set `animekmp.googleServerClientId=<web client ID>` in `local.properties` (the same value as the server's `GOOGLE_CLIENT_ID`; empty means sign-in says "not set up in this build"). In Google Cloud Console (APIs & Services, Credentials), also create an OAuth client of type **Android** for package `com.greenzean.animekmp` with the SHA-1 of your debug keystore (`./gradlew :androidApp:signingReport`), and use an emulator image with Google Play and a Google account added. The server needs `GOOGLE_CLIENT_ID` and `JWT_SECRET` set. The session is kept encrypted with a key in the Android Keystore.
 
+### MyAnimeList login
+
+Logging in to MAL is optional. Register an app at https://myanimelist.net/apiconfig (type **Android**, the type the M2-2 spike verified: no client secret is issued) and set these in the gitignored `local.properties`:
+
+- `animekmp.malClientId=<client ID>`: the public client ID. There is no client secret.
+- `animekmp.malRedirectUri=<URL>`: the full HTTPS redirect URL on a host you control, with no query or fragment (the build fails otherwise). Register exactly this URL as the single redirect URI in the MAL app. The app also accepts the same path with or without a trailing slash.
+
+Empty values make the login report "not set up in this build". The redirect is an Android App Link, so the host must serve:
+
+- `/.well-known/assetlinks.json` with `relation` `delegate_permission/common.handle_all_urls`, package `com.greenzean.animekmp` and the SHA-256 of the signing certificate (debug: `./gradlew :androidApp:signingReport`). Release builds need the release or Play App Signing fingerprint too.
+- The redirect URL itself as a static page, shown if the app does not open on its own. Its link back into the app must be an `intent://` URL built from the page's own location, with no third-party scripts and `<meta name="referrer" content="no-referrer">`.
+
+A free option is a GitHub Pages user site (`<user>.github.io`, a public repo with an empty `.nojekyll` file next to the two files above). Check the host with `adb shell pm get-app-links com.greenzean.animekmp` (Android 12 and later). Tokens stay on the device, encrypted with a key in the Android Keystore, and are never sent to our server.
+
 ## Local environment (Docker)
 
 Starts PostgreSQL and the server with one command. Needs Docker with Compose v2.
