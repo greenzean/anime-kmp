@@ -1,3 +1,4 @@
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -26,8 +27,6 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        // Set animekmp.serverUrl with -P, in ~/.gradle/gradle.properties or in the gitignored
-        // local.properties; no real URL is committed.
         val localProperties =
             Properties().apply {
                 rootProject
@@ -43,14 +42,51 @@ android {
                 .get()
         buildConfigField("String", "GRAPHQL_URL", "\"$serverUrl\"")
 
-        // The *web* OAuth client ID, the same value as the server's GOOGLE_CLIENT_ID. Empty means sign-in
-        // reports "not configured" and the rest of the app works.
         val googleServerClientId =
             providers
                 .gradleProperty("animekmp.googleServerClientId")
                 .orElse(localProperties.getProperty("animekmp.googleServerClientId") ?: "")
                 .get()
         buildConfigField("String", "GOOGLE_SERVER_CLIENT_ID", "\"$googleServerClientId\"")
+
+        val malClientId =
+            providers
+                .gradleProperty("animekmp.malClientId")
+                .orElse(localProperties.getProperty("animekmp.malClientId") ?: "")
+                .get()
+        buildConfigField("String", "MAL_CLIENT_ID", "\"$malClientId\"")
+
+        val malRedirectUri =
+            providers
+                .gradleProperty("animekmp.malRedirectUri")
+                .orElse(localProperties.getProperty("animekmp.malRedirectUri") ?: "")
+                .get()
+        val malRedirect = malRedirectUri.takeIf { it.isNotBlank() }?.let(::URI)
+        if (malRedirect != null) {
+            check(
+                malRedirect.scheme == "https" &&
+                    !malRedirect.host.isNullOrBlank() &&
+                    malRedirect.rawQuery == null &&
+                    malRedirect.rawFragment == null &&
+                    malRedirect.rawUserInfo == null &&
+                    malRedirect.port == -1 &&
+                    malRedirect.host == malRedirect.host.lowercase(),
+            ) {
+                "animekmp.malRedirectUri must be an https URL with a lower-case host, no port, query, fragment or user info"
+            }
+        }
+        val malRedirectPath = malRedirect?.path?.ifEmpty { "/" } ?: "/"
+        val malRedirectPathAlt =
+            when {
+                malRedirectPath == "/" -> "/"
+                malRedirectPath.endsWith("/") -> malRedirectPath.dropLast(1)
+                else -> "$malRedirectPath/"
+            }
+        buildConfigField("String", "MAL_REDIRECT_URI", "\"$malRedirectUri\"")
+        manifestPlaceholders["malRedirectEnabled"] = (malRedirect != null).toString()
+        manifestPlaceholders["malRedirectHost"] = malRedirect?.host ?: "mal-redirect.invalid"
+        manifestPlaceholders["malRedirectPath"] = malRedirectPath
+        manifestPlaceholders["malRedirectPathAlt"] = malRedirectPathAlt
     }
 
     buildFeatures {
@@ -73,4 +109,5 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+    implementation(libs.androidx.browser)
 }
