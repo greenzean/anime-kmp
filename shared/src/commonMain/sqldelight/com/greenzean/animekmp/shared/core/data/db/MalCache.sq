@@ -1,0 +1,37 @@
+CREATE TABLE mal_anime_details (
+    mal_id     INTEGER NOT NULL PRIMARY KEY,
+    payload    TEXT    NOT NULL,
+    fetched_at INTEGER NOT NULL
+);
+
+CREATE TABLE mal_search (
+    query_key  TEXT    NOT NULL,
+    page_start INTEGER NOT NULL,
+    payload    TEXT    NOT NULL,
+    fetched_at INTEGER NOT NULL,
+    PRIMARY KEY (query_key, page_start)
+);
+
+selectDetails:
+SELECT payload, fetched_at FROM mal_anime_details WHERE mal_id = ?;
+
+saveDetails:
+INSERT OR REPLACE INTO mal_anime_details (mal_id, payload, fetched_at) VALUES (?, ?, ?);
+
+selectSearch:
+SELECT payload, fetched_at FROM mal_search WHERE query_key = ? AND page_start = ?;
+
+saveSearch:
+INSERT OR REPLACE INTO mal_search (query_key, page_start, payload, fetched_at) VALUES (?, ?, ?, ?);
+
+deleteDetailsFetchedBefore:
+DELETE FROM mal_anime_details WHERE fetched_at < ?;
+
+deleteSearchFetchedBefore:
+DELETE FROM mal_search WHERE fetched_at < ?;
+
+deleteAllDetails:
+DELETE FROM mal_anime_details;
+
+deleteAllSearch:
+DELETE FROM mal_search;
