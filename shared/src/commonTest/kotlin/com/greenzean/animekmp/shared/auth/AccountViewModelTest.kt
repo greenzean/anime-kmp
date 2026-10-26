@@ -62,7 +62,7 @@ class AccountViewModelTest {
             sessionStore = store,
             signInWithGoogle = SignInWithGoogleUseCase(provider, api, store),
             mergeLibrary = MergeLibraryUseCase(engine, accountLibrary, scheduler),
-            signOut = SignOutUseCase(store, engine, accountLibrary),
+            signOut = SignOutUseCase(store, engine, accountLibrary, api),
         )
 
     @Test

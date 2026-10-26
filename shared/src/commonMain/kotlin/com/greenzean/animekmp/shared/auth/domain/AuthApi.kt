@@ -7,4 +7,6 @@ interface AuthApi {
     suspend fun signInNonce(): Result<String, DataError.Network>
 
     suspend fun signInWithGoogle(idToken: String): Result<Session, DataError.Network>
+
+    suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network>
 }

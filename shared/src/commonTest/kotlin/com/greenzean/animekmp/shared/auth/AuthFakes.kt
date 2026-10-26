@@ -15,13 +15,20 @@ val SESSION = Session("access", Instant.parse("2026-10-22T12:15:00Z"), "refresh"
 class FakeAuthApi : AuthApi {
     var nonceResult: Result<String, DataError.Network> = Result.Success("nonce-1")
     var signInResult: Result<Session, DataError.Network> = Result.Success(SESSION)
+    var signOutResult: Result<Unit, DataError.Network> = Result.Success(Unit)
     val idTokens = mutableListOf<String>()
+    val signedOutTokens = mutableListOf<String>()
 
     override suspend fun signInNonce() = nonceResult
 
     override suspend fun signInWithGoogle(idToken: String): Result<Session, DataError.Network> {
         idTokens += idToken
         return signInResult
+    }
+
+    override suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network> {
+        signedOutTokens += refreshToken
+        return signOutResult
     }
 }
 

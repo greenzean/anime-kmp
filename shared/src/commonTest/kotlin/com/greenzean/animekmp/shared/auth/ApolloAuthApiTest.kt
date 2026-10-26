@@ -68,6 +68,31 @@ class ApolloAuthApiTest {
         }
 
     @Test
+    fun signOutSendsTheRefreshTokenAndSucceeds() =
+        runTest {
+            val (api, engine) = api("""{"data":{"signOut":true}}""")
+
+            val result = api.signOut("r1")
+
+            assertEquals(Result.Success(Unit), result)
+            assertEquals(
+                emptyList(),
+                engine.requests
+                    .single()
+                    .headers
+                    .filter { it.name == "Authorization" },
+            )
+        }
+
+    @Test
+    fun aFailedSignOutIsAnError() =
+        runTest {
+            val (api, _) = api("""{"errors":[{"message":"boom"}]}""")
+
+            assertEquals(Result.Error(DataError.Network.SERVER_ERROR), api.signOut("r1"))
+        }
+
+    @Test
     fun aRejectedIdTokenIsUnauthorized() =
         runTest {
             val (api, _) =

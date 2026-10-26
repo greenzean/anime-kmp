@@ -55,10 +55,11 @@ private class Device(
     val accountLibrary = SqlDelightAccountLibraryDataSource(db, dispatcher)
     val store = InMemorySessionStore()
     val scheduler = FakeSyncScheduler()
+    val authApi = FakeAuthApi()
     var engine = SyncEngine(server, local)
 
     val merge get() = MergeLibraryUseCase(engine, accountLibrary, scheduler)
-    val signOut get() = SignOutUseCase(store, engine, accountLibrary)
+    val signOut get() = SignOutUseCase(store, engine, accountLibrary, authApi)
 
     fun tombstones() =
         db.listEntryQueries
@@ -192,6 +193,41 @@ class MergeAndSignOutTest {
             assertEquals(mapOf(BEBOP to "WATCHING"), device.statuses())
             assertEquals(1, device.pending())
             assertNull(device.local.getCursor())
+        }
+
+    @Test
+    fun signOutRevokesTheRefreshTokenOnTheServerForBothChoices() =
+        runTest {
+            LibraryChoice.entries.forEach { choice ->
+                device.store.save(SESSION)
+
+                device.signOut(choice)
+
+                assertNull(device.store.get())
+            }
+            assertEquals(listOf("refresh", "refresh"), device.authApi.signedOutTokens)
+        }
+
+    @Test
+    fun signOutWorksWhenTheServerCallFails() =
+        runTest {
+            device.store.save(SESSION)
+            device.set(BEBOP, WatchStatus.WATCHING, at = 10)
+            device.authApi.signOutResult = Result.Error(DataError.Network.NO_INTERNET)
+
+            device.signOut(LibraryChoice.DELETE)
+
+            assertNull(device.store.get())
+            assertEquals(emptyMap(), device.statuses())
+            assertEquals(listOf("refresh"), device.authApi.signedOutTokens)
+        }
+
+    @Test
+    fun signOutWithoutASessionSkipsTheServerCall() =
+        runTest {
+            device.signOut(LibraryChoice.KEEP)
+
+            assertEquals(emptyList(), device.authApi.signedOutTokens)
         }
 
     @Test
