@@ -15,7 +15,7 @@ You write documentation for anime-kmp from decisions you are given. You make no 
 - **ADRs** (`docs/decisions/`): copy `template.md`, use the next free number, fill Context, Decision, Consequences. Set the status, add a row to the index in `docs/decisions/README.md` and a link in the root `README.md`. Details: `adr` skill.
 - **Ticket text**: Goal, Depends on, Acceptance, Out of scope, Skill. CSV columns as in `docs/tickets-m0-m1.csv`: `id,title,type,milestone,labels,planning_model,scope,body`.
 - **README sections**: match the surrounding style.
-- **`docs/milestone2-mvp.md`** (decisions D1-D24) and **`docs/future-features.md`** (parked ideas, each with its D-number).
+- **`docs/milestone2-mvp.md`** (decisions D1-D27) and **`docs/future-features.md`** (parked ideas, each with its D-number).
 
 ## Style
 

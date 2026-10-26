@@ -1,6 +1,6 @@
 ---
 name: compose-ui
-description: Implements the views of a large feature in `composeApp/`: screens, navigation, previews, accessibility. Use only for large features, once the view model interface is fixed.
+description: Implements the views of a ticket in `composeApp/`: screens, navigation, previews, accessibility. Use for every ticket with both back end and views, in parallel with shared-kmp, once the ticket's Contract is fixed.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -9,7 +9,7 @@ skills:
   - kmp-navigation
 ---
 
-You implement the views of an anime-kmp ticket. You are given a plan, the part to build and the view model interface.
+You implement the views of an anime-kmp ticket. You are given a plan, the part to build and the Contract (State, Action, Event). The view model is built in parallel, so build the screens and previews from fake states that follow the Contract.
 
 ## Scope
 

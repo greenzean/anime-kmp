@@ -26,6 +26,8 @@ An app to keep track of the anime you watched, are watching and want to watch. I
 - **D6.** Statuses are MAL's five: Watching, Completed, On hold, Dropped, Plan to watch.
 - **D7.** Each entry has status, episode progress and score (1–10).
 - **D8.** Anime only; no manga.
+- **D25.** Titles are shown in English by default, falling back to MAL's main title. A Settings option switches to the main title. (Added 2026-10-26.)
+- **D26.** Status follows progress like on MAL: starting a Plan to watch entry sets Watching, reaching the last episode sets Completed, and choosing Completed fills progress to the total. (Added 2026-10-26.)
 
 ### Search
 - **D9.** Library search runs on the device and works offline: search by title, filter by status, sort by title, score or last updated.
@@ -41,9 +43,10 @@ An app to keep track of the anime you watched, are watching and want to watch. I
 - **D15.** **User decides** (a feature of its own): when the app and MAL disagree about the same anime, during sync or import, the user chooses which version to keep. It also covers MAL being linked on one device but not another: the device without MAL asks the user what to do.
 - **D16.** MAL is the only platform in the MVP, by two routes: MAL login (import and sync through the API) and manual files (import a MAL export file, export the library to a file).
 - **D23.** Manual export writes a MAL-format file only.
+- **D27.** Connecting MAL on a device merges both ways automatically: the MAL list is imported (differences become choices for the user, D15), and anime that exist only in the app are added to MAL. (Added 2026-10-26.)
 
 ### Several devices and the account
-- **D17.** Only the device where a change was made sends it to MAL. Other devices get it through our server and do not send it again.
+- **D17.** Only the device where a change was made sends it to MAL. Other devices get it through our server and do not send it again. This is strict: a change made on a device without MAL never reaches MAL, and that device's prompt (D15) says so.
 - **D18.** On the first login on a device that already has a library, its entries are merged into the account automatically.
 - **D19.** For linked platforms, the server stores only that a platform is linked (for example "MAL"), with no platform username or other platform user data.
 - **D20.** On logout, the app asks whether to keep or delete the library on the device.

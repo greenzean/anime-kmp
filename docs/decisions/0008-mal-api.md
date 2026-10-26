@@ -28,7 +28,7 @@ Accepted (M2-2)
 | `GET /users/@me` | Returns `id, name, gender, birthday, location, joined_at`. This is platform user data: do not store it or send it to our server (D19). |
 
 ## Decision
-Use **the endpoints above directly from the app, with a client ID only (no secret)**, and these rules for M2-9, M2-10, M2-12 and M2-19:
+Use **the endpoints above directly from the app, with a client ID only (no secret)**, and these rules for M2-9, M2-10, M2-16 and M2-21:
 
 - **Search and details need no login.** M2-10 and M2-11 do not depend on M2-9.
 - **Fields to request:** search results `id,title,main_picture,mean,media_type,num_episodes,status`; details add `synopsis,genres,start_date,rank,recommendations`; list calls `list_status`. Ask for no more than a screen needs.
@@ -36,14 +36,14 @@ Use **the endpoints above directly from the app, with a client ID only (no secre
 - **Throttling and backoff:** limit calls from the client to about 2 requests per second, queue the rest. Treat HTTP 429, 403 and a 307 redirect to `/error.json` as "throttled": stop, back off exponentially (start at 30 s) and surface a typed error. On 403, stop all MAL calls for at least an hour (blocks were reported, not reproduced).
 - **Do not follow redirects blindly** on the MAL client: a throttled request is a redirect, and following it hides the signal.
 - **OAuth:** PKCE `plain`, client ID from config, no secret. Refresh when the access token is near expiry or on 401; always store the newest refresh token.
-- **Conflict design (M2-18):** `list_status.updated_at` is available per entry for both reads and writes.
+- **Conflict design (M2-19):** `list_status.updated_at` is available per entry for both reads and writes.
 - **Redirect URI:** the spike used `http://www.redirect.com/anime-kmp`, a domain we do not control, so a third party saw the code in its URL. M2-9 uses an Android App Link on a host the project controls (a static GitHub Pages site serving `/.well-known/assetlinks.json` with the package name and signing certificate SHA-256, plus a static fallback page), so only the verified app opens it. The redirect URL comes from the build property `animekmp.malRedirectUri`. MAL requires `redirect_uri` to match a registered URI exactly and supports only `plain`; register one URI only. Custom schemes were dropped because MAL's acceptance of them is undocumented and any app can claim them.
 
 ## Consequences
 - M2-9 keeps its plan: no new app type is needed. It needs a redirect URI the app owns.
 - M2-9 refreshes a token when it is near expiry and treats any 400 or 401 on the refresh grant as a dead session. Refreshing after a 401 from an API call is added with the first MAL API call (M2-10). If the process is killed while the login page is open, the redirect is dropped and the user starts the login again. The login is cancelled when the app resumes without a redirect, so a browser that closes its tab before handing over the link would make the login fail safe as cancelled; only Chrome-style Custom Tabs on an emulator with Firefox were tried. The authorize URL opens only in a browser that provides Custom Tabs, because with `plain` PKCE the URL carries the verifier.
-- M2-10 and M2-11 can proceed without M2-9. M2-12 (suggestions) needs the login.
+- M2-10 and M2-11 can proceed without M2-9. M2-16 (suggestions) needs the login (M2-15).
 - The throttle is at a short-window rate, so backoff and request spacing are mandatory in M2-10, not an optimization.
-- M2-19 may rely on idempotent PATCH and DELETE for retries.
+- M2-21 may rely on idempotent PATCH and DELETE for retries.
 - **Not tested:** the empty suggestions list for a new MAL user (the test account has a list); the length and body of the 403 block; the exact throttle threshold and recovery time; behaviour of rewatch, tags and comments fields; list pagination beyond the first page; access token expiry handling after 31 days.
 - Anime content from MAL must still follow the API agreement (see `docs/milestone2-mvp.md`).
