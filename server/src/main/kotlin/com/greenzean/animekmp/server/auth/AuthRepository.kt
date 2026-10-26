@@ -28,6 +28,7 @@ import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
 private const val NONCE_BYTES = 32
+private const val NONCE_SEPARATOR = "."
 private val NONCE_TTL: Duration = Duration.ofMinutes(5)
 
 sealed interface RotationResult {
@@ -41,16 +42,24 @@ sealed interface RotationResult {
     data object ReuseDetected : RotationResult
 }
 
+enum class NoncePurpose(
+    val prefix: String,
+) {
+    SIGN_IN("s"),
+    DELETE_ACCOUNT("d"),
+}
+
 class AuthRepository(
     private val database: Database? = null,
     private val clock: Clock = Clock.systemUTC(),
     private val random: SecureRandom = SecureRandom(),
 ) {
-    fun issueNonce(): String {
+    fun issueNonce(purpose: NoncePurpose): String {
         val nonce =
-            Base64.getUrlEncoder().withoutPadding().encodeToString(
-                ByteArray(NONCE_BYTES).also(random::nextBytes),
-            )
+            purpose.prefix + NONCE_SEPARATOR +
+                Base64.getUrlEncoder().withoutPadding().encodeToString(
+                    ByteArray(NONCE_BYTES).also(random::nextBytes),
+                )
         transaction(database) {
             SignInNonceTable.deleteWhere { expiresAt less now().toOffset() }
             SignInNonceTable.insert {
@@ -61,13 +70,17 @@ class AuthRepository(
         return nonce
     }
 
-    fun consumeNonce(nonce: String): Boolean =
-        transaction(database) {
-            SignInNonceTable.deleteWhere {
-                (SignInNonceTable.nonce eq nonce) and (expiresAt greater now().toOffset())
-            } ==
-                1
-        }
+    fun consumeNonce(
+        nonce: String,
+        purpose: NoncePurpose,
+    ): Boolean =
+        nonce.startsWith(purpose.prefix + NONCE_SEPARATOR) &&
+            transaction(database) {
+                SignInNonceTable.deleteWhere {
+                    (SignInNonceTable.nonce eq nonce) and (expiresAt greater now().toOffset())
+                } ==
+                    1
+            }
 
     fun userIdForSub(sub: String): UUID =
         transaction(database) {
@@ -78,6 +91,19 @@ class AuthRepository(
                 .single()[AppUserTable.id]
                 .toJavaUuid()
         }
+
+    fun findUserIdBySub(sub: String): UUID? =
+        transaction(database) {
+            AppUserTable
+                .select(AppUserTable.id)
+                .where { AppUserTable.googleSub eq sub }
+                .singleOrNull()
+                ?.get(AppUserTable.id)
+                ?.toJavaUuid()
+        }
+
+    fun deleteUser(userId: UUID): Boolean =
+        transaction(database) { AppUserTable.deleteWhere { id eq userId.toKotlinUuid() } == 1 }
 
     fun storeRefreshToken(
         userId: UUID,

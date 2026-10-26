@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.server.sync
 
+import com.greenzean.animekmp.server.auth.AuthFailure
 import com.greenzean.animekmp.server.db.AnimeTable
+import com.greenzean.animekmp.server.db.AppUserTable
 import com.greenzean.animekmp.server.db.ListEntryTable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Sequence
@@ -38,7 +40,6 @@ data class EntryChange(
     val deletedAt: Instant?,
 )
 
-/** `entryId` is the server row the change landed on; it differs from `id` for a re-added anime. */
 data class ChangeResult(
     val id: UUID,
     val outcome: PushOutcome,
@@ -51,35 +52,19 @@ data class ChangesSlice(
     val hasMore: Boolean,
 )
 
-/** `database` null means Exposed's default (last connected) database. */
 class SyncRepository(
     private val database: Database? = null,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val seq = Sequence("list_entry_sync_seq")
 
-    /**
-     * Applies the batch in one transaction. Re-pushing the same batch changes nothing (idempotent).
-     *
-     * Pushes of one user are serialized by a transaction-scoped advisory lock taken before any `nextval`.
-     * Without it a push could take seq 10, a second push seq 11 and commit first, and a pull would move its
-     * cursor past 11 before 10 becomes visible, so that device would never see 10 (ADR 0006). The lock also
-     * makes the check-then-insert below race-free.
-     *
-     * Two assumptions the lock depends on: the transaction runs at READ COMMITTED (Exposed's default for
-     * Postgres), so rows committed while waiting for the lock are visible afterwards; and every writer of
-     * `list_entry` takes this lock first, because the column default `nextval` would hand a lockless insert
-     * a sequence value silently.
-     *
-     * Timestamps are truncated to milliseconds: Postgres keeps microseconds and the app sends milliseconds, so
-     * a replay of a finer-grained timestamp would otherwise compare newer than the stored row.
-     */
     fun push(
         userId: UUID,
         batch: List<EntryChange>,
     ): List<ChangeResult> =
         transaction(database) {
             exec("SELECT pg_advisory_xact_lock(hashtextextended('list_entry:$userId', 0))") {}
+            requireUser(userId)
             batch.map { apply(userId, it.truncatedToMillis()) }
         }
 
@@ -90,6 +75,7 @@ class SyncRepository(
     ): ChangesSlice {
         val after = Cursor.decode(cursor)
         return transaction(database) {
+            requireUser(userId)
             val rows =
                 ListEntryTable
                     .innerJoin(AnimeTable)
@@ -125,10 +111,6 @@ class SyncRepository(
         return if (byId != null) update(userId, change, animeId, byId) else applyToSlot(userId, change, animeId)
     }
 
-    /**
-     * The server never calls MAL, so it cannot tell a real MAL id from an invented one: it keeps whatever id it is
-     * given in the ID map (ADR 0009). Insert-if-absent then read, so two users adding the same anime at once agree.
-     */
     private fun animeIdFor(malId: Int): Long {
         AnimeTable.insertIgnore { it[AnimeTable.malId] = malId }
         return AnimeTable
@@ -137,8 +119,6 @@ class SyncRepository(
             .single()[AnimeTable.id]
     }
 
-    // One row per (user, anime). The same anime added under another id (two devices, or a re-add after a delete)
-    // is merged into the existing row by last-write-wins; entryId tells the client which id the row has (ADR 0006).
     private fun applyToSlot(
         userId: UUID,
         change: EntryChange,
@@ -160,12 +140,10 @@ class SyncRepository(
                 PushOutcome.REJECTED_INVALID
             }
 
-            // A far-future timestamp would win every later last-write-wins comparison and freeze the entry.
             change.updatedAt.isAfter(latest) || change.deletedAt?.isAfter(latest) == true -> {
                 PushOutcome.REJECTED_INVALID
             }
 
-            // MAL ids are positive; 0 or less is a client bug, not an anime.
             change.malId <= 0 -> {
                 PushOutcome.REJECTED_INVALID
             }
@@ -176,7 +154,6 @@ class SyncRepository(
         }
     }
 
-    /** Applies last-write-wins to the stored row `existing`, which may carry another id than `change.id`. */
     private fun update(
         userId: UUID,
         change: EntryChange,
@@ -243,4 +220,13 @@ class SyncRepository(
         )
 
     private fun Instant.toOffset(): OffsetDateTime = atOffset(ZoneOffset.UTC)
+}
+
+private fun requireUser(userId: UUID) {
+    val exists =
+        !AppUserTable
+            .select(AppUserTable.id)
+            .where { AppUserTable.id eq userId.toKotlinUuid() }
+            .empty()
+    if (!exists) throw AuthFailure("User no longer exists")
 }

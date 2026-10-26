@@ -19,12 +19,16 @@ class AuthService(
     private val tokens: SessionTokens,
     private val repository: AuthRepository,
 ) {
-    fun signInNonce(): String = repository.issueNonce()
+    fun signInNonce(): String = repository.issueNonce(NoncePurpose.SIGN_IN)
+
+    fun deleteAccountNonce(): String = repository.issueNonce(NoncePurpose.DELETE_ACCOUNT)
 
     fun signInWithGoogle(idToken: String): Session =
         failing {
             val identity = verifier.verify(idToken)
-            if (!repository.consumeNonce(identity.nonce)) throw AuthFailure("Sign-in nonce unknown, expired or used")
+            if (!repository.consumeNonce(identity.nonce, NoncePurpose.SIGN_IN)) {
+                throw AuthFailure("Sign-in nonce unknown, expired or used")
+            }
             val userId = repository.userIdForSub(identity.sub)
             val refresh = tokens.newRefreshToken()
             repository.storeRefreshToken(
@@ -55,6 +59,16 @@ class AuthService(
 
     fun signOut(refreshToken: String) {
         repository.revokeFamily(SessionTokens.hash(refreshToken))
+    }
+
+    fun deleteAccount(idToken: String) {
+        failing {
+            val identity = verifier.verify(idToken)
+            if (!repository.consumeNonce(identity.nonce, NoncePurpose.DELETE_ACCOUNT)) {
+                throw AuthFailure("Delete nonce unknown, expired or used")
+            }
+            repository.findUserIdBySub(identity.sub)?.let(repository::deleteUser)
+        }
     }
 
     private fun session(
