@@ -1,8 +1,12 @@
 package com.greenzean.animekmp.shared.mal.data
 
+import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
+import com.greenzean.animekmp.shared.mal.domain.MalAnimeCache
+import com.greenzean.animekmp.shared.mal.domain.MalAnimeRepository
 import com.greenzean.animekmp.shared.mal.domain.MalAuthApi
 import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
 import com.greenzean.animekmp.shared.mal.domain.MalRedirectHandler
+import com.greenzean.animekmp.shared.mal.domain.MalThrottle
 import io.ktor.client.HttpClient
 import org.koin.dsl.module
 
@@ -11,4 +15,8 @@ val malModule =
         single<MalAuthApi> { KtorMalAuthApi(HttpClient { followRedirects = false }, get()) }
         single { MalAuthManager(get(), get(), get(), get(), get()) }
         single { MalRedirectHandler(get()) }
+        single<MalAnimeApi> { KtorMalAnimeApi(HttpClient { followRedirects = false }, get()) }
+        single<MalAnimeCache> { SqlDelightMalCache(get()) }
+        single { MalThrottle() }
+        single { MalAnimeRepository(get(), get(), get()) }
     }
