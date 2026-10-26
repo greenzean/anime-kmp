@@ -3,9 +3,16 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
     <application
         android:name=".AnimeApplication"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@android:drawable/sym_def_app_icon"
         android:label="Anime Tracker"
         android:supportsRtl="true"
@@ -23,6 +30,24 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="animekmp" android:host="delete-account" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".mal.MalRedirectActivity"
+            android:enabled="${malRedirectEnabled}"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="${malRedirectHost}"
+                    android:path="${malRedirectPath}" />
+                <data android:path="${malRedirectPathAlt}" />
             </intent-filter>
         </activity>
     </application>
