@@ -25,7 +25,13 @@ fun App(
         Surface(modifier = modifier.fillMaxSize()) {
             val navController = rememberNavController()
             LaunchedEffect(navController, deepLinks) {
-                deepLinks.collect { navController.navigate(NavUri(it)) }
+                deepLinks.collect { uri ->
+                    try {
+                        navController.navigate(NavUri(uri))
+                    } catch (_: IllegalArgumentException) {
+                        Unit
+                    }
+                }
             }
             NavHost(navController = navController, startDestination = LibraryRoute) {
                 libraryGraph(onNavigateToSettings = { navController.navigate(SettingsRoute) })
