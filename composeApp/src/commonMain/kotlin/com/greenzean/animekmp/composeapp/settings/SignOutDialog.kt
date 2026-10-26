@@ -5,6 +5,11 @@ import androidx.compose.ui.Modifier
 import com.greenzean.animekmp.composeapp.designsystem.components.AppChoiceDialog
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
 
+internal const val SIGN_OUT_TITLE = "Sign out"
+internal const val SIGN_OUT_KEEP = "Keep library on this device"
+internal const val SIGN_OUT_DELETE = "Delete library from this device"
+internal const val SIGN_OUT_CANCEL = "Cancel"
+
 @Composable
 fun SignOutDialog(
     prompt: SignOutPrompt,
@@ -14,20 +19,20 @@ fun SignOutDialog(
     modifier: Modifier = Modifier,
 ) {
     AppChoiceDialog(
-        title = "Sign out",
+        title = SIGN_OUT_TITLE,
         text = prompt.message(),
-        primaryText = "Keep library on this device",
+        primaryText = SIGN_OUT_KEEP,
         onPrimary = onKeep,
-        destructiveText = "Delete library from this device",
+        destructiveText = SIGN_OUT_DELETE,
         onDestructive = onDelete,
-        dismissText = "Cancel",
+        dismissText = SIGN_OUT_CANCEL,
         onDismiss = onDismiss,
         modifier = modifier,
         busy = prompt !is SignOutPrompt.Ready,
     )
 }
 
-private fun SignOutPrompt.message(): String =
+internal fun SignOutPrompt.message(): String =
     when (this) {
         SignOutPrompt.Preparing -> {
             "Syncing your latest changes before signing out."

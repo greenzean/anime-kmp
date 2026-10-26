@@ -5,6 +5,8 @@ import com.greenzean.animekmp.shared.auth.domain.AuthApi
 import com.greenzean.animekmp.shared.auth.domain.Session
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.graphql.DeleteAccountMutation
+import com.greenzean.animekmp.shared.graphql.DeleteAccountNonceMutation
 import com.greenzean.animekmp.shared.graphql.SignInNonceMutation
 import com.greenzean.animekmp.shared.graphql.SignInWithGoogleMutation
 import com.greenzean.animekmp.shared.graphql.SignOutMutation
@@ -26,4 +28,10 @@ class ApolloAuthApi(
 
     override suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network> =
         client.mutation(SignOutMutation(refreshToken)).execute().toResult { }
+
+    override suspend fun deleteAccountNonce(): Result<String, DataError.Network> =
+        client.mutation(DeleteAccountNonceMutation()).execute().toResult { it.deleteAccountNonce }
+
+    override suspend fun deleteAccount(idToken: String): Result<Unit, DataError.Network> =
+        client.mutation(DeleteAccountMutation(idToken)).execute().toResult { }
 }

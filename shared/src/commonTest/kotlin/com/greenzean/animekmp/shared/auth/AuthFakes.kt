@@ -16,10 +16,15 @@ class FakeAuthApi : AuthApi {
     var nonceResult: Result<String, DataError.Network> = Result.Success("nonce-1")
     var signInResult: Result<Session, DataError.Network> = Result.Success(SESSION)
     var signOutResult: Result<Unit, DataError.Network> = Result.Success(Unit)
+    var deleteNonceResult: Result<String, DataError.Network> = Result.Success("delete-nonce-1")
+    var deleteAccountResult: Result<Unit, DataError.Network> = Result.Success(Unit)
     val idTokens = mutableListOf<String>()
     val signedOutTokens = mutableListOf<String>()
+    val deletedWithIdTokens = mutableListOf<String>()
 
     override suspend fun signInNonce() = nonceResult
+
+    override suspend fun deleteAccountNonce() = deleteNonceResult
 
     override suspend fun signInWithGoogle(idToken: String): Result<Session, DataError.Network> {
         idTokens += idToken
@@ -29,6 +34,11 @@ class FakeAuthApi : AuthApi {
     override suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network> {
         signedOutTokens += refreshToken
         return signOutResult
+    }
+
+    override suspend fun deleteAccount(idToken: String): Result<Unit, DataError.Network> {
+        deletedWithIdTokens += idToken
+        return deleteAccountResult
     }
 }
 

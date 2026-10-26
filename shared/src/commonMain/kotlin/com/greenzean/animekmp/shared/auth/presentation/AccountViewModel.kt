@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.greenzean.animekmp.shared.auth.domain.DeleteAccountUseCase
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
 import com.greenzean.animekmp.shared.auth.domain.LibraryChoice
 import com.greenzean.animekmp.shared.auth.domain.MergeLibraryUseCase
@@ -24,6 +25,7 @@ class AccountViewModel(
     private val signInWithGoogle: SignInWithGoogleUseCase,
     private val mergeLibrary: MergeLibraryUseCase,
     private val signOut: SignOutUseCase,
+    private val deleteAccount: DeleteAccountUseCase,
 ) : ViewModel() {
     private val _state = MutableStateFlow(AccountState())
     val state: StateFlow<AccountState> = _state.asStateFlow()
@@ -35,6 +37,7 @@ class AccountViewModel(
                 _state.update {
                     it.copy(
                         isSignedIn = session != null,
+                        sessionChecked = true,
                         merge =
                             if (session ==
                                 null
@@ -58,6 +61,9 @@ class AccountViewModel(
             AccountAction.OnKeepLibraryClick -> applySignOut(LibraryChoice.KEEP)
             AccountAction.OnDeleteLibraryClick -> applySignOut(LibraryChoice.DELETE)
             AccountAction.OnDismissSignOut -> dismissSignOut()
+            AccountAction.OnDeleteAccountClick -> _state.update { it.copy(deletePrompt = DeletePrompt.Confirming) }
+            AccountAction.OnConfirmDeleteAccountClick -> confirmDeleteAccount()
+            AccountAction.OnDismissDeleteAccount -> dismissDeleteAccount()
         }
     }
 
@@ -106,6 +112,31 @@ class AccountViewModel(
         if (_state.value.signOutPrompt == SignOutPrompt.SigningOut) return
         prepareJob?.cancel()
         _state.update { it.copy(signOutPrompt = null) }
+    }
+
+    private fun confirmDeleteAccount() {
+        val prompt = _state.value.deletePrompt
+        if (prompt != DeletePrompt.Confirming && prompt !is DeletePrompt.Failed) return
+        _state.update { it.copy(deletePrompt = DeletePrompt.Deleting) }
+        viewModelScope.launch {
+            val result = deleteAccount()
+            _state.update {
+                it.copy(
+                    deletePrompt =
+                        when {
+                            result is Result.Success -> null
+                            isCancelled((result as Result.Error).error) -> DeletePrompt.Confirming
+                            else -> DeletePrompt.Failed(result.error)
+                        },
+                    merge = if (result is Result.Success) MergeState.Idle else it.merge,
+                )
+            }
+        }
+    }
+
+    private fun dismissDeleteAccount() {
+        if (_state.value.deletePrompt == DeletePrompt.Deleting) return
+        _state.update { it.copy(deletePrompt = null) }
     }
 
     private fun isCancelled(error: SignInError) = error == SignInError.Google(GoogleSignInError.CANCELLED)

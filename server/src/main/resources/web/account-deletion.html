@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Delete your account - Anime Tracker</title>
+<link rel="stylesheet" href="/account/delete/style.css">
+</head>
+<body>
+<main>
+<h1>Delete your Anime Tracker account</h1>
+<p>You can delete your Anime Tracker account and all data our server holds about you at any time, here or in the app. Deleting is permanent and cannot be undone.</p>
+
+<section aria-labelledby="web">
+<h2 id="web">Delete your account on this page</h2>
+<div id="delete-web" data-client-id="{{GOOGLE_CLIENT_ID}}" hidden>
+<p>Sign in with the Google account you use in Anime Tracker. We only use it to find and delete your account.</p>
+<div id="google-button"></div>
+<div id="confirm" hidden>
+<p><strong>This deletes your account, your synced library and every sign-in session. It cannot be undone.</strong></p>
+<p><button id="delete-button" type="button" class="button danger">Delete permanently</button></p>
+</div>
+<p id="status" role="status" aria-live="polite"></p>
+</div>
+<p id="unavailable" class="note" hidden>Deletion on this page is not available right now. Use the steps in the app below.</p>
+<noscript><p class="note">Deleting on this page needs JavaScript. You can also delete your account in the app, as described below.</p></noscript>
+</section>
+
+<section aria-labelledby="app">
+<h2 id="app">Delete your account in the app</h2>
+<ol>
+<li>Open Anime Tracker on your Android device and sign in with your Google account.</li>
+<li>Go to <strong>Settings</strong> and choose <strong>Delete account</strong>.</li>
+<li>Read the summary, confirm, and approve the Google sign-in that proves the account is yours.</li>
+</ol>
+<p><a class="button" href="animekmp://delete-account">Open the delete screen in the app</a></p>
+</section>
+
+<section aria-labelledby="deleted">
+<h2 id="deleted">What is deleted</h2>
+<ul>
+<li>Your account on the server, identified only by your Google account ID.</li>
+<li>Your synced library: every entry (anime and status) and every deletion marker.</li>
+<li>Every sign-in session of your account, on all devices.</li>
+</ul>
+</section>
+
+<section aria-labelledby="kept">
+<h2 id="kept">What is kept</h2>
+<ul>
+<li>The copy of your library stored on your own device stays there until you remove it or uninstall the app.</li>
+<li>Server logs and database backups may hold technical records, such as request times, for a short period before they are rotated out. They are not linked to your library.</li>
+<li>Your data on MyAnimeList is not touched. This app never stores it on the server.</li>
+</ul>
+</section>
+</main>
+<script src="/account/delete/script.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>

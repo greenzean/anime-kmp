@@ -9,6 +9,7 @@ import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.graphql.GraphQLSchemaDefinition
 import com.greenzean.animekmp.server.graphql.SyncSchemaHooks
 import com.greenzean.animekmp.server.graphql.auth.AuthContextFactory
+import com.greenzean.animekmp.server.routes.accountDeletionRoutes
 import com.greenzean.animekmp.server.routes.graphQLRoutes
 import com.greenzean.animekmp.server.routes.healthRoutes
 import com.greenzean.animekmp.server.sync.SyncRepository
@@ -26,13 +27,12 @@ import java.time.Clock
 
 fun main() {
     val config = AppConfig.fromEnv()
-    // Must run before the first logger is created.
     if (config.env == AppEnv.PROD) System.setProperty("logback.configurationFile", "logback-prod.xml")
     val database = config.database?.let { connectDatabase(it) }
     val tokens = config.auth?.let { SessionTokens(it.jwtSecret) }
     val auth = config.auth?.let { authService(it, database, checkNotNull(tokens)) }
     embeddedServer(Netty, port = config.port, host = config.host) {
-        module(database, auth = auth, tokens = tokens)
+        module(database, auth = auth, tokens = tokens, googleClientId = config.auth?.googleClientId)
     }.start(wait = true)
 }
 
@@ -54,6 +54,7 @@ fun Application.module(
     clock: Clock = Clock.systemUTC(),
     auth: AuthService? = null,
     tokens: SessionTokens? = null,
+    googleClientId: String? = null,
 ) {
     val sync = SyncRepository(database, clock)
     install(CallLogging)
@@ -69,10 +70,10 @@ fun Application.module(
         }
     }
     routing {
-        // graphQLPostRoute installs its own Jackson ContentNegotiation; an app-wide kotlinx one would break it.
         route("") {
             install(ContentNegotiation) { json() }
             healthRoutes()
+            accountDeletionRoutes(googleClientId)
         }
         graphQLRoutes()
     }

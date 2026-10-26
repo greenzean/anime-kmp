@@ -53,33 +53,49 @@ fun AppChoiceDialog(
         title = { Text(title) },
         text = { Text(text) },
         confirmButton = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
-            ) {
-                AppButton(
-                    text = primaryText,
-                    onClick = onPrimary,
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                AppButton(
-                    text = destructiveText,
-                    onClick = onDestructive,
-                    enabled = !busy,
-                    style = AppButtonStyle.Destructive,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                AppButton(
-                    text = dismissText,
-                    onClick = onDismiss,
-                    enabled = !busy,
-                    style = AppButtonStyle.Text,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            AppChoiceDialogActions(
+                primaryText = primaryText,
+                onPrimary = onPrimary,
+                destructiveText = destructiveText,
+                onDestructive = onDestructive,
+                dismissText = dismissText,
+                onDismiss = onDismiss,
+                busy = busy,
+            )
         },
     )
+}
+
+@Composable
+internal fun AppChoiceDialogActions(
+    primaryText: String,
+    onPrimary: () -> Unit,
+    destructiveText: String,
+    onDestructive: () -> Unit,
+    dismissText: String,
+    onDismiss: () -> Unit,
+    busy: Boolean,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+    ) {
+        AppButton(text = primaryText, onClick = onPrimary, enabled = !busy, modifier = Modifier.fillMaxWidth())
+        AppButton(
+            text = destructiveText,
+            onClick = onDestructive,
+            enabled = !busy,
+            style = AppButtonStyle.Destructive,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        AppButton(
+            text = dismissText,
+            onClick = onDismiss,
+            enabled = !busy,
+            style = AppButtonStyle.Text,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Preview

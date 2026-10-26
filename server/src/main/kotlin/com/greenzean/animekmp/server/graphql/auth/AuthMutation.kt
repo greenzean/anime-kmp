@@ -27,6 +27,14 @@ class AuthMutation(
         return true
     }
 
+    fun deleteAccountNonce(): String = service().deleteAccountNonce()
+
+    fun deleteAccount(idToken: String): Boolean {
+        require(idToken.length <= MAX_ID_TOKEN_LENGTH) { "idToken is too long" }
+        service().deleteAccount(idToken)
+        return true
+    }
+
     private fun service(): AuthService = auth ?: error("Sign-in is not configured")
 }
 

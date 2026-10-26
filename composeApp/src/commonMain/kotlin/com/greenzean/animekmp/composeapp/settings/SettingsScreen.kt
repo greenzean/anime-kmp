@@ -14,7 +14,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -42,9 +46,17 @@ import org.koin.compose.viewmodel.koinViewModel
 fun SettingsRoot(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    openDeleteAccount: Boolean = false,
     viewModel: AccountViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }
+    LaunchedEffect(state.sessionChecked, state.isSignedIn, pendingDeleteAccount) {
+        if (pendingDeleteAccount && state.sessionChecked) {
+            pendingDeleteAccount = false
+            if (state.isSignedIn) viewModel.onAction(AccountAction.OnDeleteAccountClick)
+        }
+    }
     SettingsScreen(state = state, onAction = viewModel::onAction, onNavigateBack = onNavigateBack, modifier = modifier)
 }
 
@@ -63,6 +75,13 @@ fun SettingsScreen(
             onDismiss = { onAction(AccountAction.OnDismissSignOut) },
         )
     }
+    state.deletePrompt?.let { prompt ->
+        DeleteAccountDialog(
+            prompt = prompt,
+            onConfirm = { onAction(AccountAction.OnConfirmDeleteAccountClick) },
+            onDismiss = { onAction(AccountAction.OnDismissDeleteAccount) },
+        )
+    }
     AppScaffold(title = "Settings", onNavigateBack = onNavigateBack, modifier = modifier) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = MaterialTheme.spacing.lg),
@@ -76,7 +95,10 @@ fun SettingsScreen(
             )
             AppCard {
                 if (state.isSignedIn) {
-                    SignedInAccount(onSignOut = { onAction(AccountAction.OnSignOutClick) })
+                    SignedInAccount(
+                        onSignOut = { onAction(AccountAction.OnSignOutClick) },
+                        onDeleteAccount = { onAction(AccountAction.OnDeleteAccountClick) },
+                    )
                 } else {
                     SignedOutAccount(state = state, onAction = onAction)
                 }
@@ -91,15 +113,29 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SignedInAccount(onSignOut: () -> Unit) {
+private fun SignedInAccount(
+    onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
         AccountSummary()
-        AppButton(
-            text = "Sign out",
-            onClick = onSignOut,
-            style = AppButtonStyle.Outlined,
-            modifier = Modifier.align(Alignment.End),
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AppButton(
+                text = "Sign out",
+                onClick = onSignOut,
+                style = AppButtonStyle.Outlined,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            AppButton(
+                text = "Delete account",
+                onClick = onDeleteAccount,
+                style = AppButtonStyle.Destructive,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

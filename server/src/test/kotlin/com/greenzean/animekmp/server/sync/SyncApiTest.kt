@@ -47,7 +47,6 @@ import kotlin.uuid.toKotlinUuid
 private const val CHANGE_FIELDS = "id malId status updatedAt deletedAt"
 private const val SECRET = "0123456789abcdef0123456789abcdef"
 
-/** One Postgres container for the whole class; the container is reaped by Testcontainers when the JVM exits. */
 private object SharedDb {
     val db: Database by lazy {
         val container = PostgreSQLContainer("postgres:18-alpine").also { it.start() }
@@ -76,7 +75,6 @@ class SyncApiTest {
         }
     }
 
-    // Fixed "now" so test timestamps are never in the future relative to the server (future timestamps are rejected).
     private val clock = Clock.fixed(Instant.parse("2026-10-20T00:00:00Z"), ZoneOffset.UTC)
     private val tokens = SessionTokens(SECRET, clock)
     private val userA = UUID.randomUUID()
@@ -96,7 +94,6 @@ class SyncApiTest {
 
     private fun bearer(user: UUID) = tokens.issueAccess(user).token
 
-    /** Signed in as user A unless `token` says otherwise; null sends no Authorization header. */
     private suspend fun HttpClient.gql(
         query: String,
         token: String? = bearer(userA),
@@ -215,7 +212,6 @@ class SyncApiTest {
         sync {
             client.push(change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z"))
             val cursor = client.pull(null).str("nextCursor")
-            // Another device pushes a change it made hours ago, after this client already pulled.
             val late = UUID.randomUUID()
             client.push(change(late, fma, "COMPLETED", "2026-10-19T08:00:00Z"))
 
@@ -248,7 +244,6 @@ class SyncApiTest {
                     change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z"),
                     change(UUID.randomUUID(), bebop, "COMPLETED", "2026-10-19T12:30:00Z"),
                 )
-            // The third change is the same anime as the second, so it is merged into that row (newer, so APPLIED).
             assertEquals(listOf("REJECTED_INVALID", "APPLIED", "APPLIED"), result.outcomes())
             assertEquals(1, client.pull(null).changes().size)
         }
@@ -393,7 +388,6 @@ class SyncApiTest {
             assertEquals(listOf("APPLIED"), client.push(merge).outcomes())
             val cursor = client.pull(null).str("nextCursor")
 
-            // The response was lost, so the client sends the same change again.
             val retry = client.push(merge)
             assertEquals(listOf("IGNORED_STALE"), retry.outcomes())
             assertEquals(oldId.toString(), retry["results"]!!.jsonArray[0].str("entryId"))
@@ -569,6 +563,31 @@ class SyncApiTest {
                             .jsonObject
                     assertEquals("UNAUTHENTICATED", error["extensions"]!!.jsonObject.str("code"), "token $token")
                 }
+            }
+            assertEquals(0, transaction(db) { ListEntryTable.selectAll().count() }.toInt())
+        }
+
+    @Test
+    fun aDeletedUsersTokenIsRejectedByPushAndPull() =
+        sync {
+            val token = bearer(userA)
+            client.push(change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z"))
+            transaction(db) { exec("DELETE FROM app_user WHERE id = '$userA'") }
+            val input = change(UUID.randomUUID(), fma, "WATCHING", "2026-10-19T12:00:00Z")
+            val queries =
+                listOf(
+                    "{ changesSince { nextCursor } }",
+                    "mutation { pushChanges(changes: [$input]) { results { id } } }",
+                )
+            for (query in queries) {
+                val error =
+                    client
+                        .gql(query, token)["errors"]!!
+                        .jsonArray
+                        .single()
+                        .jsonObject
+                assertEquals("UNAUTHENTICATED", error["extensions"]!!.jsonObject.str("code"))
+                assertEquals("Authentication failed", error.str("message").substringAfterLast(" : "))
             }
             assertEquals(0, transaction(db) { ListEntryTable.selectAll().count() }.toInt())
         }

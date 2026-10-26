@@ -9,4 +9,8 @@ interface AuthApi {
     suspend fun signInWithGoogle(idToken: String): Result<Session, DataError.Network>
 
     suspend fun signOut(refreshToken: String): Result<Unit, DataError.Network>
+
+    suspend fun deleteAccountNonce(): Result<String, DataError.Network>
+
+    suspend fun deleteAccount(idToken: String): Result<Unit, DataError.Network>
 }

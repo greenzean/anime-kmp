@@ -6,10 +6,12 @@ import com.greenzean.animekmp.shared.core.domain.DataError
 
 data class AccountState(
     val isSignedIn: Boolean = false,
+    val sessionChecked: Boolean = false,
     val isSigningIn: Boolean = false,
     val error: SignInError? = null,
     val merge: MergeState = MergeState.Idle,
     val signOutPrompt: SignOutPrompt? = null,
+    val deletePrompt: DeletePrompt? = null,
 )
 
 sealed interface MergeState {
@@ -36,6 +38,16 @@ sealed interface SignOutPrompt {
     data object SigningOut : SignOutPrompt
 }
 
+sealed interface DeletePrompt {
+    data object Confirming : DeletePrompt
+
+    data object Deleting : DeletePrompt
+
+    data class Failed(
+        val error: SignInError,
+    ) : DeletePrompt
+}
+
 sealed interface AccountAction {
     data object OnSignInWithGoogleClick : AccountAction
 
@@ -52,4 +64,10 @@ sealed interface AccountAction {
     data object OnDeleteLibraryClick : AccountAction
 
     data object OnDismissSignOut : AccountAction
+
+    data object OnDeleteAccountClick : AccountAction
+
+    data object OnConfirmDeleteAccountClick : AccountAction
+
+    data object OnDismissDeleteAccount : AccountAction
 }
