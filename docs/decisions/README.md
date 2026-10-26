@@ -32,3 +32,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0011 | [Sign-out and who owns the library on the device](0011-sign-out-and-library-ownership.md) | Accepted | M2-7 |
 | 0012 | [Sign-out revokes the refresh token](0012-sign-out-revokes-refresh-token.md) | Accepted | M2-29 |
 | 0013 | [Account deletion](0013-account-deletion.md) | Accepted | M2-8 |
+| 0014 | [The mini PC runs the server and deploys after passing tests](0014-mini-pc-runs-server-and-deploys.md) | Accepted | M2-30 |

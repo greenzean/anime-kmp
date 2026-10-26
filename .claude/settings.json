@@ -11,6 +11,10 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(gh pr *)"
+    ],
+    "deny": [
+      "Bash(docker *)",
+      "Bash(docker-compose *)"
     ]
   },
   "env": {
