@@ -5,6 +5,7 @@ composeMultiplatform = "1.12.1"
 activityCompose = "1.13.0"
 work = "2.12.0"
 credentials = "1.6.0"
+browser = "1.10.0"
 googleid = "1.2.1"
 navigation = "2.9.2"
 android-compileSdk = "37"
@@ -24,6 +25,7 @@ koin = "4.2.2"
 lifecycle = "2.11.0"
 coroutines = "1.11.0"
 turbine = "1.2.1"
+serializationJson = "1.11.0"
 exposed = "1.5.0"
 hikari = "7.1.0"
 postgresql = "42.7.13"
@@ -78,6 +80,12 @@ androidx-credentials = { module = "androidx.credentials:credentials", version.re
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
 googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigation" }
+
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serializationJson" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 
 apollo-runtime = { module = "com.apollographql.apollo:apollo-runtime", version.ref = "apollo" }
 
