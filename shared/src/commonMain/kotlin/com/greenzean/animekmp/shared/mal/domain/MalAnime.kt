@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Error
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.library.domain.Anime
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -14,7 +15,10 @@ data class MalAnimeSummary(
     val mediaType: String?,
     val numEpisodes: Int?,
     val status: String?,
+    val titleEn: String? = null,
 )
+
+fun MalAnimeSummary.toAnime(): Anime = Anime(malId = malId, title = title, titleEn = titleEn, imageUrl = imageUrl)
 
 @Serializable
 data class MalRecommendation(

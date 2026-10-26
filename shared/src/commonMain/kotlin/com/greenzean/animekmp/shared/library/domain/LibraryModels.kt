@@ -5,6 +5,8 @@ import kotlin.time.Instant
 data class Anime(
     val malId: Int,
     val title: String,
+    val titleEn: String? = null,
+    val imageUrl: String? = null,
 )
 
 enum class WatchStatus { WATCHING, COMPLETED, ON_HOLD, DROPPED, PLAN_TO_WATCH }

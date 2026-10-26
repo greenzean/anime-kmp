@@ -51,6 +51,11 @@ class SqlDelightSyncLocalDataSource(
             }
         }
 
+    override suspend fun parkedMissingAnime(): List<Int> =
+        withContext(dispatcher) {
+            parked.selectMissingAnime().executeAsList().map { it.toInt() }
+        }
+
     override suspend fun retryParked(): Int =
         withContext(dispatcher) {
             db.transactionWithResult {
@@ -71,7 +76,6 @@ class SqlDelightSyncLocalDataSource(
             applyPulled(change)
         }
 
-    /** Keeps only the newest parked change per anime, so a stale one cannot overwrite a newer one later. */
     private fun park(change: SyncChange) {
         val existing = parked.selectByMalId(change.malId.toLong()).executeAsOneOrNull()
         if (existing == null || existing.updated_at < change.updatedAt.toEpochMilliseconds()) {
@@ -85,17 +89,9 @@ class SqlDelightSyncLocalDataSource(
         }
     }
 
-    /**
-     * Merge rule from ADR 0006: one row per anime. Adopt the server id first, then apply the
-     * pulled row only if local is SYNCED or older; a newer (or equal) PENDING edit is never overwritten.
-     * The anime must already be in the local catalog (FK).
-     */
     private fun applyPulled(change: SyncChange): Boolean {
         val local = listEntries.selectByMalId(change.malId.toLong()).executeAsOneOrNull()
-        return if (local == null) insertPulled(change) else mergePulled(change, local)
-    }
-
-    private fun insertPulled(change: SyncChange): Boolean {
+        if (local != null) return mergePulled(change, local)
         listEntries.insertPulled(
             change.id,
             change.malId.toLong(),

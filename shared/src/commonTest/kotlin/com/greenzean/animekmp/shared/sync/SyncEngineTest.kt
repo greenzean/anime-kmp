@@ -1,6 +1,6 @@
 package com.greenzean.animekmp.shared.sync
 
-import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.TestAnimeCatalog
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
@@ -26,7 +26,7 @@ import kotlin.time.Instant
 
 class SyncEngineTest {
     private val driver = createTestDriver()
-    private val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    private val db = AnimeDatabase(driver).also(TestAnimeCatalog::apply)
     private val dispatcher = UnconfinedTestDispatcher()
     private val library = SqlDelightLibraryDataSource(db, dispatcher = dispatcher)
     private val local = SqlDelightSyncLocalDataSource(db, dispatcher)
@@ -215,7 +215,7 @@ class SyncEngineTest {
             engine.sync()
             assertEquals(null, row(99))
 
-            db.animeQueries.insertOrIgnore(99, "Late Arrival")
+            db.animeQueries.insertOrIgnore(99, "Late Arrival", null, null)
             api.pages.add(page("c1", false))
             val result = engine.sync()
 

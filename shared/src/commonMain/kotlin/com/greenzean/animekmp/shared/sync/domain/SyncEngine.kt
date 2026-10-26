@@ -8,6 +8,7 @@ import kotlinx.coroutines.sync.withLock
 class SyncEngine(
     private val api: SyncApi,
     private val local: SyncLocalDataSource,
+    private val parkedAnime: ParkedAnimeResolver = NoParkedAnimeResolver,
 ) {
     private val mutex = Mutex()
 
@@ -77,6 +78,7 @@ class SyncEngine(
             cursor = page.nextCursor
         } while (page.hasMore)
 
+        parkedAnime.resolve()
         pulled += local.retryParked()
         return Result.Success(pulled)
     }

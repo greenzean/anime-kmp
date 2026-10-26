@@ -7,7 +7,7 @@ import com.greenzean.animekmp.shared.auth.domain.MergeSummary
 import com.greenzean.animekmp.shared.auth.domain.SessionManager
 import com.greenzean.animekmp.shared.auth.domain.SessionRefresher
 import com.greenzean.animekmp.shared.auth.domain.SignOutUseCase
-import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
+import com.greenzean.animekmp.shared.core.data.TestAnimeCatalog
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
@@ -47,7 +47,7 @@ private class Device(
     server: FakeServerSyncApi,
 ) {
     val driver = createTestDriver()
-    val db = AnimeDatabase(driver).also(DevAnimeSeed::apply)
+    val db = AnimeDatabase(driver).also(TestAnimeCatalog::apply)
     val clock = TickClock()
     private val dispatcher = UnconfinedTestDispatcher()
     val library = SqlDelightLibraryDataSource(db, clock, dispatcher)

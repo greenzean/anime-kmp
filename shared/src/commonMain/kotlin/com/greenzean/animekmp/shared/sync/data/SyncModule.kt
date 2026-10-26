@@ -5,6 +5,8 @@ import com.greenzean.animekmp.shared.auth.data.ApolloSessionRefresher
 import com.greenzean.animekmp.shared.auth.domain.SessionManager
 import com.greenzean.animekmp.shared.auth.domain.SessionRefresher
 import com.greenzean.animekmp.shared.sync.domain.AccountLibraryDataSource
+import com.greenzean.animekmp.shared.sync.domain.MalParkedAnimeResolver
+import com.greenzean.animekmp.shared.sync.domain.ParkedAnimeResolver
 import com.greenzean.animekmp.shared.sync.domain.SyncApi
 import com.greenzean.animekmp.shared.sync.domain.SyncEngine
 import com.greenzean.animekmp.shared.sync.domain.SyncLocalDataSource
@@ -22,5 +24,6 @@ val syncDataModule =
         single<SyncApi> { ApolloSyncApi(get(), get()) }
         single<SyncLocalDataSource> { SqlDelightSyncLocalDataSource(get()) }
         single<AccountLibraryDataSource> { SqlDelightAccountLibraryDataSource(get()) }
-        single { SyncEngine(get(), get()) }
+        single<ParkedAnimeResolver> { MalParkedAnimeResolver(get(), get(), get()) }
+        single { SyncEngine(get(), get(), get()) }
     }

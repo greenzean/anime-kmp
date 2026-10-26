@@ -1,7 +1,8 @@
--- Local cache of anime details, keyed by the MAL id (ADR 0009). The server stores ids only, never titles.
 CREATE TABLE anime (
-    mal_id INTEGER NOT NULL PRIMARY KEY,
-    title  TEXT    NOT NULL
+    mal_id    INTEGER NOT NULL PRIMARY KEY,
+    title     TEXT    NOT NULL,
+    title_en  TEXT,
+    image_url TEXT
 );
 
 selectAll:
@@ -11,7 +12,14 @@ selectByMalId:
 SELECT * FROM anime WHERE mal_id = ?;
 
 insertOrIgnore:
-INSERT OR IGNORE INTO anime (mal_id, title) VALUES (?, ?);
+INSERT OR IGNORE INTO anime (mal_id, title, title_en, image_url) VALUES (?, ?, ?, ?);
+
+updateDetails:
+UPDATE anime
+SET title = :title,
+    title_en = COALESCE(:titleEn, title_en),
+    image_url = COALESCE(:imageUrl, image_url)
+WHERE mal_id = :malId;
 
 countAll:
 SELECT count(*) FROM anime;

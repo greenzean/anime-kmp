@@ -34,7 +34,7 @@ class ParkedChangesTest {
         deletedAt = deletedAt?.let(Instant::fromEpochMilliseconds),
     )
 
-    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop")
+    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop", null, null)
 
     private fun row() = db.listEntryQueries.selectByMalId(ANIME_ID.toLong()).executeAsOneOrNull()
 

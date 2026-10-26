@@ -16,26 +16,27 @@ import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-/** Local-only for now; M1-5/M1-6 add the remote side and sync. */
 @OptIn(ExperimentalUuidApi::class)
 class SqlDelightLibraryDataSource(
     private val db: AnimeDatabase,
     private val clock: Clock = Clock.System,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : LibraryLocalDataSource {
-    override fun observeAnime(): Flow<List<Anime>> =
-        db.animeQueries
-            .selectAll()
-            .asFlow()
-            .mapToList(dispatcher)
-            .map { rows -> rows.map { it.toAnime() } }
-
     override fun observeLibrary(): Flow<List<LibraryEntry>> =
         db.listEntryQueries
             .selectActiveWithAnime()
             .asFlow()
             .mapToList(dispatcher)
             .map { rows -> rows.map { it.toLibraryEntry() } }
+
+    override suspend fun saveAnime(anime: Anime) {
+        withContext(dispatcher) {
+            db.transaction {
+                db.animeQueries.insertOrIgnore(anime.malId.toLong(), anime.title, anime.titleEn, anime.imageUrl)
+                db.animeQueries.updateDetails(anime.title, anime.titleEn, anime.imageUrl, anime.malId.toLong())
+            }
+        }
+    }
 
     override suspend fun setStatus(
         malId: Int,
