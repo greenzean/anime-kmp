@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared.auth
 
 import com.greenzean.animekmp.shared.auth.data.InMemorySessionStore
+import com.greenzean.animekmp.shared.auth.domain.DeleteAccountUseCase
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
 import com.greenzean.animekmp.shared.auth.domain.MergeLibraryUseCase
 import com.greenzean.animekmp.shared.auth.domain.MergeSummary
@@ -9,6 +10,7 @@ import com.greenzean.animekmp.shared.auth.domain.SignInWithGoogleUseCase
 import com.greenzean.animekmp.shared.auth.domain.SignOutUseCase
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
+import com.greenzean.animekmp.shared.auth.presentation.DeletePrompt
 import com.greenzean.animekmp.shared.auth.presentation.MergeState
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
 import com.greenzean.animekmp.shared.core.data.DevAnimeSeed
@@ -63,6 +65,7 @@ class AccountViewModelTest {
             signInWithGoogle = SignInWithGoogleUseCase(provider, api, store),
             mergeLibrary = MergeLibraryUseCase(engine, accountLibrary, scheduler),
             signOut = SignOutUseCase(store, engine, accountLibrary, api),
+            deleteAccount = DeleteAccountUseCase(provider, api, store, engine, accountLibrary),
         )
 
     @Test
@@ -71,6 +74,11 @@ class AccountViewModelTest {
         assertFalse(state.isSignedIn)
         assertFalse(state.isSigningIn)
         assertNull(state.error)
+    }
+
+    @Test
+    fun theSessionIsCheckedOnceTheStoreHasEmitted() {
+        assertTrue(viewModel().state.value.sessionChecked)
     }
 
     @Test
@@ -190,6 +198,85 @@ class AccountViewModelTest {
 
         assertFalse(viewModel.state.value.isSignedIn)
         assertEquals(MergeState.Idle, viewModel.state.value.merge)
+    }
+
+    @Test
+    fun deleteAccountAsksFirstThenClearsTheSessionAndKeepsTheLibrary() {
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        val viewModel = signedInViewModel()
+
+        viewModel.onAction(AccountAction.OnDeleteAccountClick)
+        assertEquals(DeletePrompt.Confirming, viewModel.state.value.deletePrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertTrue(api.deletedWithIdTokens.isEmpty())
+
+        viewModel.onAction(AccountAction.OnConfirmDeleteAccountClick)
+
+        assertNull(viewModel.state.value.deletePrompt)
+        assertFalse(viewModel.state.value.isSignedIn)
+        assertEquals(listOf("id-token"), api.deletedWithIdTokens)
+        assertEquals("delete-nonce-1", provider.nonces.last())
+        assertEquals(1L, db.listEntryQueries.countActive().executeAsOne())
+    }
+
+    @Test
+    fun aFailedDeleteKeepsTheSessionAndCanBeRetried() {
+        api.deleteAccountResult = Result.Error(DataError.Network.NO_INTERNET)
+        val viewModel = signedInViewModel()
+        viewModel.onAction(AccountAction.OnDeleteAccountClick)
+
+        viewModel.onAction(AccountAction.OnConfirmDeleteAccountClick)
+
+        assertEquals(
+            DeletePrompt.Failed(SignInError.Server(DataError.Network.NO_INTERNET)),
+            viewModel.state.value.deletePrompt,
+        )
+        assertTrue(viewModel.state.value.isSignedIn)
+
+        api.deleteAccountResult = Result.Success(Unit)
+        viewModel.onAction(AccountAction.OnConfirmDeleteAccountClick)
+
+        assertNull(viewModel.state.value.deletePrompt)
+        assertFalse(viewModel.state.value.isSignedIn)
+    }
+
+    @Test
+    fun cancellingTheGoogleSheetReturnsToTheConfirmation() {
+        val viewModel = signedInViewModel()
+        provider.result = Result.Error(GoogleSignInError.CANCELLED)
+        viewModel.onAction(AccountAction.OnDeleteAccountClick)
+
+        viewModel.onAction(AccountAction.OnConfirmDeleteAccountClick)
+
+        assertEquals(DeletePrompt.Confirming, viewModel.state.value.deletePrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertTrue(api.deletedWithIdTokens.isEmpty())
+    }
+
+    @Test
+    fun deleteAccountCannotBeDismissedWhileDeleting() {
+        val viewModel = signedInViewModel()
+        val gate = CompletableDeferred<Unit>()
+        provider.gate = gate
+        viewModel.onAction(AccountAction.OnDeleteAccountClick)
+        viewModel.onAction(AccountAction.OnConfirmDeleteAccountClick)
+
+        viewModel.onAction(AccountAction.OnDismissDeleteAccount)
+
+        assertEquals(DeletePrompt.Deleting, viewModel.state.value.deletePrompt)
+        gate.complete(Unit)
+        assertNull(viewModel.state.value.deletePrompt)
+    }
+
+    @Test
+    fun dismissingTheConfirmationClosesIt() {
+        val viewModel = signedInViewModel()
+        viewModel.onAction(AccountAction.OnDeleteAccountClick)
+
+        viewModel.onAction(AccountAction.OnDismissDeleteAccount)
+
+        assertNull(viewModel.state.value.deletePrompt)
+        assertTrue(viewModel.state.value.isSignedIn)
     }
 
     private fun signedInViewModel() = viewModel().also { it.onAction(AccountAction.OnSignInWithGoogleClick) }

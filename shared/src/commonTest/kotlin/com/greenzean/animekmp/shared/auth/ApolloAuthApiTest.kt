@@ -85,6 +85,41 @@ class ApolloAuthApiTest {
         }
 
     @Test
+    fun deleteAccountNonceIsReturned() =
+        runTest {
+            val (api, _) = api("""{"data":{"deleteAccountNonce":"d.n-1"}}""")
+            assertEquals(Result.Success("d.n-1"), api.deleteAccountNonce())
+        }
+
+    @Test
+    fun deleteAccountSendsTheIdTokenAndNoAuthorization() =
+        runTest {
+            val (api, engine) = api("""{"data":{"deleteAccount":true}}""")
+
+            val result = api.deleteAccount("id-1")
+
+            assertEquals(Result.Success(Unit), result)
+            assertEquals(
+                emptyList(),
+                engine.requests
+                    .single()
+                    .headers
+                    .filter { it.name == "Authorization" },
+            )
+        }
+
+    @Test
+    fun aRejectedDeleteIsUnauthorized() =
+        runTest {
+            val (api, _) =
+                api(
+                    """{"errors":[{"message":"Authentication failed","extensions":{"code":"UNAUTHENTICATED"}}]}""",
+                )
+
+            assertEquals(Result.Error(DataError.Network.UNAUTHORIZED), api.deleteAccount("id-1"))
+        }
+
+    @Test
     fun aFailedSignOutIsAnError() =
         runTest {
             val (api, _) = api("""{"errors":[{"message":"boom"}]}""")

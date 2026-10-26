@@ -64,6 +64,8 @@ type ListEntryChange {
 }
 
 type Mutation {
+  deleteAccount(idToken: String!): Boolean!
+  deleteAccountNonce: String!
   pushChanges(changes: [ListEntryChangeInput!]!): PushResult!
   refreshSession(refreshToken: String!): AuthPayload!
   signInNonce: String!

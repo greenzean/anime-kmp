@@ -1,0 +1,3 @@
+mutation DeleteAccount($idToken: String!) {
+  deleteAccount(idToken: $idToken)
+}
