@@ -12,6 +12,7 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 - **Design is part of every view ticket:** a ticket with `composeApp` screens includes their visual design in its acceptance criteria (previews in light and dark, accessibility, screenshots), built on the design system from M2-6a (#86), the only separate design ticket.
 - **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.
 - **Models:** default is `sonnet` (plans and executes small tickets). Tickets labeled `opus-plan` are planned with `/model opusplan` (Opus in plan mode, Sonnet after approval). Switch at the start of a session, not mid-session.
+- **Where things run:** only the Android app, the emulator and Gradle builds run on the Mac. The server, PostgreSQL and Docker (compose, Testcontainers) run on the mini PC, never on the Mac: do not start Docker Desktop or `docker compose` locally. Docker is denied for Claude Code on the Mac. Server tests: `server-tests` (script outside the repo); when they pass it runs `server-deploy`, which deploys the server and DB to the mini PC without asking (ADR 0014); no deploy when the tests fail or were not run. The host and address details stay out of the repo (it is public).
 - Verify versions, prices, API terms and library support with a search; say what could not be verified.
 - Keep prompts and changes scoped to the ticket (touch only the modules it names).
 

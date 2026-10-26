@@ -63,6 +63,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0010: Server sign-in and session tokens](docs/decisions/0010-server-sign-in.md)
 - [0011: Sign-out and who owns the library on the device](docs/decisions/0011-sign-out-and-library-ownership.md)
 - [0012: Sign-out revokes the refresh token](docs/decisions/0012-sign-out-revokes-refresh-token.md)
+- [0014: The mini PC runs the server and deploys after passing tests](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)
 
 ## Build
 

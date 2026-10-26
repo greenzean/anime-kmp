@@ -39,6 +39,7 @@ Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`.
 - Builds in CI for all active targets.
 - Tests pass; shared logic is covered in `commonTest`.
 - Checked manually on a device or emulator.
+- Tickets that touch `server/`: `server-tests` passed and the deploy to the mini PC is healthy.
 - Reviewed and merged, with the ticket linked to the PR.
 
 ## Decisions
