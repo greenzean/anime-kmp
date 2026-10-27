@@ -234,7 +234,7 @@ dependencies {
 
 If the IDE preview fails with `ClassNotFoundException: androidx.compose.ui.tooling.ComposeViewAdapter`, the `androidRuntimeClasspath` line is missing. A Gradle build, spotless and detekt cannot catch this: after adding the first preview in a module, open it in Android Studio.
 
-Import `@Preview` from `org.jetbrains.compose.ui.tooling.preview.Preview` (not the Android tooling package). The multiplatform `@Preview` has no `uiMode`, `showBackground`, or device parameters, so preview dark mode by passing a `darkTheme` flag to the theme wrapper (e.g. `AppTheme(darkTheme = true) { ... }`) rather than `uiMode = Configuration.UI_MODE_NIGHT_YES`.
+Import `@Preview` from `androidx.compose.ui.tooling.preview.Preview`; that is the package `compose.components.uiToolingPreview` exposes in `commonMain` and the one all previews in this repo use. The multiplatform `@Preview` has no `uiMode`, `showBackground`, or device parameters, so preview dark mode by passing a `darkTheme` flag to the theme wrapper (e.g. `AppTheme(darkTheme = true) { ... }`) rather than `uiMode = Configuration.UI_MODE_NIGHT_YES`.
 
 ---
 

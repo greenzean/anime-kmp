@@ -1,7 +1,7 @@
 ---
 name: kmp-testing
 description: |
-  Testing patterns for KMP (Android-first) - ViewModel and repository unit tests with kotlin.test, Turbine, AssertK, UnconfinedTestDispatcher, fake repositories, SavedStateHandle, and Compose UI tests. Use this skill whenever writing or reviewing tests for ViewModels, repositories, use cases, or Compose screens. Trigger on phrases like "write a test", "unit test the ViewModel", "test a repository", "Turbine", "fake repository", "UnconfinedTestDispatcher", "runTest", "ComposeTestRule", or "in-memory database".
+  Testing patterns for KMP (Android-first) - ViewModel and repository unit tests with kotlin.test, Turbine, UnconfinedTestDispatcher, fake repositories, SavedStateHandle, and Compose UI tests. Use this skill whenever writing or reviewing tests for ViewModels, repositories, use cases, or Compose screens. Trigger on phrases like "write a test", "unit test the ViewModel", "test a repository", "Turbine", "fake repository", "UnconfinedTestDispatcher", "runTest", "ComposeTestRule", or "in-memory database".
 ---
  
 # KMP Testing
@@ -13,10 +13,10 @@ Shared logic is tested in `commonTest` (`shared/src/commonTest`, `composeApp/src
 | Concern | Library |
 |---|---|
 | Test framework | `kotlin.test` (commonTest); JUnit5 is JVM-only (jvmTest/androidUnitTest) |
-| Assertions | AssertK |
+| Assertions | `kotlin.test` (`assertEquals`, `assertTrue`, `assertNull`) |
 | Flow / StateFlow testing | Turbine |
 | Coroutine testing | `kotlinx-coroutines-test` + `UnconfinedTestDispatcher` |
-| UI testing | `runComposeUiTest` |
+| UI testing | `runComposeUiTest` with Robolectric (`composeApp/src/androidHostTest`) |
  
 ---
  
@@ -52,8 +52,8 @@ fun `loading library emits entries in state`() = runTest {
  
     viewModel.state.test {
         viewModel.onAction(LibraryAction.OnRefreshClick)
-        assertThat(awaitItem().isLoading).isTrue()
-        assertThat(awaitItem().entries).isNotEmpty()
+        assertTrue(awaitItem().isLoading)
+        assertTrue(awaitItem().entries.isNotEmpty())
     }
 }
 ```
@@ -67,7 +67,7 @@ fun `clicking entry sends NavigateToDetail event`() = runTest {
  
     viewModel.events.test {
         viewModel.onAction(LibraryAction.OnEntryClick("123"))
-        assertThat(awaitItem()).isEqualTo(LibraryEvent.NavigateToDetail("123"))
+        assertEquals(LibraryEvent.NavigateToDetail("123"), awaitItem())
     }
 }
 ```
@@ -110,7 +110,7 @@ fun `returns entries sorted by most recent`() = runTest {
 
     val result = getLibrary()
 
-    assertThat(result).isInstanceOf(Result.Success::class)
+    assertTrue(result is Result.Success)
     // assert ordering on (result as Result.Success).data
 }
 ```
@@ -149,6 +149,25 @@ val compressor = ImageCompressor(ioDispatcher = UnconfinedTestDispatcher())
  
 ---
  
+## View Tests (required for every screen)
+
+Every screen in `composeApp` ships with `runComposeUiTest` tests in the same ticket, next to the view model tests. The tests cover the UI and UX, not only the logic:
+
+- **Every state:** one test per status or state the screen can show (loading, content, empty, offline, error, and each variant such as in library or not). Assert what the user sees.
+- **Every action:** each button, row and control sends the right action or callback when clicked (add, retry, back, item click, navigation callbacks).
+- **Accessibility:** controls have a `contentDescription` or text, and a click target exists for each action. Use `onNodeWithContentDescription` or `onNodeWithText` for lookups, so a missing label fails the test.
+- **UX rules from the ticket:** things that must be hidden, disabled or shown in a given state (for example, the Add button is hidden when the anime is already in the library).
+- Test the stateless `XxxScreen(state, onAction)` composable with a hand-built state and a list that records actions. `XxxRoot` and the view model stay covered by the view model tests.
+- Use the Robot pattern when a screen has 3 or more tests.
+- Check touch targets with `assertTouchWidthIsEqualTo` / `assertTouchHeightIsEqualTo` (48dp). Layout bounds of `IconButton` are smaller than the touch target.
+- After writing a test, break the behavior once and see it fail.
+
+**Where and how they run:** view tests live in `composeApp/src/androidHostTest/kotlin/...`, run with `@RunWith(RobolectricTestRunner::class)` and `runComposeUiTest`, and are started with `./gradlew :composeApp:testAndroidHostTest` (also in CI). They are not in `commonTest` because Robolectric is Android-only. The setup lives in `composeApp/build.gradle.kts` (`withHostTest`, JVM flags for the JDK internals Robolectric needs, `ui-test-junit4`, `ui-test-manifest`, which is required) and `robolectric.properties` (SDK 35, because Espresso fails on the newest SDK). Not covered by these tests: real device rendering, Coil image loading, and navigation wiring in `App.kt`; those stay in the emulator check.
+
+A view ticket is not done until these tests pass. If `composeApp` has no test task yet, setting it up is part of that ticket.
+
+---
+
 ## Integration and E2E Tests
 
 Write integration tests where database/network interactions are non-trivial. Write E2E tests for complex user flows using `runComposeUiTest`:
@@ -248,5 +267,6 @@ class LibraryScreenTest {
 - Unit-test any logic that is likely to change.
 - Use fakes over mocks where possible — fakes are simpler and catch more real bugs.
 - Write integration tests where DB/network interactions are non-trivial.
+- Cover every screen's states, actions, accessibility labels and UX rules with `runComposeUiTest` tests (see View Tests).
 - Write E2E Compose tests for critical user flows.
 - Use the robot pattern for complex UI/E2E tests with multiple test cases or shared interaction sequences.

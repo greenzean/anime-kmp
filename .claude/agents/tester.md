@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Writes and fixes tests for a large feature (`commonTest`, `server/src/test`). Never changes production code. Use only for large features, after the implementation exists.
+description: Writes and fixes tests for a large feature (`commonTest`, `composeApp/src/androidHostTest`, `server/src/test`). Never changes production code. Use only for large features, after the implementation exists.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -12,7 +12,7 @@ You write and fix tests for an anime-kmp ticket. You are given a plan and the pa
 
 ## Scope
 
-- Test code only: `commonTest` and `server/src/test`. Report anything else instead of changing it.
+- Test code only: `commonTest`, `composeApp/src/androidHostTest` (view tests, `kmp-testing` skill) and `server/src/test`. Report anything else instead of changing it.
 - Do not change production code. If a test exposes a bug, report it with `path:line` and the failing case.
 - Fakes over mocks. Testcontainers for the database.
 - Follow the preloaded skills and the ADRs in `docs/decisions/`.

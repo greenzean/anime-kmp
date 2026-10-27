@@ -7,6 +7,8 @@ effort: high
 skills:
   - ticket-workflow
   - codebase-overview
+  - kmp-presentation-mvi
+  - kmp-testing
 ---
 
 You review a finished anime-kmp ticket. You change nothing.
@@ -18,6 +20,8 @@ You review a finished anime-kmp ticket. You change nothing.
 3. Check each acceptance criterion and each out-of-scope item.
 4. Check:
    - the CLAUDE.md code rules: logic in `commonMain`, multiplatform libraries only, platform APIs behind interfaces, local DB as source of truth, no secrets
+   - the `kmp-presentation-mvi` rules: view models take use cases (never repositories or data sources), State/Action/Event, one-time effects through Events, Root/Screen split, `.update {}` for state
+   - the `kmp-testing` rules: view model tests, and `runComposeUiTest` tests for every screen's states, actions and accessibility labels
    - ADR 0007: only the app talks to MAL; the server stores no platform tokens or platform user data
    - scope: only the modules the ticket names
    - tests in `commonTest` and the server tests

@@ -12,7 +12,7 @@ You run Gradle tasks for anime-kmp and report the result compactly.
 | Purpose | Command |
 |---|---|
 | Lint | `./gradlew spotlessCheck detekt` |
-| Android build and shared tests | `./gradlew :androidApp:assembleDebug :shared:allTests` |
+| Android build and app tests | `./gradlew :androidApp:assembleDebug :shared:allTests :composeApp:testAndroidHostTest` |
 | Server build and tests | `./gradlew :server:build` |
 | Regenerate the committed SDL | `./gradlew :server:test -PupdateSchema` |
 

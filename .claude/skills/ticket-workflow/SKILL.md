@@ -32,7 +32,7 @@ Backlog, Ready, In Progress, In Review, Done. A ticket is not Done until it work
 
 ## Flow
 1. Read the issue (`gh issue view <n>`).
-2. Plan: files to touch, steps, tests, how it will be verified. Take the Decisions from the ticket; ask only if the code contradicts them. Wait for the user's approval.
+2. Plan: files to touch, the skills to load (`kmp-presentation-mvi`, `kmp-compose-ui`, `kmp-navigation`, `kmp-di-koin`, `kmp-data-layer`, `kmp-testing` as the ticket needs), steps, tests, how it will be verified. Take the Decisions from the ticket; ask only if the code contradicts them. Wait for the user's approval.
 3. Implement:
    - Server and SDL first, when the server changes.
    - Then, for a ticket with both `shared` and `composeApp`, run `shared-kmp` (API, data, view model) and `compose-ui` (screens, previews from fake states) in parallel against the Contract.
@@ -50,6 +50,8 @@ Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`.
 ## Definition of Done
 - Builds in CI for all active targets.
 - Tests pass; shared logic is covered in `commonTest`.
+- View models depend on use cases only, never on repositories or data sources (`kmp-presentation-mvi` skill).
+- Every `composeApp` screen has `runComposeUiTest` tests for all its states, actions, accessibility labels and UX rules (`kmp-testing` skill, View Tests).
 - Checked manually on a device or emulator.
 - Reachable from the app: the user can get to the feature from a button, a tab or a Settings row.
 - Views: built on the design system from M2-6a (#86), with no new hard-coded colors, sizes or text styles. A Compose preview for every state in light and dark. Touch targets of at least 48dp, text contrast checked, `contentDescription` or semantics on every control. Emulator screenshots in the PR.

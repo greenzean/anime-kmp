@@ -4,6 +4,7 @@ description: Implements the app back end of a ticket in `shared/`: data layer, s
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
+  - kmp-presentation-mvi
   - kmp-data-layer
   - kmp-error-handling
   - kmp-di-koin
