@@ -9,8 +9,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object LibraryRoute
 
-fun NavGraphBuilder.libraryGraph(onNavigateToSettings: () -> Unit) {
+fun NavGraphBuilder.libraryGraph(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToDetails: (Int) -> Unit,
+) {
     composable<LibraryRoute> {
-        LibraryRoot(onNavigateToSettings = onNavigateToSettings, modifier = Modifier.safeDrawingPadding())
+        LibraryRoot(
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToDetails = onNavigateToDetails,
+            modifier = Modifier.safeDrawingPadding(),
+        )
     }
 }

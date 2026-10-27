@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.greenzean.animekmp.composeapp.core.ObserveAsEvents
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.components.AnimeCover
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
@@ -32,6 +33,7 @@ import com.greenzean.animekmp.composeapp.designsystem.components.ErrorState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.shared.search.presentation.SearchAction
+import com.greenzean.animekmp.shared.search.presentation.SearchEvent
 import com.greenzean.animekmp.shared.search.presentation.SearchResultUi
 import com.greenzean.animekmp.shared.search.presentation.SearchState
 import com.greenzean.animekmp.shared.search.presentation.SearchStatus
@@ -42,10 +44,16 @@ private const val LOAD_MORE_DISTANCE = 3
 
 @Composable
 fun SearchRoot(
+    onNavigateToDetails: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    ObserveAsEvents(viewModel.events) { event ->
+        when (event) {
+            is SearchEvent.NavigateToDetails -> onNavigateToDetails(event.malId)
+        }
+    }
     SearchScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
 }
 
@@ -146,6 +154,7 @@ private fun ResultList(
         items(state.results, key = { it.malId }) { result ->
             AppListRow(
                 title = result.title,
+                onClick = { onAction(SearchAction.OnResultClick(result.malId)) },
                 leading = { AnimeCover(result.imageUrl) },
                 trailing = { AddAction(result = result, onAdd = { onAction(SearchAction.OnAddClick(result.malId)) }) },
             )

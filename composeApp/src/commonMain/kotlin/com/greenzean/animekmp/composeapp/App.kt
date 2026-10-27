@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavUri
@@ -16,6 +17,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.details.DetailsRoute
+import com.greenzean.animekmp.composeapp.details.detailsGraph
 import com.greenzean.animekmp.composeapp.foryou.forYouGraph
 import com.greenzean.animekmp.composeapp.library.LibraryRoute
 import com.greenzean.animekmp.composeapp.library.libraryGraph
@@ -59,10 +62,14 @@ fun App(
                     startDestination = LibraryRoute,
                     modifier = Modifier.padding(padding).consumeWindowInsets(padding),
                 ) {
-                    libraryGraph(onNavigateToSettings = { navController.navigate(SettingsRoute) })
-                    searchGraph()
+                    libraryGraph(
+                        onNavigateToSettings = { navController.navigate(SettingsRoute) },
+                        onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) },
+                    )
+                    searchGraph(onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) })
+                    detailsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
                     forYouGraph()
-                    settingsGraph(onNavigateBack = { navController.popBackStack() })
+                    settingsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
                 }
             }
         }
@@ -75,4 +82,15 @@ private fun NavController.navigateToTab(tab: TopLevelTab) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+private fun NavController.isResumed(): Boolean =
+    currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED
+
+private fun NavController.popBackStackIfResumed() {
+    if (isResumed()) popBackStack()
+}
+
+private fun <T : Any> NavController.navigateIfResumed(route: T) {
+    if (isResumed()) navigate(route)
 }
