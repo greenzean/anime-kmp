@@ -17,11 +17,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.preview_row_pending
+import com.greenzean.animekmp.composeapp.generated.resources.preview_row_supporting
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
+import org.jetbrains.compose.resources.stringResource
 
-/**
- * List row with optional leading and trailing slots. At least 56dp tall; clickable only when
- * [onClick] is set, in which case it is exposed as a button.
- */
 @Composable
 fun AppListRow(
     title: String,
@@ -70,11 +71,24 @@ private fun AppListRowDarkPreview() = AppListRowPreview(darkTheme = true)
 private fun AppListRowPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         Column {
-            AppListRow(title = "Sousou no Frieren", supportingText = "12 of 28 episodes", onClick = {})
+            AppListRow(
+                title = "Sousou no Frieren",
+                supportingText =
+                    stringResource(
+                        Res.string.preview_row_supporting,
+                    ),
+                onClick = {
+                },
+            )
             AppListRow(
                 title = "Kimi ni Todoke",
-                supportingText = "Pending sync",
-                trailing = { Text("Plan to watch", style = MaterialTheme.typography.labelMedium) },
+                supportingText = stringResource(Res.string.preview_row_pending),
+                trailing = {
+                    Text(
+                        stringResource(Res.string.watch_status_plan_to_watch),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
             )
         }
     }

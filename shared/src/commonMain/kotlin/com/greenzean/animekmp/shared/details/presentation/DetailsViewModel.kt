@@ -74,7 +74,12 @@ class DetailsViewModel(
 
                     is Result.Error -> {
                         val status =
-                            if (result.error == MalError.NoConnection) DetailsStatus.Offline else DetailsStatus.Error
+                            when (result.error) {
+                                MalError.NoConnection -> DetailsStatus.Offline
+                                MalError.NotFound -> DetailsStatus.NotFound
+                                is MalError.Throttled -> DetailsStatus.Throttled
+                                else -> DetailsStatus.Error
+                            }
                         progress.update { DetailsProgress(status = status) }
                     }
                 }

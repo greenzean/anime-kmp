@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AppBottomBar(
@@ -21,7 +22,7 @@ fun AppBottomBar(
                 selected = tab == selected,
                 onClick = { onSelect(tab) },
                 icon = { Icon(tab.icon, contentDescription = null) },
-                label = { Text(tab.label) },
+                label = { Text(stringResource(tab.label)) },
             )
         }
     }

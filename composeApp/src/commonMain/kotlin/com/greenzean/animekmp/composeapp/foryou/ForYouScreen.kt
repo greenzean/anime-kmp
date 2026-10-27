@@ -10,13 +10,18 @@ import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.for_you_coming_soon_message
+import com.greenzean.animekmp.composeapp.generated.resources.for_you_coming_soon_title
+import com.greenzean.animekmp.composeapp.generated.resources.for_you_title
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ForYouScreen(modifier: Modifier = Modifier) {
-    AppScaffold(title = "For you", modifier = modifier) { padding ->
+    AppScaffold(title = stringResource(Res.string.for_you_title), modifier = modifier) { padding ->
         EmptyState(
-            title = "Coming soon",
-            message = "Recommendations based on your library will show up here.",
+            title = stringResource(Res.string.for_you_coming_soon_title),
+            message = stringResource(Res.string.for_you_coming_soon_message),
             icon = AppIcons.Star,
             modifier = Modifier.padding(padding).padding(MaterialTheme.spacing.lg),
         )

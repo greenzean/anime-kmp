@@ -31,6 +31,33 @@ import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
 import com.greenzean.animekmp.composeapp.designsystem.components.ErrorState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.airing_airing
+import com.greenzean.animekmp.composeapp.generated.resources.airing_finished
+import com.greenzean.animekmp.composeapp.generated.resources.airing_not_yet_aired
+import com.greenzean.animekmp.composeapp.generated.resources.cd_loading_details
+import com.greenzean.animekmp.composeapp.generated.resources.date_full
+import com.greenzean.animekmp.composeapp.generated.resources.date_month_year
+import com.greenzean.animekmp.composeapp.generated.resources.date_year
+import com.greenzean.animekmp.composeapp.generated.resources.details_facts_separator
+import com.greenzean.animekmp.composeapp.generated.resources.details_mal_score
+import com.greenzean.animekmp.composeapp.generated.resources.details_no_synopsis
+import com.greenzean.animekmp.composeapp.generated.resources.details_not_found_message
+import com.greenzean.animekmp.composeapp.generated.resources.details_not_found_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_offline_message
+import com.greenzean.animekmp.composeapp.generated.resources.details_started
+import com.greenzean.animekmp.composeapp.generated.resources.details_starts
+import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_message
+import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_view_on_mal
+import com.greenzean.animekmp.composeapp.generated.resources.episodes_count
+import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
+import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
+import com.greenzean.animekmp.composeapp.generated.resources.month_names
+import com.greenzean.animekmp.composeapp.generated.resources.offline_title
 import com.greenzean.animekmp.shared.details.presentation.AiringStatus
 import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsAction
@@ -38,6 +65,11 @@ import com.greenzean.animekmp.shared.details.presentation.DetailsEvent
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
 import com.greenzean.animekmp.shared.details.presentation.DetailsViewModel
+import com.greenzean.animekmp.shared.details.presentation.MalDate
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringArrayResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -64,15 +96,16 @@ fun DetailsScreen(
     modifier: Modifier = Modifier,
 ) {
     AppScaffold(
-        title = "Details",
+        title = stringResource(Res.string.details_title),
         modifier = modifier,
         onNavigateBack = { onAction(DetailsAction.OnBackClick) },
     ) { padding ->
+        val loadingDescription = stringResource(Res.string.cd_loading_details)
         val messagePadding = Modifier.padding(padding).padding(MaterialTheme.spacing.lg)
         when (state.status) {
             DetailsStatus.Loading -> {
                 Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = "Loading details" })
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDescription })
                 }
             }
 
@@ -89,18 +122,36 @@ fun DetailsScreen(
 
             DetailsStatus.Offline -> {
                 EmptyState(
-                    title = "You're offline",
-                    message = "Details need a connection the first time. Your library still works.",
+                    title = stringResource(Res.string.offline_title),
+                    message = stringResource(Res.string.details_offline_message),
                     icon = AppIcons.Warning,
-                    actionText = "Try again",
+                    actionText = stringResource(Res.string.action_try_again),
                     onAction = { onAction(DetailsAction.OnRetryClick) },
+                    modifier = messagePadding,
+                )
+            }
+
+            DetailsStatus.NotFound -> {
+                EmptyState(
+                    title = stringResource(Res.string.details_not_found_title),
+                    message = stringResource(Res.string.details_not_found_message),
+                    icon = AppIcons.Warning,
+                    modifier = messagePadding,
+                )
+            }
+
+            DetailsStatus.Throttled -> {
+                ErrorState(
+                    title = stringResource(Res.string.details_throttled_title),
+                    message = stringResource(Res.string.details_throttled_message),
+                    onRetry = { onAction(DetailsAction.OnRetryClick) },
                     modifier = messagePadding,
                 )
             }
 
             DetailsStatus.Error -> {
                 ErrorState(
-                    message = "MyAnimeList could not be reached. Try again.",
+                    message = stringResource(Res.string.error_mal_unreachable),
                     onRetry = { onAction(DetailsAction.OnRetryClick) },
                     modifier = messagePadding,
                 )
@@ -144,10 +195,14 @@ private fun DetailsContent(
             }
         }
         if (inLibrary) {
-            Text("In library", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(
+                stringResource(Res.string.label_in_library),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
         } else {
             AppButton(
-                text = "Add to library",
+                text = stringResource(Res.string.action_add_to_library),
                 onClick = { onAction(DetailsAction.OnAddClick) },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -156,11 +211,11 @@ private fun DetailsContent(
             AppTagRow(details.genres)
         }
         Text(
-            details.synopsis ?: "No synopsis available.",
+            details.synopsis ?: stringResource(Res.string.details_no_synopsis),
             style = MaterialTheme.typography.bodyLarge,
         )
         AppButton(
-            text = "View on MyAnimeList",
+            text = stringResource(Res.string.details_view_on_mal),
             onClick = { uriHandler.openUri("https://myanimelist.net/anime/${details.malId}") },
             style = AppButtonStyle.Outlined,
             modifier = Modifier.fillMaxWidth(),
@@ -168,17 +223,42 @@ private fun DetailsContent(
     }
 }
 
-private fun AnimeDetailsUi.facts(): String =
-    listOfNotNull(
-        airingStatus?.label(),
-        episodes?.let { if (it == 1) "1 episode" else "$it episodes" },
-        meanScore?.let { "MAL score $it" },
-        startDate?.let { "${if (airingStatus == AiringStatus.NotYetAired) "Starts" else "Started"} $it" },
-    ).joinToString(" · ")
+@Composable
+private fun AnimeDetailsUi.facts(): String {
+    val startDateText =
+        startDate?.let {
+            val label =
+                if (airingStatus ==
+                    AiringStatus.NotYetAired
+                ) {
+                    Res.string.details_starts
+                } else {
+                    Res.string.details_started
+                }
+            stringResource(label, it.format())
+        }
+    return listOfNotNull(
+        airingStatus?.let { stringResource(it.label()) },
+        episodes?.let { pluralStringResource(Res.plurals.episodes_count, it, it) },
+        meanScore?.let { stringResource(Res.string.details_mal_score, it.toString()) },
+        startDateText,
+    ).joinToString(stringResource(Res.string.details_facts_separator))
+}
 
-private fun AiringStatus.label(): String =
+@Composable
+internal fun MalDate.format(): String {
+    val monthName = month?.let { stringArrayResource(Res.array.month_names)[it - 1] }
+    val dayOfMonth = day
+    return when {
+        monthName == null -> stringResource(Res.string.date_year, year)
+        dayOfMonth == null -> stringResource(Res.string.date_month_year, monthName, year)
+        else -> stringResource(Res.string.date_full, monthName, dayOfMonth, year)
+    }
+}
+
+private fun AiringStatus.label(): StringResource =
     when (this) {
-        AiringStatus.Finished -> "Finished airing"
-        AiringStatus.Airing -> "Currently airing"
-        AiringStatus.NotYetAired -> "Not yet aired"
+        AiringStatus.Finished -> Res.string.airing_finished
+        AiringStatus.Airing -> Res.string.airing_airing
+        AiringStatus.NotYetAired -> Res.string.airing_not_yet_aired
     }

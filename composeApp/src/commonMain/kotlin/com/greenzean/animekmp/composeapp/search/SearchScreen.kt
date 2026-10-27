@@ -32,12 +32,28 @@ import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
 import com.greenzean.animekmp.composeapp.designsystem.components.ErrorState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_add
+import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.cd_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.cd_searching
+import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
+import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
+import com.greenzean.animekmp.composeapp.generated.resources.offline_title
+import com.greenzean.animekmp.composeapp.generated.resources.search_empty_message
+import com.greenzean.animekmp.composeapp.generated.resources.search_empty_title
+import com.greenzean.animekmp.composeapp.generated.resources.search_field_label
+import com.greenzean.animekmp.composeapp.generated.resources.search_idle_message
+import com.greenzean.animekmp.composeapp.generated.resources.search_idle_title
+import com.greenzean.animekmp.composeapp.generated.resources.search_offline_message
+import com.greenzean.animekmp.composeapp.generated.resources.search_title
 import com.greenzean.animekmp.shared.search.presentation.SearchAction
 import com.greenzean.animekmp.shared.search.presentation.SearchEvent
 import com.greenzean.animekmp.shared.search.presentation.SearchResultUi
 import com.greenzean.animekmp.shared.search.presentation.SearchState
 import com.greenzean.animekmp.shared.search.presentation.SearchStatus
 import com.greenzean.animekmp.shared.search.presentation.SearchViewModel
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 private const val LOAD_MORE_DISTANCE = 3
@@ -63,12 +79,12 @@ fun SearchScreen(
     onAction: (SearchAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AppScaffold(title = "Search", modifier = modifier) { padding ->
+    AppScaffold(title = stringResource(Res.string.search_title), modifier = modifier) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             AppTextField(
                 value = state.query,
                 onValueChange = { onAction(SearchAction.OnQueryChange(it)) },
-                label = "Search MyAnimeList",
+                label = stringResource(Res.string.search_field_label),
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.lg),
             )
             SearchContent(state = state, onAction = onAction)
@@ -85,16 +101,17 @@ private fun SearchContent(
     when (state.status) {
         SearchStatus.Idle -> {
             EmptyState(
-                title = "Find an anime",
-                message = "Type at least 3 letters of a title.",
+                title = stringResource(Res.string.search_idle_title),
+                message = stringResource(Res.string.search_idle_message),
                 icon = AppIcons.Search,
                 modifier = messagePadding,
             )
         }
 
         SearchStatus.Loading -> {
+            val searching = stringResource(Res.string.cd_searching)
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = "Searching" })
+                CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = searching })
             }
         }
 
@@ -104,8 +121,8 @@ private fun SearchContent(
 
         SearchStatus.Empty -> {
             EmptyState(
-                title = "No results",
-                message = "Nothing matched \"${state.query.trim()}\". Try another title.",
+                title = stringResource(Res.string.search_empty_title),
+                message = stringResource(Res.string.search_empty_message, state.query.trim()),
                 icon = AppIcons.Search,
                 modifier = messagePadding,
             )
@@ -113,10 +130,10 @@ private fun SearchContent(
 
         SearchStatus.Offline -> {
             EmptyState(
-                title = "You're offline",
-                message = "Searching needs a connection. Your library still works.",
+                title = stringResource(Res.string.offline_title),
+                message = stringResource(Res.string.search_offline_message),
                 icon = AppIcons.Warning,
-                actionText = "Try again",
+                actionText = stringResource(Res.string.action_try_again),
                 onAction = { onAction(SearchAction.OnRetryClick) },
                 modifier = messagePadding,
             )
@@ -124,7 +141,7 @@ private fun SearchContent(
 
         SearchStatus.Error -> {
             ErrorState(
-                message = "MyAnimeList could not be reached. Try again.",
+                message = stringResource(Res.string.error_mal_unreachable),
                 onRetry = { onAction(SearchAction.OnRetryClick) },
                 modifier = messagePadding,
             )
@@ -169,16 +186,17 @@ private fun AddAction(
 ) {
     if (result.inLibrary) {
         Text(
-            "In library",
+            stringResource(Res.string.label_in_library),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
     } else {
+        val addDescription = stringResource(Res.string.cd_add_to_library, result.title)
         AppButton(
-            text = "Add",
+            text = stringResource(Res.string.action_add),
             onClick = onAdd,
             style = AppButtonStyle.Tonal,
-            modifier = Modifier.semantics { contentDescription = "Add ${result.title} to library" },
+            modifier = Modifier.semantics { contentDescription = addDescription },
         )
     }
 }

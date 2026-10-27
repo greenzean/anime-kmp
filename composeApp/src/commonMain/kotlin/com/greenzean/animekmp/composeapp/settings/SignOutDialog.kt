@@ -3,12 +3,19 @@ package com.greenzean.animekmp.composeapp.settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.greenzean.animekmp.composeapp.designsystem.components.AppChoiceDialog
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_cancel
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_delete
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_keep
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_preparing
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_ready
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_ready_with_unsynced
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_signing_out
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_title
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_unsynced
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
-
-internal const val SIGN_OUT_TITLE = "Sign out"
-internal const val SIGN_OUT_KEEP = "Keep library on this device"
-internal const val SIGN_OUT_DELETE = "Delete library from this device"
-internal const val SIGN_OUT_CANCEL = "Cancel"
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun SignOutDialog(
@@ -19,34 +26,35 @@ fun SignOutDialog(
     modifier: Modifier = Modifier,
 ) {
     AppChoiceDialog(
-        title = SIGN_OUT_TITLE,
+        title = stringResource(Res.string.sign_out_title),
         text = prompt.message(),
-        primaryText = SIGN_OUT_KEEP,
+        primaryText = stringResource(Res.string.sign_out_keep),
         onPrimary = onKeep,
-        destructiveText = SIGN_OUT_DELETE,
+        destructiveText = stringResource(Res.string.sign_out_delete),
         onDestructive = onDelete,
-        dismissText = SIGN_OUT_CANCEL,
+        dismissText = stringResource(Res.string.action_cancel),
         onDismiss = onDismiss,
         modifier = modifier,
         busy = prompt !is SignOutPrompt.Ready,
     )
 }
 
+@Composable
 internal fun SignOutPrompt.message(): String =
     when (this) {
         SignOutPrompt.Preparing -> {
-            "Syncing your latest changes before signing out."
+            stringResource(Res.string.sign_out_preparing)
         }
 
         SignOutPrompt.SigningOut -> {
-            "Signing out."
+            stringResource(Res.string.sign_out_signing_out)
         }
 
         is SignOutPrompt.Ready -> {
-            val base = "Your library stays in your account either way. Keep it here or delete it from this device."
+            val base = stringResource(Res.string.sign_out_ready)
             if (unsyncedCount > 0) {
-                val changes = if (unsyncedCount == 1) "change is" else "changes are"
-                "$base $unsyncedCount $changes not synced yet and would be lost if you delete."
+                val unsynced = pluralStringResource(Res.plurals.sign_out_unsynced, unsyncedCount, unsyncedCount)
+                stringResource(Res.string.sign_out_ready_with_unsynced, base, unsynced)
             } else {
                 base
             }

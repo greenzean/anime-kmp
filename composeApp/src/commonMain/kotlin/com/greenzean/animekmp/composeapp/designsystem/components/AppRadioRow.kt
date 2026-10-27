@@ -17,6 +17,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.greenzean.animekmp.composeapp.designsystem.MinTouchTarget
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.display_english
+import com.greenzean.animekmp.composeapp.generated.resources.display_main_title
+import com.greenzean.animekmp.composeapp.generated.resources.preview_radio_supporting
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AppRadioRow(
@@ -62,12 +67,12 @@ private fun AppRadioRowPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         Column {
             AppRadioRow(
-                label = "English",
+                label = stringResource(Res.string.display_english),
                 selected = true,
                 onSelect = {},
-                supportingText = "Falls back to the main title",
+                supportingText = stringResource(Res.string.preview_radio_supporting),
             )
-            AppRadioRow(label = "Main title", selected = false, onSelect = {})
+            AppRadioRow(label = stringResource(Res.string.display_main_title), selected = false, onSelect = {})
         }
     }
 }

@@ -7,6 +7,7 @@ import com.greenzean.animekmp.shared.details.presentation.AiringStatus
 import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
+import com.greenzean.animekmp.shared.details.presentation.MalDate
 
 private val previewDetails =
     AnimeDetailsUi(
@@ -19,7 +20,7 @@ private val previewDetails =
         meanScore = 9.3,
         genres = listOf("Adventure", "Drama", "Fantasy"),
         airingStatus = AiringStatus.Finished,
-        startDate = "2023-09-29",
+        startDate = MalDate(2023, 9, 29),
     )
 
 private val loaded = DetailsState(previewDetails, inLibrary = false, status = DetailsStatus.Loaded)
@@ -48,25 +49,8 @@ private fun DetailsLoadingLightPreview() = DetailsPreview(DetailsState(), darkTh
 @Composable
 private fun DetailsLoadingDarkPreview() = DetailsPreview(DetailsState(), darkTheme = true)
 
-@Preview
 @Composable
-private fun DetailsOfflineLightPreview() =
-    DetailsPreview(DetailsState(status = DetailsStatus.Offline), darkTheme = false)
-
-@Preview
-@Composable
-private fun DetailsOfflineDarkPreview() = DetailsPreview(DetailsState(status = DetailsStatus.Offline), darkTheme = true)
-
-@Preview
-@Composable
-private fun DetailsErrorLightPreview() = DetailsPreview(DetailsState(status = DetailsStatus.Error), darkTheme = false)
-
-@Preview
-@Composable
-private fun DetailsErrorDarkPreview() = DetailsPreview(DetailsState(status = DetailsStatus.Error), darkTheme = true)
-
-@Composable
-private fun DetailsPreview(
+internal fun DetailsPreview(
     state: DetailsState,
     darkTheme: Boolean,
 ) {

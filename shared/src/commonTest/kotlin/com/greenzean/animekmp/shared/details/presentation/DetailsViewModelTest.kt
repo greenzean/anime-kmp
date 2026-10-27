@@ -166,14 +166,14 @@ class DetailsViewModelTest {
         }
 
     @Test
-    fun startDatesAreShownInAReadableForm() =
+    fun startDatesAreParsed() =
         runTest {
             api.result = Result.Success(frieren)
             val viewModel = viewModel()
             advanceUntilIdle()
 
             assertEquals(
-                "Sep 29, 2023",
+                MalDate(2023, 9, 29),
                 viewModel.state.value.details
                     ?.startDate,
             )
@@ -181,9 +181,16 @@ class DetailsViewModelTest {
 
     @Test
     fun partialStartDatesKeepTheirPrecision() {
-        assertEquals("Oct 2027", formatMalDate("2027-10"))
-        assertEquals("2024", formatMalDate("2024"))
-        assertNull(formatMalDate("unknown"))
+        assertEquals(MalDate(2027, 10, null), parseMalDate("2027-10"))
+        assertEquals(MalDate(2024, null, null), parseMalDate("2024"))
+        assertNull(parseMalDate("unknown"))
+    }
+
+    @Test
+    fun invalidMonthsAndOrphanDaysAreDropped() {
+        assertEquals(MalDate(2024, null, null), parseMalDate("2024-13-05"))
+        assertEquals(MalDate(2024, null, null), parseMalDate("2024-00"))
+        assertEquals(MalDate(2024, 2, 30), parseMalDate("2024-02-30"))
     }
 
     @Test
@@ -209,23 +216,23 @@ class DetailsViewModelTest {
         }
 
     @Test
-    fun notFoundIsAnError() =
+    fun notFoundHasItsOwnStatus() =
         runTest {
             api.result = Result.Error(MalApiError.NOT_FOUND)
             val viewModel = viewModel()
             advanceUntilIdle()
 
-            assertEquals(DetailsStatus.Error, viewModel.state.value.status)
+            assertEquals(DetailsStatus.NotFound, viewModel.state.value.status)
         }
 
     @Test
-    fun throttledIsAnError() =
+    fun throttledHasItsOwnStatus() =
         runTest {
             api.result = Result.Error(MalApiError.THROTTLED)
             val viewModel = viewModel()
             advanceUntilIdle()
 
-            assertEquals(DetailsStatus.Error, viewModel.state.value.status)
+            assertEquals(DetailsStatus.Throttled, viewModel.state.value.status)
         }
 
     @Test
@@ -258,7 +265,7 @@ class DetailsViewModelTest {
             assertEquals(9.3, details.meanScore)
             assertEquals(listOf("Adventure", "Drama"), details.genres)
             assertEquals(AiringStatus.Finished, details.airingStatus)
-            assertEquals("Sep 29, 2023", details.startDate)
+            assertEquals(MalDate(2023, 9, 29), details.startDate)
         }
 
     @Test

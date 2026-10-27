@@ -1,8 +1,14 @@
 package com.greenzean.animekmp.shared.details.presentation
 
-enum class DetailsStatus { Loading, Loaded, Offline, Error }
+enum class DetailsStatus { Loading, Loaded, Offline, NotFound, Throttled, Error }
 
 enum class AiringStatus { Finished, Airing, NotYetAired }
+
+data class MalDate(
+    val year: Int,
+    val month: Int?,
+    val day: Int?,
+)
 
 data class AnimeDetailsUi(
     val malId: Int,
@@ -14,7 +20,7 @@ data class AnimeDetailsUi(
     val meanScore: Double?,
     val genres: List<String>,
     val airingStatus: AiringStatus?,
-    val startDate: String?,
+    val startDate: MalDate?,
 )
 
 data class DetailsState(

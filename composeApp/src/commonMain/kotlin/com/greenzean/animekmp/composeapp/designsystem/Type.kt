@@ -7,7 +7,6 @@ import androidx.compose.ui.unit.sp
 
 private val Base = Typography()
 
-/** Material 3 defaults with medium-weight titles and labels, system font. */
 internal val AppTypography: Typography =
     Base.copy(
         headlineMedium = TextStyle(fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight.Medium),

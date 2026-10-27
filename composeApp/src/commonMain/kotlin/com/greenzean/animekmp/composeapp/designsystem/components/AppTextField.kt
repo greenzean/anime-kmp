@@ -13,8 +13,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.preview_field_error
+import com.greenzean.animekmp.composeapp.generated.resources.preview_field_search
+import com.greenzean.animekmp.composeapp.generated.resources.preview_field_title
+import org.jetbrains.compose.resources.stringResource
 
-/** Outlined text field with a visible label and optional error text (announced to screen readers). */
 @Composable
 fun AppTextField(
     value: String,
@@ -51,8 +55,13 @@ private fun AppTextFieldDarkPreview() = AppTextFieldPreview(darkTheme = true)
 private fun AppTextFieldPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         Column(Modifier.padding(16.dp)) {
-            AppTextField(value = "Frieren", onValueChange = {}, label = "Search anime")
-            AppTextField(value = "", onValueChange = {}, label = "Title", errorText = "Enter a title")
+            AppTextField(value = "Frieren", onValueChange = {}, label = stringResource(Res.string.preview_field_search))
+            AppTextField(
+                value = "",
+                onValueChange = {},
+                label = stringResource(Res.string.preview_field_title),
+                errorText = stringResource(Res.string.preview_field_error),
+            )
         }
     }
 }
