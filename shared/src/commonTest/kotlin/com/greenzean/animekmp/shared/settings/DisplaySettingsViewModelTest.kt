@@ -1,5 +1,7 @@
 package com.greenzean.animekmp.shared.settings
 
+import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
+import com.greenzean.animekmp.shared.settings.domain.SetTitleLanguageUseCase
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
@@ -25,12 +27,19 @@ class DisplaySettingsViewModelTest {
 
     @Test
     fun titleLanguageDefaultsToEnglish() {
-        assertEquals(TitleLanguage.ENGLISH, DisplaySettingsViewModel(settings).state.value.titleLanguage)
+        assertEquals(
+            TitleLanguage.ENGLISH,
+            DisplaySettingsViewModel(
+                ObserveTitleLanguageUseCase(settings),
+                SetTitleLanguageUseCase(settings),
+            ).state.value.titleLanguage,
+        )
     }
 
     @Test
     fun changingTheTitleLanguageIsStoredAndShown() {
-        val viewModel = DisplaySettingsViewModel(settings)
+        val viewModel =
+            DisplaySettingsViewModel(ObserveTitleLanguageUseCase(settings), SetTitleLanguageUseCase(settings))
 
         viewModel.onAction(DisplaySettingsAction.OnTitleLanguageChange(TitleLanguage.MAIN))
 

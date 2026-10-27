@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.shared.search
 
+import app.cash.turbine.test
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
@@ -14,11 +15,14 @@ import com.greenzean.animekmp.shared.mal.domain.MalAnimeSummary
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalSearchPage
 import com.greenzean.animekmp.shared.mal.domain.MalThrottle
+import com.greenzean.animekmp.shared.search.domain.SearchAnimeUseCase
 import com.greenzean.animekmp.shared.search.presentation.SearchAction
+import com.greenzean.animekmp.shared.search.presentation.SearchEvent
 import com.greenzean.animekmp.shared.search.presentation.SearchResultUi
 import com.greenzean.animekmp.shared.search.presentation.SearchStatus
 import com.greenzean.animekmp.shared.search.presentation.SearchViewModel
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
+import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
 import kotlinx.coroutines.Dispatchers
@@ -84,17 +88,19 @@ class SearchViewModelTest {
     }
 
     private fun TestScope.viewModel(): SearchViewModel {
-        val repository =
-            MalAnimeRepository(
-                api,
-                SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher(testScheduler)),
-                MalThrottle(),
+        val searchAnime =
+            SearchAnimeUseCase(
+                MalAnimeRepository(
+                    api,
+                    SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher(testScheduler)),
+                    MalThrottle(),
+                ),
             )
         return SearchViewModel(
-            repository,
+            searchAnime,
             ObserveLibraryUseCase(local),
             AddToLibraryUseCase(local, scheduler),
-            settings,
+            ObserveTitleLanguageUseCase(settings),
         )
     }
 
@@ -290,5 +296,19 @@ class SearchViewModelTest {
                     .single()
                     .title,
             )
+        }
+
+    @Test
+    fun resultClickEmitsNavigateToDetails() =
+        runTest {
+            val viewModel = viewModel()
+            advanceUntilIdle()
+
+            viewModel.events.test {
+                viewModel.onAction(SearchAction.OnResultClick(52991))
+                advanceUntilIdle()
+
+                assertEquals(SearchEvent.NavigateToDetails(52991), awaitItem())
+            }
         }
 }

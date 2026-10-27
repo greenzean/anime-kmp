@@ -25,7 +25,17 @@ sealed interface SearchAction {
         val malId: Int,
     ) : SearchAction
 
+    data class OnResultClick(
+        val malId: Int,
+    ) : SearchAction
+
     data object OnRetryClick : SearchAction
 
     data object OnLoadMore : SearchAction
+}
+
+sealed interface SearchEvent {
+    data class NavigateToDetails(
+        val malId: Int,
+    ) : SearchEvent
 }
