@@ -30,6 +30,7 @@ M2-11 to M2-27 were rewritten on 2026-10-26 (old issues #63-#79 closed, new issu
 | M2-12a | #131 | Check DI graph and view models | Koin graph test; build fails if a view model takes a repository | M2-12 |
 | M2-12b | #132 | Test Settings and For you screens | View tests for the two remaining screens | M2-12 |
 | M2-12c | #133 | Move texts to string resources | No visible change; texts ready for translation | M2-12 |
+| M2-12d | #135 | Clean up the Claude setup | No visible change; rules in one place, tickets run as parallel agents | M2-12c |
 | M2-13 | #111 | Track status, episodes and score | Edit an entry; +1 on library rows | M2-12 |
 | M2-14 | #112 | Search, filter and sort your library | Find entries in the library, offline | M2-13 |
 | M2-15 | #113 | Connect your MAL account | MyAnimeList section in Settings | – |

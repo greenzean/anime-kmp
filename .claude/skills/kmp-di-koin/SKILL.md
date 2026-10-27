@@ -22,7 +22,6 @@ Prefer the constructor-reference overloads (`singleOf`, `viewModelOf`, `factoryO
 ### Data layer module
 
 ```kotlin
-// shared.library.data
 val libraryDataModule = module {
     singleOf(::SqlDelightAnimeDataSource) { bind<AnimeLocalDataSource>() }
     singleOf(::ApolloAnimeDataSource) { bind<AnimeRemoteDataSource>() }
@@ -33,7 +32,6 @@ val libraryDataModule = module {
 ### Presentation layer module
 
 ```kotlin
-// shared.library.presentation
 val libraryPresentationModule = module {
     viewModelOf(::LibraryViewModel)
     viewModelOf(::EntryDetailViewModel)
@@ -43,11 +41,9 @@ val libraryPresentationModule = module {
 ### Core data module (example)
 
 ```kotlin
-// shared.core.data
 val coreDataModule = module {
-    // Lambda overload needed here — calling a factory method, not a constructor
     single { HttpClientFactory.create(get()) }
-    single { ApolloClientFactory.create(get(), get()) }   // HttpClient/engine + TokenStorage
+    single { ApolloClientFactory.create(get(), get()) }
     single { AnimeDatabase(get<DatabaseDriverFactory>().create()) }
 }
 ```
@@ -59,28 +55,22 @@ val coreDataModule = module {
 Register all modules in a shared `initKoin` entry point in common code, and expose platform-only dependencies through an `expect`/`actual` `platformModule`:
 
 ```kotlin
-// shared/commonMain — shared entry point, called by every platform
 fun initKoin(config: KoinAppDeclaration? = null) {
     startKoin {
         config?.invoke(this)
         modules(
             platformModule,
-            // core
             coreDataModule,
-            // features
             libraryDataModule,
             libraryPresentationModule,
-            // ...
         )
     }
 }
 
-// shared/commonMain — platform-only dependencies (Ktor engine, DB driver, secure token storage)
 expect val platformModule: Module
 ```
 
 ```kotlin
-// shared/androidMain — Ktor engine, DB driver, token storage all come from here
 actual val platformModule = module {
     single<HttpClientEngine> { OkHttp.create() }
     single { DatabaseDriverFactory(androidContext()) }
@@ -89,7 +79,6 @@ actual val platformModule = module {
 ```
 
 ```kotlin
-// androidApp — androidContext/androidLogger live only in the Android host
 class AnimeApplication : Application() {
     override fun onCreate() {
         super.onCreate()

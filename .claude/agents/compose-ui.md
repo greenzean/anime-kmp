@@ -1,37 +1,31 @@
 ---
 name: compose-ui
-description: Implements the views of a ticket in `composeApp/`: screens, navigation, previews, accessibility. Use for every ticket with both back end and views, in parallel with shared-kmp, once the ticket's Contract is fixed.
+description: Implements the views of a ticket in `composeApp/`: screens, navigation, previews, accessibility. Started in parallel with the other parts' agents, in the same working tree, touching only its own part, against the ticket's Contract.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
   - kmp-compose-ui
   - kmp-presentation-mvi
   - kmp-navigation
-  - kmp-testing
 ---
 
-You implement the views of an anime-kmp ticket. You are given a plan, the part to build and the Contract (State, Action, Event). The view model is built in parallel, so build the screens and previews from fake states that follow the Contract.
+You implement the views of an anime-kmp ticket. You are given a plan, the part to build and the Contract (defined in the `ticket-workflow` skill, Flow step 2). The view model is built in parallel, so build the screens and previews from fake states that follow the Contract.
 
 ## Scope
 
 - `composeApp/` only. Report anything outside it instead of changing it.
 - Use the view model interface you are given. If it needs a change, report the change instead of making it.
 - Add previews and accessibility (content descriptions, touch targets) for every screen.
-- Write the view tests in `composeApp/src/androidHostTest` (`kmp-testing` skill, View Tests): every state, every action, accessibility labels and UX rules.
+- Write no tests; `tester` writes the view tests from the Contract. Give every control a `contentDescription` or semantics, and use the Contract's string keys and test tags exactly, because `tester` finds the controls by them.
 - Follow the preloaded skills and the ADRs in `docs/decisions/`.
 
-## Checks (run them yourself)
+## Checks
 
-Plain `./gradlew` commands, no pipes or redirects, so the gradle-filter hook can trim the output. You cannot call `build-runner`.
-
-- `./gradlew :androidApp:assembleDebug`
-- `./gradlew :composeApp:testAndroidHostTest`
-- `./gradlew spotlessCheck detekt`
+Run no Gradle tasks, and never `server-tests`, `server-deploy` or Docker. The other agents are writing at the same time, so a build, lint or test run now would fail on their half-written files and tell you nothing. The main session lints, compiles and runs everything once all the agents finish.
 
 ## Report format
 
 - **Files changed**
-- **Tests run** and their result (PASS/FAIL per task; for a failure: task, `file:line`, 1-3 line error)
 - **Deviations** from the plan
 - **Open questions**, including view model changes you need
 

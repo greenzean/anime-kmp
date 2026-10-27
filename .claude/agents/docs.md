@@ -13,7 +13,7 @@ You write documentation for anime-kmp from decisions you are given. You make no 
 ## Doc types
 
 - **ADRs** (`docs/decisions/`): copy `template.md`, use the next free number, fill Context, Decision, Consequences. Set the status, add a row to the index in `docs/decisions/README.md` and a link in the root `README.md`. Details: `adr` skill.
-- **Ticket text**: Goal, Depends on, Acceptance, Out of scope, Skill. CSV columns as in `docs/tickets-m0-m1.csv`: `id,title,type,milestone,labels,planning_model,scope,body`.
+- **Ticket text**: the template in the `ticket-workflow` skill (title, Goal, Where in the app, Contract, Acceptance, Decisions, Depends on, Out of scope). CSV columns as in `docs/tickets-m0-m1.csv`: `id,title,type,milestone,labels,planning_model,scope,body`.
 - **README sections**: match the surrounding style.
 - **`docs/milestone2-mvp.md`** (decisions D1-D27) and **`docs/future-features.md`** (parked ideas, each with its D-number).
 
@@ -28,6 +28,6 @@ Short sentences. Tables for comparisons. Relative links that resolve.
 
 ## Rules
 
-- No commits or pushes. `git add` every file you create.
+- No commits or pushes. You cannot run git: list every file you create so the main session stages it.
 - Never spawn agents.
 - Touch only the files named in the request.

@@ -1,7 +1,7 @@
 ---
 name: graphql-schema
 description: |
-  GraphQL contract conventions for anime-kmp - graphql-kotlin code-first schema in `server/`, the committed SDL file, the schema export/drift test, Apollo Kotlin operations in `shared/`, and the server-first routing order for API changes. Use this skill whenever adding or changing a query, mutation, subscription, GraphQL type, scalar, or Apollo operation. Trigger on phrases like "GraphQL", "schema", "SDL", "add a query", "add a mutation", "resolver", "Apollo operation", ".graphql file", "schema.graphqls", or "regenerate schema".
+  GraphQL contract conventions for anime-kmp - graphql-kotlin code-first schema in `server/`, the committed SDL file, the schema export/drift test, Apollo Kotlin operations in `shared/`, and how an API change is split between the server, the app back end and the views. Use this skill whenever adding or changing a query, mutation, subscription, GraphQL type, scalar, or Apollo operation. Trigger on phrases like "GraphQL", "schema", "SDL", "add a query", "add a mutation", "resolver", "Apollo operation", ".graphql file", "schema.graphqls", or "regenerate schema".
 ---
 
 # GraphQL schema conventions
@@ -12,27 +12,32 @@ Decisions: ADR 0003 (graphql-kotlin) and ADR 0004 (schema as contract). The sche
 
 ```
 server/src/main/kotlin/com/greenzean/animekmp/server/graphql/
-  <Feature>Query.kt / <Feature>Mutation.kt   # implement graphql-kotlin Query / Mutation
-  model/                                     # GraphQL output and input types (server-owned)
-server/src/test/.../graphql/SchemaExportTest.kt  # SDL export + drift check
+  <Feature>Query.kt / <Feature>Mutation.kt
+  model/
+server/src/test/.../graphql/SchemaExportTest.kt
 
 shared/src/commonMain/graphql/
-  schema.graphqls          # generated from the server, committed, never hand-edited
-  <Name>Query.graphql      # client operations, one per file
+  schema.graphqls
+  <Name>Query.graphql
   <Name>Mutation.graphql
 ```
+
+`Query` and `Mutation` classes implement the graphql-kotlin interfaces, and `model/` holds the GraphQL output and input types (server-owned). `SchemaExportTest` exports the SDL and checks for drift. `schema.graphqls` is written in the plan as part of the Contract and checked by the drift test; the `.graphql` files are the client operations, one per file.
 
 - Apollo generates client models into `com.greenzean.animekmp.shared.graphql`. Map them to domain/DB models in the data layer and never expose them to the UI.
 - GraphQL types are separate from DB rows and from MAL DTOs. Map between them in the server.
 
-## Changing the API (always in this order)
+## Changing the API
 
-1. Server: types plus `Query`/`Mutation` classes, with resolver tests.
-2. Export: `./gradlew :server:test -PupdateSchema`, then review and commit the `schema.graphqls` diff.
-3. Client: add or adjust `.graphql` operations in `shared`, then the repository/sync code.
-4. Views.
+The SDL change is part of the ticket's Contract, so the parts run in parallel:
 
-A plain `./gradlew :server:test` fails if `schema.graphqls` no longer matches the server code. Regenerate the file; do not edit it by hand.
+1. Plan: write the SDL change into `schema.graphqls`. It is the one time the file is edited by hand.
+2. Server (`server` agent): types plus `Query`/`Mutation` classes whose printed schema equals the committed SDL.
+3. App back end (`shared-kmp` agent): `.graphql` operations in `shared`, then the repository/sync code, built against the committed SDL.
+4. Views and tests (`compose-ui`, `tester`) build from the Contract.
+5. After all the agents finish, the main session runs `server-tests :server:test`, which includes the drift test. If it fails, run `server-tests -PupdateSchema :server:test` (it does not deploy, because the first argument is not `:server:test`) and compare the new `schema.graphqls` with the Contract: accept it only when the difference is ordering or formatting, otherwise fix the server code.
+
+The drift test in `server-tests :server:test` fails if `schema.graphqls` no longer matches the server code. Decision: ADR 0015.
 
 ## Rules
 

@@ -18,17 +18,15 @@ The UI is dumb. Composables render state and forward user actions — nothing mo
 
 Strong skipping mode is enabled by default in modern Compose — no explicit opt-in needed.
 
-Only annotate a state data class with `@Stable` when it contains fields the Compose compiler considers unstable (e.g., `List`, `Map`, `Set`, interfaces, or abstract types). If all fields are primitive types, `String`, or other stable types, no annotation is needed.
+Only annotate a state data class with `@Stable` when it contains fields the Compose compiler considers unstable (e.g., `List`, `Map`, `Set`, interfaces, or abstract types). If all fields are primitive types, `String`, or other stable types, no annotation is needed. In the example, `LibraryState` needs `@Stable` because it holds a `List`; `EntryDetailState` needs none.
 
 ```kotlin
-// Needs @Stable — contains a List (unstable by default)
 @Stable
 data class LibraryState(
     val entries: List<EntryUi> = emptyList(),
     val isLoading: Boolean = false
 )
 
-// No annotation needed — all fields are stable
 data class EntryDetailState(
     val title: String = "",
     val body: String = "",
@@ -45,10 +43,8 @@ All state lives in the ViewModel. Do not use `remember` or `rememberSaveable` fo
 The only exception is Compose-internal state that the framework requires you to hold in composition, such as `LazyListState`, `ScrollState`, or `PagerState`. For these, use `remember*` as needed:
 
 ```kotlin
-// Acceptable — Compose-owned UI state
 val lazyListState = rememberLazyListState()
 
-// Reacting to Compose-owned state with derivedStateOf
 val showScrollToTop by remember {
     derivedStateOf { lazyListState.firstVisibleItemIndex > 5 }
 }
@@ -70,7 +66,6 @@ Side effects should be avoided when possible. If something can be handled by the
 When a side effect is truly necessary (e.g., interacting with Android lifecycle APIs that have no ViewModel equivalent), extract it into a dedicated composable to keep the Screen composable clean:
 
 ```kotlin
-// Extracted into its own composable
 @Composable
 fun ObserveLifecycle(onStart: () -> Unit, onStop: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -100,7 +95,7 @@ Add `key` to lazy list items when there is an obvious unique identifier availabl
 LazyColumn {
     items(
         items = state.entries,
-        key = { it.id }  // id is clearly unique
+        key = { it.id }
     ) { entry ->
         EntryItem(entry = entry, onClick = { onAction(OnEntryClick(entry.id)) })
     }
@@ -119,43 +114,34 @@ Avoid animations that cause recompositions. Prefer approaches that animate below
 - **`animateFloatAsState` + `graphicsLayer`** — animate a float, apply in graphicsLayer
 
 ```kotlin
-// Good — animates without recomposition
 val alpha by animateFloatAsState(if (state.isVisible) 1f else 0f)
 Box(
     modifier = Modifier.graphicsLayer { this.alpha = alpha }
 )
-
-// Bad — causes recomposition on every frame
-Box(
-    modifier = Modifier.alpha(animatedAlpha)
-)
 ```
+
+Do not pass the animated value to `Modifier.alpha(animatedAlpha)`: it recomposes on every frame.
 
 **Deferred state reads:** When a value drives an animation, pass it as a lambda rather than reading it directly. This defers the state read to the layout/draw phase and avoids recomposition:
 
 ```kotlin
-// Good — deferred read
 fun Modifier.animatedOffset(offsetProvider: () -> IntOffset) =
     offset { offsetProvider() }
-
-// Bad — immediate read causes recomposition
-fun Modifier.animatedOffset(offset: IntOffset) =
-    offset(x = offset.x.dp, y = offset.y.dp)
 ```
+
+Do not take the `IntOffset` itself and read it immediately (`offset(x = offset.x.dp, y = offset.y.dp)`): that recomposes whenever it changes.
 
 ---
 
 ## Modifier Extensions
 
-Prefer plain `Modifier` extension functions or `Modifier.Node`-based factories. Do not make modifier extensions `@Composable`:
+Prefer plain `Modifier` extension functions or `Modifier.Node`-based factories. Do not make modifier extensions `@Composable`. A `composed` extension such as `shimmerEffect` works, but a plain factory such as `roundedBackground` is better because it needs no composition:
 
 ```kotlin
-// Good — plain extension
 fun Modifier.shimmerEffect(): Modifier = composed {
-    // shimmer implementation
+    Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
 }
 
-// Better — Modifier factory (no composition needed)
 fun Modifier.roundedBackground(color: Color, radius: Dp) =
     background(color, RoundedCornerShape(radius))
 ```
@@ -171,7 +157,6 @@ The design system lives in the `composeapp.designsystem` package of `composeApp`
 Use slot APIs (passing `@Composable` lambdas) primarily for design system components that need flexible content areas:
 
 ```kotlin
-// Slot API — design system component
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
@@ -216,23 +201,20 @@ Wrap previews in the app theme so they reflect real appearance. Use realistic sa
 ### Setup (once per module that has previews)
 
 ```kotlin
-// composeApp/build.gradle.kts
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.components.uiToolingPreview) // provides @Preview
+            implementation(compose.components.uiToolingPreview)
         }
     }
 }
 
 dependencies {
-    // Android Studio's preview renderer needs ComposeViewAdapter at runtime.
-    // Android KMP library modules have no debugImplementation; this keeps it out of release.
     androidRuntimeClasspath(compose.uiTooling)
 }
 ```
 
-If the IDE preview fails with `ClassNotFoundException: androidx.compose.ui.tooling.ComposeViewAdapter`, the `androidRuntimeClasspath` line is missing. A Gradle build, spotless and detekt cannot catch this: after adding the first preview in a module, open it in Android Studio.
+Android KMP library modules have no `debugImplementation`, so `androidRuntimeClasspath` is what keeps the preview renderer's dependency out of release builds. If the IDE preview fails with `ClassNotFoundException: androidx.compose.ui.tooling.ComposeViewAdapter`, the `androidRuntimeClasspath` line is missing. A Gradle build, spotless and detekt cannot catch this: after adding the first preview in a module, open it in Android Studio.
 
 Import `@Preview` from `androidx.compose.ui.tooling.preview.Preview`; that is the package `compose.components.uiToolingPreview` exposes in `commonMain` and the one all previews in this repo use. The multiplatform `@Preview` has no `uiMode`, `showBackground`, or device parameters, so preview dark mode by passing a `darkTheme` flag to the theme wrapper (e.g. `AppTheme(darkTheme = true) { ... }`) rather than `uiMode = Configuration.UI_MODE_NIGHT_YES`.
 
@@ -263,7 +245,6 @@ For decorative elements that convey no information, set `contentDescription = nu
 Text input state lives in the ViewModel. Every keystroke dispatches an Action:
 
 ```kotlin
-// In the Screen composable
 TextField(
     value = state.title,
     onValueChange = { onAction(EntryEditorAction.OnTitleChange(it)) }

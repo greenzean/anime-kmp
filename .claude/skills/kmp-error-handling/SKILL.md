@@ -71,8 +71,8 @@ fun <T, E : Error> Result<T, E>.asEmptyResult(): EmptyResult<E> {
 All helpers return `Result` so they can be chained:
 ```kotlin
 repository.saveEntry(entry)
-    .onSuccess { /* update UI */ }
-    .onFailure { /* show error */ }
+    .onSuccess { showSaved() }
+    .onFailure { showError(it) }
     .asEmptyResult()
 ```
 
@@ -119,7 +119,6 @@ enum class PasswordValidationError : Error {
     NO_DIGIT
 }
 
-// Used with Result — always a single error, not a list:
 fun validatePassword(pw: String): EmptyResult<PasswordValidationError>
 ```
 
@@ -155,14 +154,12 @@ ViewModels in `shared` keep the typed error in State/Event; the Root composable 
 If an error is purely internal and never shown to the user (e.g., a retry signal, an internal state marker), it does not need a `.toUiText()` mapping.
 
 ```kotlin
-// composeApp: composeapp.core
 fun DataError.toUiText(): UiText {
     return when (this) {
         DataError.Network.NO_INTERNET -> UiText.StringResource(Res.string.error_no_internet)
         DataError.Network.SERVER_ERROR -> UiText.StringResource(Res.string.error_server)
         DataError.Network.UNAUTHORIZED -> UiText.StringResource(Res.string.error_unauthorized)
         DataError.Local.DISK_FULL -> UiText.StringResource(Res.string.error_disk_full)
-        // ... map all user-facing cases
         else -> UiText.StringResource(Res.string.error_unknown)
     }
 }
@@ -178,15 +175,15 @@ An Apollo call does not throw for network or GraphQL failures; it returns them o
 inline fun <D : Operation.Data, T> ApolloResponse<D>.toResult(
     map: (D) -> T
 ): Result<T, DataError.Network> {
-    exception?.let { return Result.Error(it.toDataError()) }          // transport / parse failure
-    if (hasErrors()) return Result.Error(errors.orEmpty().toDataError()) // GraphQL errors
+    exception?.let { return Result.Error(it.toDataError()) }
+    if (hasErrors()) return Result.Error(errors.orEmpty().toDataError())
     val data = data ?: return Result.Error(DataError.Network.UNKNOWN)
     return Result.Success(map(data))
 }
 
 fun ApolloException.toDataError(): DataError.Network = when (this) {
     is ApolloNetworkException -> DataError.Network.NO_INTERNET
-    is ApolloHttpException -> statusCode.toDataError()                  // reuse the HTTP status mapping below
+    is ApolloHttpException -> statusCode.toDataError()
     is JsonDataException, is ApolloParseException -> DataError.Network.SERIALIZATION
     else -> DataError.Network.UNKNOWN
 }

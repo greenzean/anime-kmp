@@ -1,7 +1,7 @@
 # 0004: Client/server contract
 
 ## Status
-Accepted (M0-8)
+Accepted (M0-8). The routing order under Consequences is superseded by [0015](0015-parallel-parts-against-a-contract.md).
 
 ## Context
 ADR 0003 picked graphql-kotlin, so the server's schema is generated from Kotlin classes and the SDL comes out of that process. The client uses Apollo Kotlin in `shared`. Two ways to share the contract were compared on 2026-10-19:

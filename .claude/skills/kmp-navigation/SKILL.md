@@ -21,7 +21,6 @@ description: |
 Define routes as `@Serializable` objects or data classes in the feature's `composeApp` package:
  
 ```kotlin
-// composeApp: composeapp.library
 @Serializable data object LibraryRoute
 @Serializable data class EntryDetailRoute(val entryId: String)
 ```
@@ -35,10 +34,9 @@ Use `data object` for screens with no parameters, `data class` for screens with 
 Each feature exposes a `NavGraphBuilder` extension function:
  
 ```kotlin
-// composeApp: composeapp.library
 fun NavGraphBuilder.libraryGraph(
     navController: NavController,
-    onNavigateToSearch: () -> Unit  // callback for cross-feature navigation
+    onNavigateToSearch: () -> Unit
 ) {
     navigation<LibraryRoute>(startDestination = LibraryRoute) {
         composable<LibraryRoute> {
@@ -64,7 +62,6 @@ fun NavGraphBuilder.libraryGraph(
 All feature nav graphs are assembled in one place, called from `App()`:
  
 ```kotlin
-// composeApp: composeapp.navigation
 NavHost(navController, startDestination = LibraryRoute) {
     libraryGraph(
         navController = navController,
@@ -85,13 +82,10 @@ For simple scalar arguments, use `@Serializable data class` routes:
 ```kotlin
 @Serializable data class EntryDetailRoute(val entryId: String)
  
-// Navigate
 navController.navigate(EntryDetailRoute(entryId = "abc123"))
  
-// Receive
 composable<EntryDetailRoute> { backStackEntry ->
     val route: EntryDetailRoute = backStackEntry.toRoute()
-    // route.entryId available here
 }
 ```
  

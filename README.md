@@ -32,7 +32,7 @@ flowchart LR
 
 - **Offline first.** The local database is the source of truth. The UI reads and writes only locally, and sync talks to the server.
 - **Only the app talks to MyAnimeList.** MAL tokens stay on each device; the server stores no platform tokens, platform user data or anime metadata, only library entries and anime IDs ([ADR 0007](docs/decisions/0007-client-side-platform-access.md)). The client is still treated as untrusted by our server.
-- **The GraphQL schema is the contract.** The server owns it, and the SDL is committed in `shared`. API changes go server first, then the client.
+- **The GraphQL schema is the contract.** The server owns it, and the SDL is committed in `shared`. A ticket writes the API change into the SDL first, then the server, the app and the views are built in parallel against it ([ADR 0015](docs/decisions/0015-parallel-parts-against-a-contract.md)).
 - **Shared logic lives in `commonMain`.** Platform APIs (secure storage, notifications, file picker, connectivity, background work) sit behind interfaces or `expect/actual`.
 
 ### Sync
@@ -64,6 +64,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0011: Sign-out and who owns the library on the device](docs/decisions/0011-sign-out-and-library-ownership.md)
 - [0012: Sign-out revokes the refresh token](docs/decisions/0012-sign-out-revokes-refresh-token.md)
 - [0014: The mini PC runs the server and deploys after passing tests](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)
+- [0015: Parts are built in parallel against a Contract](docs/decisions/0015-parallel-parts-against-a-contract.md)
 
 ## Build
 
@@ -85,7 +86,7 @@ Copy `.env.example` to `.env` for server configuration. Never commit `.env`.
 
 ## Run the server
 
-`scripts/dev-server.sh` starts the Compose Postgres and runs the server against it (`--reset` wipes the database first); `scripts/dev-app.sh` installs the debug app on an emulator pointed at it. Or by hand:
+`scripts/dev-server.sh` is a wrapper for `server-deploy`, which deploys the working tree to the mini PC (`--reset` wipes the database first, [ADR 0014](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)); `scripts/dev-app.sh` installs the debug app on an emulator pointed at it. Or by hand:
 
 ```
 ./gradlew :server:run
@@ -93,7 +94,7 @@ curl localhost:8080/health
 curl localhost:8080/graphql -H 'content-type: application/json' -d '{"query":"{ hello }"}'
 ```
 
-GraphiQL is at <http://localhost:8080/graphiql>. After changing the GraphQL schema, run `./gradlew :server:test -PupdateSchema` and commit the `shared/src/commonMain/graphql/schema.graphqls` diff.
+GraphiQL is at <http://localhost:8080/graphiql>. A GraphQL schema change is written into `shared/src/commonMain/graphql/schema.graphqls` first and the server is made to match it ([ADR 0015](docs/decisions/0015-parallel-parts-against-a-contract.md)). `server-tests -PupdateSchema :server:test` ([ADR 0014](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)) only rewrites the file to fix ordering or formatting differences.
 
 Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
 

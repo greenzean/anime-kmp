@@ -29,7 +29,7 @@ Decision and rationale: ADR 0006. Contract rules: `graphql-schema` skill. Server
 ## Adding a synced field
 1. Flyway migration (see `postgres-migrations`), update `ListEntryTable`.
 2. Add it to `EntryChange`, the input/output GraphQL types and `SyncRepository` (insert and update).
-3. `./gradlew :server:test -PupdateSchema`, then the `.graphql` operations in `shared`.
+3. The SDL change goes in the Contract (see `graphql-schema`, Changing the API, and ADR 0015); the `.graphql` operations in `shared` follow it.
 4. Add a server test in `SyncApiTest`.
 
 ## Accounts on the device (ADR 0011)

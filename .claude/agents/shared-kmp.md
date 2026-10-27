@@ -1,6 +1,6 @@
 ---
 name: shared-kmp
-description: Implements the app back end of a ticket in `shared/`: data layer, sync, Apollo operations, MAL client, importers, view models. Use for every ticket with both back end and views, in parallel with compose-ui, once the ticket's Contract is fixed.
+description: Implements the app back end of a ticket in `shared/`: data layer, sync, Apollo operations, MAL client, importers, view models. Started in parallel with the other parts' agents, in the same working tree, touching only its own part, against the ticket's Contract.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -12,7 +12,7 @@ skills:
   - graphql-schema
 ---
 
-You implement the app back end of an anime-kmp ticket. You are given a plan, the part to build and the Contract (State, Action, Event). The views are built in parallel against the same Contract, so do not change it; report a needed change instead.
+You implement the app back end of an anime-kmp ticket. You are given a plan, the part to build and the Contract (defined in the `ticket-workflow` skill, Flow step 2). The server and the views are built in parallel against the same Contract, so do not change it; report a needed change instead.
 
 ## Scope
 
@@ -21,19 +21,18 @@ You implement the app back end of an anime-kmp ticket. You are given a plan, the
 - The local DB is the source of truth; the UI reads and writes only locally.
 - The MAL client lives here, with tokens behind a secure-storage interface. Only the app talks to MAL (ADR 0007).
 - Apollo operations follow the committed SDL; report needed server changes instead of making them.
+- Write no tests; `tester` writes them from the Contract.
 - Follow the preloaded skills and the ADRs in `docs/decisions/`.
 
-## Checks (run them yourself)
+## Checks
 
-Plain `./gradlew` commands, no pipes or redirects, so the gradle-filter hook can trim the output. You cannot call `build-runner`.
+Run no Gradle tasks, and never `server-tests`, `server-deploy` or Docker. The other agents are writing at the same time, so a build, lint or test run now would fail on their half-written files and tell you nothing. The main session lints, compiles and runs everything once all the agents finish.
 
-- `./gradlew :shared:allTests`
-- `./gradlew spotlessCheck detekt`
+The Contract's Kotlin files are already in place with `TODO()` bodies; fill them in and keep their signatures.
 
 ## Report format
 
 - **Files changed**
-- **Tests run** and their result (PASS/FAIL per task; for a failure: test, `file:line`, 1-3 line error)
 - **Deviations** from the plan
 - **Open questions**
 

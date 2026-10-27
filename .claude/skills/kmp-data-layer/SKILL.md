@@ -28,7 +28,6 @@ This skill uses `Result<T, E>`, `DataError`, and the extension helpers defined i
 - **Repository** — combines multiple data sources (e.g., a remote API + a local DB for offline-first). Only use the term "repository" when the class genuinely coordinates multiple sources.
 
 ```kotlin
-// Single source → data source
 interface AnimeLocalDataSource {
     fun observeLibrary(): Flow<List<LibraryEntry>>
     suspend fun upsert(entry: LibraryEntry): EmptyResult<DataError.Local>
@@ -38,7 +37,6 @@ interface AnimeRemoteDataSource {
     suspend fun pullChanges(since: Instant?): Result<List<LibraryEntry>, DataError.Network>
 }
 
-// Multiple sources → repository
 interface LibraryRepository {
     fun observeLibrary(): Flow<List<LibraryEntry>>
     suspend fun sync(): EmptyResult<DataError>
@@ -60,9 +58,9 @@ interface LibraryRepository {
 - Mappers are simple extension functions living in the data layer next to the type they convert:
 
 ```kotlin
-fun LibraryEntryFragment.toLibraryEntry(): LibraryEntry = LibraryEntry(id = id, status = status.toDomain(), ...)  // Apollo
-fun LibraryEntryRow.toLibraryEntry(): LibraryEntry = ...                                                          // SQLDelight
-fun LibraryEntry.toInput(): LibraryEntryInput = ...                                                               // Apollo input
+fun LibraryEntryFragment.toLibraryEntry(): LibraryEntry = LibraryEntry(id = id, status = status.toDomain(), ...)
+fun LibraryEntryRow.toLibraryEntry(): LibraryEntry = ...
+fun LibraryEntry.toInput(): LibraryEntryInput = ...
 ```
 
 ---
@@ -90,7 +88,7 @@ class OfflineFirstLibraryRepository(
     private val local: AnimeLocalDataSource,
     private val remote: AnimeRemoteDataSource,
 ) : LibraryRepository {
-    override fun observeLibrary() = local.observeLibrary()   // UI only ever reads the DB
+    override fun observeLibrary() = local.observeLibrary()
 
     override suspend fun sync(): EmptyResult<DataError> =
         remote.pullChanges(since = null)
@@ -145,14 +143,11 @@ Use `safeCall` / `responseToResult` helpers for plain HTTP calls (e.g. a token e
 Tokens are secrets: store them behind an interface in the `domain` package and implement it per platform.
 
 ```kotlin
-// shared commonMain
 interface TokenStorage {
     suspend fun load(): Tokens?
     suspend fun save(tokens: Tokens)
     suspend fun clear()
 }
-// androidMain → encrypted storage backed by the Android Keystore
-// iosMain     → Keychain
 ```
 
 Never store tokens in plain preferences, logs, or the SQLDelight database. Never commit keystores or `.env` files. Token refresh (401) is handled in the Apollo/Ktor auth layer that reads and writes `TokenStorage`.
@@ -164,12 +159,9 @@ Never store tokens in plain preferences, logs, or the SQLDelight database. Never
 `.sq` files, schema and queries live in `shared/src/commonMain/sqldelight`; only the driver is per-platform. Expose it through an `expect`/`actual` factory (or a platform Koin module) injected via Koin:
 
 ```kotlin
-// commonMain
 expect class DatabaseDriverFactory {
     fun create(): SqlDriver
 }
-// androidMain → AndroidSqliteDriver(AnimeDatabase.Schema, context, "anime.db")
-// iosMain     → NativeSqliteDriver(AnimeDatabase.Schema, "anime.db")
 ```
 
 Tests use an in-memory driver (JDBC in-memory on the JVM/Android host test, native in-memory on iOS).

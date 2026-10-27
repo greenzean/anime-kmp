@@ -133,7 +133,7 @@ class LibraryViewModel(
 For blocking code that doesn't support suspension, wrap it:
 ```kotlin
 suspend fun compressImage(bytes: ByteArray): ByteArray = withContext(Dispatchers.IO) {
-    // blocking compression logic
+    compress(bytes)
 }
 ```
  
@@ -148,7 +148,6 @@ Only inject `CoroutineDispatcher` when:
 `shared` cannot reference `Res.string.*` (the string resources live in `composeApp`), so ViewModels keep **typed errors**, not text, in State and Event, and `composeApp` converts them to `UiText` at the Root/Screen layer:
 
 ```kotlin
-// shared.library.presentation — no Compose, no resources
 data class LibraryState(
     val error: DataError? = null
 )
@@ -185,7 +184,6 @@ sealed interface UiText {
 **When to use plain `String`:** For values that are always dynamic and never come from resources — e.g., an anime title, a formatted date, a score. These can be exposed as `String` directly in the State or UI model in `shared`.
 
 ```kotlin
-// composeApp: Root composable converts the typed error to text
 ObserveAsEvents(viewModel.events) { event ->
     when (event) {
         is LibraryEvent.ShowError -> snackbarHostState.showSnackbar(event.error.toUiText().getString())
@@ -193,7 +191,6 @@ ObserveAsEvents(viewModel.events) { event ->
     }
 }
 
-// Plain String — always dynamic, never a resource (lives in shared)
 data class EntryUi(
     val title: String,
     val formattedDate: String
@@ -213,7 +210,7 @@ When a domain model needs UI-specific formatting (dates, units, currency), creat
 data class EntryUi(
     val id: String,
     val title: String,
-    val formattedDate: String  // e.g. "Mar 15, 2026"
+    val formattedDate: String
 )
  
 fun LibraryEntry.toEntryUi(): EntryUi = EntryUi(
@@ -240,11 +237,11 @@ Receives the ViewModel (via `koinViewModel()` from `org.koin.compose.viewmodel.k
 Receives only `state` and `onAction`. No ViewModel reference. Can be previewed independently.
 
 ```kotlin
-// LibraryScreen.kt — Root + Screen in a single file
 
 @Composable
 fun LibraryRoot(
     onNavigateToDetail: (String) -> Unit,
+    onShowError: (UiText) -> Unit,
     viewModel: LibraryViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -252,7 +249,7 @@ fun LibraryRoot(
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
             is LibraryEvent.NavigateToDetail -> onNavigateToDetail(event.entryId)
-            is LibraryEvent.ShowError -> { /* show snackbar with error.toUiText() */ }
+            is LibraryEvent.ShowError -> onShowError(event.error.toUiText())
         }
     }
 

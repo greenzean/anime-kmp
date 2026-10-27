@@ -12,13 +12,15 @@ The server is a JVM-only Ktor (Netty) app in `server/`. Base package: `com.green
 
 ```
 server/src/main/kotlin/com/greenzean/animekmp/server/
-  Application.kt        # main() + Application.module()
-  AppConfig.kt          # env-based config
-  routes/               # one Route.<feature>Routes() extension per feature
+  Application.kt
+  AppConfig.kt
+  routes/
 server/src/main/resources/
-  logback.xml           # dev
-  logback-prod.xml      # prod (JSON)
+  logback.xml
+  logback-prod.xml
 ```
+
+`Application.kt` holds `main()` and `Application.module()`, `AppConfig.kt` the env-based config, and `routes/` one `Route.<feature>Routes()` extension per feature. `logback.xml` is for dev and `logback-prod.xml` writes JSON for prod.
 
 - `main()` reads `AppConfig.fromEnv()` and starts `embeddedServer(Netty, ...)`. `Application.module()` installs plugins and calls each feature's routes inside `routing { }`.
 - Each feature exposes `fun Route.xxxRoutes()` in `routes/`; register it in `module()`.
@@ -71,13 +73,15 @@ Ktor, Logback and the logstash encoder versions live in `gradle/libs.versions.to
 ## Verify
 
 ```
-./gradlew :server:build   # compile, tests, spotless, detekt
-./gradlew :server:run     # then: curl localhost:8080/health
+./gradlew :server:compileKotlin :server:spotlessCheck :server:detekt
+server-tests :server:test
 ```
+
+`server-tests` runs Gradle here against the mini PC's Docker and deploys when the tests pass. The server itself runs on the mini PC, never on the Mac.
 
 ## GraphQL
 
-graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and API-change order: `graphql-schema` skill.
+graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and how an API change is split between the parts: `graphql-schema` skill.
 
 ## Auth (ADR 0010)
 
