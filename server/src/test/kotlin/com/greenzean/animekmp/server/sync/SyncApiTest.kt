@@ -1,153 +1,27 @@
 package com.greenzean.animekmp.server.sync
 
-import com.greenzean.animekmp.server.DatabaseConfig
 import com.greenzean.animekmp.server.auth.SessionTokens
 import com.greenzean.animekmp.server.db.AnimeTable
-import com.greenzean.animekmp.server.db.AppUserTable
 import com.greenzean.animekmp.server.db.ListEntryTable
-import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.module
-import io.ktor.client.HttpClient
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.contentType
-import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.UUID
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.uuid.toKotlinUuid
 
-private const val CHANGE_FIELDS = "id malId status updatedAt deletedAt"
-private const val SECRET = "0123456789abcdef0123456789abcdef"
-
-private object SharedDb {
-    val db: Database by lazy {
-        val container = PostgreSQLContainer("postgres:18-alpine").also { it.start() }
-        connectDatabase(DatabaseConfig(container.jdbcUrl, container.username, container.password))
-    }
-}
-
-class SyncApiTest {
-    private val db: Database get() = SharedDb.db
-
-    @AfterTest
-    fun shutDownPool() {
-        pool.shutdownNow()
-    }
-
-    @BeforeTest
-    fun setUp() {
-        transaction(db) {
-            exec("TRUNCATE list_entry, app_user CASCADE")
-            for ((id, sub) in listOf(userA to "sub-a", userB to "sub-b")) {
-                AppUserTable.insert {
-                    it[AppUserTable.id] = id.toKotlinUuid()
-                    it[googleSub] = sub
-                }
-            }
-        }
-    }
-
-    private val clock = Clock.fixed(Instant.parse("2026-10-20T00:00:00Z"), ZoneOffset.UTC)
-    private val tokens = SessionTokens(SECRET, clock)
-    private val userA = UUID.randomUUID()
-    private val userB = UUID.randomUUID()
-    private val bebop = 1
-    private val fma = 5114
-
-    private fun change(
-        id: UUID,
-        malId: Int,
-        status: String,
-        updatedAt: String,
-        deletedAt: String? = null,
-    ) = """{id:"$id",malId:$malId,status:$status,updatedAt:"$updatedAt",deletedAt:${deletedAt?.let {
-        "\"$it\""
-    } ?: "null"}}"""
-
-    private fun bearer(user: UUID) = tokens.issueAccess(user).token
-
-    private suspend fun HttpClient.gql(
-        query: String,
-        token: String? = bearer(userA),
-    ): JsonObject {
-        val body = buildJsonObject { put("query", query) }.toString()
-        val text =
-            post("/graphql") {
-                contentType(ContentType.Application.Json)
-                token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
-                setBody(body)
-            }.bodyAsText()
-        return Json.parseToJsonElement(text).jsonObject
-    }
-
-    private suspend fun HttpClient.push(vararg changes: String): JsonObject = pushAs(userA, *changes)
-
-    private suspend fun HttpClient.pushAs(
-        user: UUID,
-        vararg changes: String,
-    ): JsonObject {
-        val r =
-            gql(
-                """mutation { pushChanges(changes: [${changes.joinToString(
-                    ",",
-                )}]) { results { id outcome entryId } } }""",
-                bearer(user),
-            )
-        return (r["data"] ?: error("push failed: $r")).jsonObject["pushChanges"]!!.jsonObject
-    }
-
-    private suspend fun HttpClient.pull(
-        cursor: String?,
-        limit: Int? = null,
-        user: UUID = userA,
-    ): JsonObject {
-        val args = listOfNotNull(cursor?.let { "cursor:\"$it\"" }, limit?.let { "limit:$it" }).joinToString(",")
-        val field = if (args.isEmpty()) "changesSince" else "changesSince($args)"
-        val r = gql("{ $field { nextCursor hasMore changes { $CHANGE_FIELDS } } }", bearer(user))
-        return (r["data"] ?: error("pull failed: $r")).jsonObject["changesSince"]!!.jsonObject
-    }
-
-    private fun JsonObject.outcomes() =
-        this["results"]!!.jsonArray.map { it.jsonObject["outcome"]!!.jsonPrimitive.content }
-
-    private fun JsonObject.changes(): JsonArray = this["changes"]!!.jsonArray
-
-    private fun JsonElement.str(key: String) = jsonObject[key]!!.jsonPrimitive.content
-
-    private fun sync(block: suspend ApplicationTestBuilder.() -> Unit) =
-        testApplication {
-            application { module(db, clock, tokens = tokens) }
-            block()
-        }
-
+class SyncApiTest : SyncApiTestBase() {
     @Test
     fun pushedChangeIsPulled() =
         sync {
@@ -278,8 +152,8 @@ class SyncApiTest {
         val repo = SyncRepository(db, clock)
         val shared = 424242
         val at = Instant.parse("2026-10-19T12:00:00Z")
-        repo.push(userA, listOf(EntryChange(UUID.randomUUID(), shared, "WATCHING", at, null)))
-        repo.push(userB, listOf(EntryChange(UUID.randomUUID(), shared, "COMPLETED", at, null)))
+        repo.push(userA, listOf(entryChange(shared, "WATCHING", at, 0, null)))
+        repo.push(userB, listOf(entryChange(shared, "COMPLETED", at, 0, null)))
         assertEquals(1L, animeRowsFor(shared))
         assertEquals(
             shared,
@@ -314,7 +188,7 @@ class SyncApiTest {
     @Test
     fun concurrentPushesOfTheSameChangeAreIdempotent() {
         val repo = SyncRepository(db, clock)
-        val change = EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null)
+        val change = entryChange(bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), 0, null)
         val outcomes =
             (1..8)
                 .map { thread { repo.push(userA, listOf(change)) } }
@@ -332,7 +206,7 @@ class SyncApiTest {
             (1..8)
                 .map {
                     val change =
-                        EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null)
+                        entryChange(bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), 0, null)
                     thread { repo.push(userA, listOf(change)) }
                 }.map { it.get().single() }
         assertEquals(1, results.count { it.outcome == PushOutcome.APPLIED })
@@ -612,16 +486,10 @@ class SyncApiTest {
     fun repositoryTruncatesTimestampsSoReplaysAreIdempotent() {
         val repo = SyncRepository(db, clock)
         val change =
-            EntryChange(UUID.randomUUID(), bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00.123456789Z"), null)
+            entryChange(bebop, "WATCHING", Instant.parse("2026-10-19T12:00:00.123456789Z"), 0, null)
         assertEquals(PushOutcome.APPLIED, repo.push(userA, listOf(change)).single().outcome)
         assertEquals(PushOutcome.IGNORED_STALE, repo.push(userA, listOf(change)).single().outcome)
         val stored = repo.changesSince(userA, null, 10).changes.single()
         assertEquals(Instant.parse("2026-10-19T12:00:00.123Z"), stored.updatedAt)
     }
-
-    private fun <T> thread(block: () -> T): java.util.concurrent.Future<T> = pool.submit(block)
-
-    private val pool =
-        java.util.concurrent.Executors
-            .newFixedThreadPool(8)
 }

@@ -63,7 +63,6 @@ class MigrationTest {
 
     private var nextMalId = 1
 
-    /** Adds an anime to the ID map and returns its internal id. */
     private fun newAnime(): Long =
         transaction(db) {
             AnimeTable.insert { it[malId] = nextMalId++ }[AnimeTable.id]
@@ -209,5 +208,89 @@ class MigrationTest {
         insertEntry(user)
         transaction(db) { AppUserTable.deleteWhere { AppUserTable.id eq user } }
         assertEquals(0, transaction(db) { ListEntryTable.selectAll().count() }.toInt())
+    }
+
+    private fun insertWith(
+        entryProgress: Int? = null,
+        entryScore: Int? = null,
+    ): Uuid {
+        val entryId = Uuid.random()
+        transaction(db) {
+            val user = newUser(Uuid.random().toString())
+            val anime = newAnime()
+            ListEntryTable.insert {
+                it[id] = entryId
+                it[userId] = user
+                it[animeId] = anime
+                it[status] = "WATCHING"
+                it[updatedAt] = OffsetDateTime.now()
+                entryProgress?.let { value -> it[progress] = value }
+                entryScore?.let { value -> it[score] = value }
+            }
+        }
+        return entryId
+    }
+
+    private fun rowOf(entryId: Uuid) =
+        transaction(db) { ListEntryTable.selectAll().where { ListEntryTable.id eq entryId }.single() }
+
+    @Test
+    fun progressDefaultsToZeroAndScoreToNull() {
+        val row = rowOf(insertWith())
+
+        assertEquals(0, row[ListEntryTable.progress])
+        assertNull(row[ListEntryTable.score])
+    }
+
+    @Test
+    fun progressAndScoreAreStored() {
+        val row = rowOf(insertWith(entryProgress = 12, entryScore = 8))
+
+        assertEquals(12, row[ListEntryTable.progress])
+        assertEquals(8, row[ListEntryTable.score])
+    }
+
+    @Test
+    fun progressBoundsAreAccepted() {
+        assertEquals(0, rowOf(insertWith(entryProgress = 0))[ListEntryTable.progress])
+        assertEquals(10_000, rowOf(insertWith(entryProgress = 10_000))[ListEntryTable.progress])
+    }
+
+    @Test
+    fun negativeProgressRejected() {
+        assertFailsWith<SQLException> { insertWith(entryProgress = -1) }
+    }
+
+    @Test
+    fun progressAboveTenThousandRejected() {
+        assertFailsWith<SQLException> { insertWith(entryProgress = 10_001) }
+    }
+
+    @Test
+    fun scoreBoundsAreAccepted() {
+        assertEquals(1, rowOf(insertWith(entryScore = 1))[ListEntryTable.score])
+        assertEquals(10, rowOf(insertWith(entryScore = 10))[ListEntryTable.score])
+    }
+
+    @Test
+    fun scoreZeroRejected() {
+        assertFailsWith<SQLException> { insertWith(entryScore = 0) }
+    }
+
+    @Test
+    fun scoreAboveTenRejected() {
+        assertFailsWith<SQLException> { insertWith(entryScore = 11) }
+    }
+
+    @Test
+    fun progressCannotBeNull() {
+        val nullable =
+            transaction(db) {
+                exec(
+                    "SELECT is_nullable FROM information_schema.columns " +
+                        "WHERE table_name = 'list_entry' AND column_name = 'progress'",
+                ) { rs -> if (rs.next()) rs.getString(1) else null }
+            }
+        assertEquals("NO", nullable)
     }
 }

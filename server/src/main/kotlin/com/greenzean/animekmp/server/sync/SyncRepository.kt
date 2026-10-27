@@ -38,6 +38,8 @@ data class EntryChange(
     val status: String,
     val updatedAt: Instant,
     val deletedAt: Instant?,
+    val progress: Int,
+    val score: Int?,
 )
 
 data class ChangeResult(
@@ -148,6 +150,14 @@ class SyncRepository(
                 PushOutcome.REJECTED_INVALID
             }
 
+            change.progress !in 0..MAX_PROGRESS -> {
+                PushOutcome.REJECTED_INVALID
+            }
+
+            change.score != null && change.score !in MIN_SCORE..MAX_SCORE -> {
+                PushOutcome.REJECTED_INVALID
+            }
+
             else -> {
                 null
             }
@@ -180,6 +190,8 @@ class SyncRepository(
                         it[status] = change.status
                         it[updatedAt] = change.updatedAt.toOffset()
                         it[deletedAt] = change.deletedAt?.toOffset()
+                        it[progress] = change.progress
+                        it[score] = change.score
                         it[serverSeq] = seq.nextLongVal()
                     }
                     PushOutcome.APPLIED
@@ -200,6 +212,8 @@ class SyncRepository(
             it[status] = change.status
             it[updatedAt] = change.updatedAt.toOffset()
             it[deletedAt] = change.deletedAt?.toOffset()
+            it[progress] = change.progress
+            it[score] = change.score
         }
         return ChangeResult(change.id, PushOutcome.APPLIED, change.id)
     }
@@ -217,6 +231,8 @@ class SyncRepository(
             status = this[ListEntryTable.status],
             updatedAt = this[ListEntryTable.updatedAt].toInstant(),
             deletedAt = this[ListEntryTable.deletedAt]?.toInstant(),
+            progress = this[ListEntryTable.progress],
+            score = this[ListEntryTable.score],
         )
 
     private fun Instant.toOffset(): OffsetDateTime = atOffset(ZoneOffset.UTC)

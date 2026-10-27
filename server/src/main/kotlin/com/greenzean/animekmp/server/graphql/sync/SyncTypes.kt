@@ -11,8 +11,9 @@ data class ListEntryChangeInput(
     val malId: Int,
     val status: ListStatus,
     val updatedAt: Instant,
-    /** Non-null makes this change a tombstone. */
     val deletedAt: Instant?,
+    val progress: Int,
+    val score: Int?,
 )
 
 data class ListEntryChange(
@@ -21,12 +22,13 @@ data class ListEntryChange(
     val status: ListStatus,
     val updatedAt: Instant,
     val deletedAt: Instant?,
+    val progress: Int,
+    val score: Int?,
 )
 
 data class ChangeResult(
     val id: UUID,
     val outcome: PushOutcome,
-    /** The server row the change landed on; differs from `id` when the anime already had an entry under another id. */
     val entryId: UUID,
 )
 
