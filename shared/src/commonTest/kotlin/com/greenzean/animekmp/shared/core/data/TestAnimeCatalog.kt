@@ -13,7 +13,7 @@ object TestAnimeCatalog {
 
     fun apply(db: AnimeDatabase) {
         db.transaction {
-            anime.forEach { (malId, title) -> db.animeQueries.insertOrIgnore(malId, title, null, null) }
+            anime.forEach { (malId, title) -> db.animeQueries.insertOrIgnore(malId, title, null, null, null) }
         }
     }
 }

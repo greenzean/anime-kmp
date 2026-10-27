@@ -7,6 +7,7 @@ data class Anime(
     val title: String,
     val titleEn: String? = null,
     val imageUrl: String? = null,
+    val episodes: Int? = null,
 )
 
 enum class WatchStatus { WATCHING, COMPLETED, ON_HOLD, DROPPED, PLAN_TO_WATCH }
@@ -17,6 +18,8 @@ data class LibraryEntry(
     val id: String,
     val anime: Anime,
     val status: WatchStatus,
+    val progress: Int,
+    val score: Int?,
     val updatedAt: Instant,
     val syncState: SyncState,
 )

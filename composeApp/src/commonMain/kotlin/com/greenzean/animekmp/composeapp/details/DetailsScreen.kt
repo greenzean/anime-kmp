@@ -11,9 +11,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -34,6 +38,7 @@ import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.action_add_to_library
 import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.action_undo
 import com.greenzean.animekmp.composeapp.generated.resources.airing_airing
 import com.greenzean.animekmp.composeapp.generated.resources.airing_finished
 import com.greenzean.animekmp.composeapp.generated.resources.airing_not_yet_aired
@@ -55,9 +60,9 @@ import com.greenzean.animekmp.composeapp.generated.resources.details_title
 import com.greenzean.animekmp.composeapp.generated.resources.details_view_on_mal
 import com.greenzean.animekmp.composeapp.generated.resources.episodes_count
 import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
-import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
 import com.greenzean.animekmp.composeapp.generated.resources.month_names
 import com.greenzean.animekmp.composeapp.generated.resources.offline_title
+import com.greenzean.animekmp.composeapp.generated.resources.snackbar_removed_from_library
 import com.greenzean.animekmp.shared.details.presentation.AiringStatus
 import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsAction
@@ -65,7 +70,9 @@ import com.greenzean.animekmp.shared.details.presentation.DetailsEvent
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
 import com.greenzean.animekmp.shared.details.presentation.DetailsViewModel
+import com.greenzean.animekmp.shared.details.presentation.EntryEditUi
 import com.greenzean.animekmp.shared.details.presentation.MalDate
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringArrayResource
@@ -81,12 +88,32 @@ fun DetailsRoot(
     viewModel: DetailsViewModel = koinViewModel(key = "details-$malId") { parametersOf(malId) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val removedMessage = stringResource(Res.string.snackbar_removed_from_library)
+    val undoLabel = stringResource(Res.string.action_undo)
     ObserveAsEvents(viewModel.events) { event ->
         when (event) {
-            DetailsEvent.NavigateBack -> onNavigateBack()
+            DetailsEvent.NavigateBack -> {
+                onNavigateBack()
+            }
+
+            DetailsEvent.ShowRemoved -> {
+                scope.launch {
+                    val result = snackbarHostState.showSnackbar(message = removedMessage, actionLabel = undoLabel)
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.onAction(DetailsAction.OnUndoRemoveClick)
+                    }
+                }
+            }
         }
     }
-    DetailsScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
+    DetailsScreen(
+        state = state,
+        onAction = viewModel::onAction,
+        modifier = modifier,
+        snackbarHostState = snackbarHostState,
+    )
 }
 
 @Composable
@@ -94,14 +121,15 @@ fun DetailsScreen(
     state: DetailsState,
     onAction: (DetailsAction) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState? = null,
 ) {
     AppScaffold(
         title = stringResource(Res.string.details_title),
         modifier = modifier,
         onNavigateBack = { onAction(DetailsAction.OnBackClick) },
+        snackbarHostState = snackbarHostState,
     ) { padding ->
         val loadingDescription = stringResource(Res.string.cd_loading_details)
-        val messagePadding = Modifier.padding(padding).padding(MaterialTheme.spacing.lg)
         when (state.status) {
             DetailsStatus.Loading -> {
                 Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -113,49 +141,86 @@ fun DetailsScreen(
                 state.details?.let { details ->
                     DetailsContent(
                         details = details,
-                        inLibrary = state.inLibrary,
+                        entry = state.entry,
                         onAction = onAction,
                         modifier = Modifier.padding(padding),
                     )
                 }
             }
 
-            DetailsStatus.Offline -> {
-                EmptyState(
-                    title = stringResource(Res.string.offline_title),
-                    message = stringResource(Res.string.details_offline_message),
-                    icon = AppIcons.Warning,
-                    actionText = stringResource(Res.string.action_try_again),
-                    onAction = { onAction(DetailsAction.OnRetryClick) },
-                    modifier = messagePadding,
-                )
+            else -> {
+                MessageWithEditor(
+                    entry = state.entry,
+                    onAction = onAction,
+                    modifier = Modifier.padding(padding).padding(MaterialTheme.spacing.lg),
+                ) { messageModifier -> StatusMessage(state.status, onAction, messageModifier) }
             }
+        }
+    }
+}
 
-            DetailsStatus.NotFound -> {
-                EmptyState(
-                    title = stringResource(Res.string.details_not_found_title),
-                    message = stringResource(Res.string.details_not_found_message),
-                    icon = AppIcons.Warning,
-                    modifier = messagePadding,
-                )
-            }
+@Composable
+private fun MessageWithEditor(
+    entry: EntryEditUi?,
+    onAction: (DetailsAction) -> Unit,
+    modifier: Modifier = Modifier,
+    message: @Composable (Modifier) -> Unit,
+) {
+    val columnModifier = if (entry != null) modifier.verticalScroll(rememberScrollState()) else modifier
+    Column(modifier = columnModifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg)) {
+        if (entry != null) {
+            EntryEditor(entry = entry, onAction = onAction)
+        }
+        message(if (entry != null) Modifier.fillMaxWidth() else Modifier.weight(1f))
+    }
+}
 
-            DetailsStatus.Throttled -> {
-                ErrorState(
-                    title = stringResource(Res.string.details_throttled_title),
-                    message = stringResource(Res.string.details_throttled_message),
-                    onRetry = { onAction(DetailsAction.OnRetryClick) },
-                    modifier = messagePadding,
-                )
-            }
+@Composable
+private fun StatusMessage(
+    status: DetailsStatus,
+    onAction: (DetailsAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (status) {
+        DetailsStatus.Offline -> {
+            EmptyState(
+                title = stringResource(Res.string.offline_title),
+                message = stringResource(Res.string.details_offline_message),
+                icon = AppIcons.Warning,
+                actionText = stringResource(Res.string.action_try_again),
+                onAction = { onAction(DetailsAction.OnRetryClick) },
+                modifier = modifier,
+            )
+        }
 
-            DetailsStatus.Error -> {
-                ErrorState(
-                    message = stringResource(Res.string.error_mal_unreachable),
-                    onRetry = { onAction(DetailsAction.OnRetryClick) },
-                    modifier = messagePadding,
-                )
-            }
+        DetailsStatus.NotFound -> {
+            EmptyState(
+                title = stringResource(Res.string.details_not_found_title),
+                message = stringResource(Res.string.details_not_found_message),
+                icon = AppIcons.Warning,
+                modifier = modifier,
+            )
+        }
+
+        DetailsStatus.Throttled -> {
+            ErrorState(
+                title = stringResource(Res.string.details_throttled_title),
+                message = stringResource(Res.string.details_throttled_message),
+                onRetry = { onAction(DetailsAction.OnRetryClick) },
+                modifier = modifier,
+            )
+        }
+
+        DetailsStatus.Error -> {
+            ErrorState(
+                message = stringResource(Res.string.error_mal_unreachable),
+                onRetry = { onAction(DetailsAction.OnRetryClick) },
+                modifier = modifier,
+            )
+        }
+
+        DetailsStatus.Loading, DetailsStatus.Loaded -> {
+            Unit
         }
     }
 }
@@ -163,7 +228,7 @@ fun DetailsScreen(
 @Composable
 private fun DetailsContent(
     details: AnimeDetailsUi,
-    inLibrary: Boolean,
+    entry: EntryEditUi?,
     onAction: (DetailsAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -194,12 +259,8 @@ private fun DetailsContent(
                 }
             }
         }
-        if (inLibrary) {
-            Text(
-                stringResource(Res.string.label_in_library),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        if (entry != null) {
+            EntryEditor(entry = entry, onAction = onAction)
         } else {
             AppButton(
                 text = stringResource(Res.string.action_add_to_library),

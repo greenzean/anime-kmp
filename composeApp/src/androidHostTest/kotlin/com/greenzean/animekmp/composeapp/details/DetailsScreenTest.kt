@@ -11,8 +11,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTouchHeightIsEqualTo
 import androidx.compose.ui.test.assertTouchWidthIsEqualTo
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -23,12 +26,18 @@ import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.action_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.action_cancel
+import com.greenzean.animekmp.composeapp.generated.resources.action_remove_from_library
 import com.greenzean.animekmp.composeapp.generated.resources.action_retry
 import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
 import com.greenzean.animekmp.composeapp.generated.resources.airing_finished
 import com.greenzean.animekmp.composeapp.generated.resources.airing_not_yet_aired
 import com.greenzean.animekmp.composeapp.generated.resources.cd_back
 import com.greenzean.animekmp.composeapp.generated.resources.cd_loading_details
+import com.greenzean.animekmp.composeapp.generated.resources.cd_progress_decrement
+import com.greenzean.animekmp.composeapp.generated.resources.cd_progress_edit
+import com.greenzean.animekmp.composeapp.generated.resources.cd_progress_increment
+import com.greenzean.animekmp.composeapp.generated.resources.cd_score_badge
 import com.greenzean.animekmp.composeapp.generated.resources.details_facts_separator
 import com.greenzean.animekmp.composeapp.generated.resources.details_mal_score
 import com.greenzean.animekmp.composeapp.generated.resources.details_no_synopsis
@@ -40,10 +49,21 @@ import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_m
 import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_title
 import com.greenzean.animekmp.composeapp.generated.resources.details_title
 import com.greenzean.animekmp.composeapp.generated.resources.details_view_on_mal
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_dialog_title
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_label
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value_unknown
+import com.greenzean.animekmp.composeapp.generated.resources.entry_score_label
+import com.greenzean.animekmp.composeapp.generated.resources.entry_score_none
+import com.greenzean.animekmp.composeapp.generated.resources.entry_status_label
 import com.greenzean.animekmp.composeapp.generated.resources.episodes_count
 import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
-import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
 import com.greenzean.animekmp.composeapp.generated.resources.offline_title
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_completed
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_dropped
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_on_hold
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_watching
 import com.greenzean.animekmp.composeapp.plural
 import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.details.presentation.AiringStatus
@@ -51,7 +71,9 @@ import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsAction
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
+import com.greenzean.animekmp.shared.details.presentation.EntryEditUi
 import com.greenzean.animekmp.shared.details.presentation.MalDate
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import org.jetbrains.compose.resources.StringResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -88,9 +110,14 @@ private fun facts(
     ).joinToString(str(Res.string.details_facts_separator))
 }
 
-private val loaded = DetailsState(frieren, inLibrary = false, status = DetailsStatus.Loaded)
+internal val loaded = DetailsState(frieren, status = DetailsStatus.Loaded)
 
-private class Screen(
+internal val entry =
+    EntryEditUi(WatchStatus.WATCHING, progress = 5, totalEpisodes = 28, score = 7, selectableEpisodes = 28)
+
+internal val loadedInLibrary = loaded.copy(entry = entry)
+
+internal class Screen(
     val actions: MutableList<DetailsAction> = mutableListOf(),
     val openedUrls: MutableList<String> = mutableListOf(),
 )
@@ -224,20 +251,266 @@ class DetailsScreenTest {
         }
 
     @Test
-    fun inLibraryHidesTheAddButtonAndSaysSo() =
+    fun inLibraryHidesTheAddButtonAndShowsTheEditor() =
         runComposeUiTest {
-            show(loaded.copy(inLibrary = true))
+            show(loadedInLibrary)
 
-            onNodeWithText(str(Res.string.label_in_library)).assertIsDisplayed()
             onNodeWithText(str(Res.string.action_add_to_library)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().assertIsDisplayed()
         }
 
     @Test
-    fun notInLibraryDoesNotSayInLibrary() =
+    fun notInLibraryHasNoEditor() =
         runComposeUiTest {
             show(loaded)
 
-            onNodeWithText(str(Res.string.label_in_library)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_status_label)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_progress_label)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_score_label)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.action_remove_from_library)).assertDoesNotExist()
+        }
+
+    @Test
+    fun editorShowsStatusProgressAndScore() =
+        runComposeUiTest {
+            show(loadedInLibrary)
+
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.watch_status_watching)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_progress_label)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_progress_value, 5, 28)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_score_label)).performScrollTo().assertIsDisplayed()
+            onNodeWithContentDescription(str(Res.string.cd_score_badge, 7)).performScrollTo().assertIsDisplayed()
+        }
+
+    @Test
+    fun editorShowsAnUnknownTotalWithAQuestionMark() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(totalEpisodes = null)))
+
+            onNodeWithText(str(Res.string.entry_progress_value_unknown, 5)).performScrollTo().assertIsDisplayed()
+        }
+
+    @Test
+    fun editorSaysNoScoreWhenThereIsNone() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(score = null)))
+
+            onNodeWithContentDescription(str(Res.string.entry_score_none)).performScrollTo().assertIsDisplayed()
+            onNodeWithContentDescription(str(Res.string.cd_score_badge, 7)).assertDoesNotExist()
+        }
+
+    @Test
+    fun editorIsShownOfflineWithoutDetails() =
+        runComposeUiTest {
+            val screen = show(DetailsState(entry = entry, status = DetailsStatus.Offline))
+
+            onNodeWithText(str(Res.string.offline_title)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_status_label)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_progress_value, 5, 28)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_remove_from_library)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_try_again)).performScrollTo().performClick()
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnRetryClick), screen.actions)
+        }
+
+    @Test
+    fun offlineWithoutAnEntryHasNoEditor() =
+        runComposeUiTest {
+            show(DetailsState(status = DetailsStatus.Offline))
+
+            onNodeWithText(str(Res.string.entry_status_label)).assertDoesNotExist()
+        }
+
+    @Test
+    fun editorIsShownInEveryMessageStatus() {
+        listOf(DetailsStatus.Error, DetailsStatus.Throttled, DetailsStatus.NotFound).forEach { status ->
+            runComposeUiTest {
+                show(DetailsState(entry = entry, status = status))
+
+                onNodeWithText(str(Res.string.entry_status_label)).assertIsDisplayed()
+                onNodeWithText(str(Res.string.action_remove_from_library)).assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
+    fun loadingHasNoEditor() =
+        runComposeUiTest {
+            show(DetailsState(entry = entry, status = DetailsStatus.Loading))
+
+            onNodeWithText(str(Res.string.entry_status_label)).assertDoesNotExist()
+        }
+
+    @Test
+    fun statusRowOpensADialogWithEveryStatus() =
+        runComposeUiTest {
+            show(loadedInLibrary)
+
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().performClick()
+
+            onAllNodesWithText(str(Res.string.watch_status_watching)).assertCountEquals(2)
+            onNodeWithText(str(Res.string.watch_status_completed)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.watch_status_on_hold)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.watch_status_dropped)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.watch_status_plan_to_watch)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_cancel)).assertDoesNotExist()
+        }
+
+    @Test
+    fun choosingAStatusSendsItAndClosesTheDialog() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().performClick()
+
+            onNodeWithText(str(Res.string.watch_status_on_hold)).performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnStatusChange(WatchStatus.ON_HOLD)), screen.actions)
+            onNodeWithText(str(Res.string.action_cancel)).assertDoesNotExist()
+        }
+
+    @Test
+    fun plusButtonAddsOneEpisode() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+
+            onNodeWithContentDescription(str(Res.string.cd_progress_increment)).performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnProgressChange(6)), screen.actions)
+        }
+
+    @Test
+    fun minusButtonRemovesOneEpisode() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+
+            onNodeWithContentDescription(str(Res.string.cd_progress_decrement)).performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnProgressChange(4)), screen.actions)
+        }
+
+    @Test
+    fun minusButtonIsDisabledAtZeroEpisodes() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(progress = 0)))
+
+            onNodeWithContentDescription(str(Res.string.cd_progress_decrement)).performScrollTo().assertIsNotEnabled()
+            onNodeWithContentDescription(str(Res.string.cd_progress_increment)).performScrollTo().assertIsEnabled()
+        }
+
+    private val progressEdit
+        get() = str(Res.string.cd_progress_edit, str(Res.string.entry_progress_value, 5, 28))
+
+    @Test
+    fun minusButtonIsDisabledAtOneEpisode() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(progress = 1)))
+
+            onNodeWithContentDescription(str(Res.string.cd_progress_decrement)).performScrollTo().assertIsNotEnabled()
+            onNodeWithContentDescription(str(Res.string.cd_progress_increment)).performScrollTo().assertIsEnabled()
+        }
+
+    @Test
+    fun progressButtonOpensAGridWithEveryEpisodeAndNoTextField() =
+        runComposeUiTest {
+            show(loadedInLibrary)
+
+            onNodeWithContentDescription(progressEdit).performScrollTo().performClick()
+
+            onAllNodesWithText(str(Res.string.entry_progress_dialog_title)).assertCountEquals(2)
+            onNodeWithText(str(Res.string.action_cancel)).assertDoesNotExist()
+            onNode(hasSetTextAction()).assertDoesNotExist()
+            for (episode in 1..28) {
+                onNodeWithText(episode.toString()).performScrollTo().assertIsDisplayed()
+            }
+        }
+
+    @Test
+    fun theGridEndsAtTheSelectableEpisodes() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(selectableEpisodes = 10)))
+            onNodeWithContentDescription(progressEdit).performScrollTo().performClick()
+
+            onNodeWithText("10").performScrollTo().assertIsDisplayed()
+            onNodeWithText("11").assertDoesNotExist()
+        }
+
+    @Test
+    fun choosingAnEpisodeSendsItAndClosesTheDialog() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+            onNodeWithContentDescription(progressEdit).performScrollTo().performClick()
+
+            onNodeWithText("12").performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnProgressChange(12)), screen.actions)
+            onNodeWithText(str(Res.string.action_cancel)).assertDoesNotExist()
+        }
+
+    @Test
+    fun choosingTheLastEpisodeSendsIt() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+            onNodeWithContentDescription(progressEdit).performScrollTo().performClick()
+
+            onNodeWithText("28").performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnProgressChange(28)), screen.actions)
+        }
+
+    @Test
+    fun progressWithAnUnknownTotalOpensTheGrid() =
+        runComposeUiTest {
+            val screen = show(loaded.copy(entry = entry.copy(totalEpisodes = null, selectableEpisodes = 17)))
+            onNodeWithContentDescription(
+                str(Res.string.cd_progress_edit, str(Res.string.entry_progress_value_unknown, 5)),
+            ).performScrollTo()
+                .performClick()
+
+            onNodeWithText("17").performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnProgressChange(17)), screen.actions)
+        }
+
+    @Test
+    fun planToWatchHidesTheEpisodesRowButKeepsStatusAndScore() =
+        runComposeUiTest {
+            show(loaded.copy(entry = entry.copy(status = WatchStatus.PLAN_TO_WATCH, progress = 0)))
+
+            onNodeWithText(str(Res.string.entry_progress_label)).assertDoesNotExist()
+            onNodeWithContentDescription(str(Res.string.cd_progress_decrement)).assertDoesNotExist()
+            onNodeWithContentDescription(str(Res.string.cd_progress_increment)).assertDoesNotExist()
+            onNodeWithContentDescription(str(Res.string.entry_progress_value, 0, 28)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_progress_value, 0, 28)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.watch_status_plan_to_watch)).performScrollTo().assertIsDisplayed()
+            onNodeWithText(str(Res.string.entry_score_label)).performScrollTo().assertIsDisplayed()
+        }
+
+    @Test
+    fun removeSendsRemove() =
+        runComposeUiTest {
+            val screen = show(loadedInLibrary)
+
+            onNodeWithText(str(Res.string.action_remove_from_library)).performScrollTo().performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnRemoveClick), screen.actions)
+        }
+
+    @Test
+    fun editorControlsMeetTheMinimumTouchTarget() =
+        runComposeUiTest {
+            show(loadedInLibrary)
+
+            listOf(Res.string.cd_progress_increment, Res.string.cd_progress_decrement).forEach {
+                onNodeWithContentDescription(str(it))
+                    .performScrollTo()
+                    .assertTouchWidthIsEqualTo(48.dp)
+                    .assertTouchHeightIsEqualTo(48.dp)
+            }
+            onNodeWithContentDescription(progressEdit).performScrollTo().assertHeightIsAtLeast(48.dp)
+            onNodeWithText(str(Res.string.entry_status_label)).performScrollTo().assertTouchHeightIsEqualTo(48.dp)
+            onNodeWithText(str(Res.string.entry_score_label)).performScrollTo().assertTouchHeightIsEqualTo(48.dp)
+            onNodeWithText(str(Res.string.action_remove_from_library)).performScrollTo().assertHeightIsAtLeast(48.dp)
         }
 
     @Test

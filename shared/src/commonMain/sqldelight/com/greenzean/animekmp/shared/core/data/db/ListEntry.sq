@@ -1,10 +1,10 @@
-
-
 CREATE TABLE list_entry (
     id         TEXT    NOT NULL PRIMARY KEY,
     mal_id     INTEGER NOT NULL REFERENCES anime (mal_id),
     status     TEXT    NOT NULL
         CHECK (status IN ('WATCHING', 'COMPLETED', 'ON_HOLD', 'DROPPED', 'PLAN_TO_WATCH')),
+    progress   INTEGER NOT NULL DEFAULT 0,
+    score      INTEGER,
     updated_at INTEGER NOT NULL,
     deleted_at INTEGER,
     sync_state TEXT    NOT NULL DEFAULT 'PENDING'
@@ -16,7 +16,7 @@ CREATE INDEX list_entry_updated_idx ON list_entry (updated_at);
 
 selectActiveWithAnime:
 SELECT list_entry.id, list_entry.mal_id, list_entry.status,
-       list_entry.updated_at, list_entry.sync_state, anime.title, anime.title_en, anime.image_url
+       list_entry.progress, list_entry.score, anime.episodes, list_entry.updated_at, list_entry.sync_state, anime.title, anime.title_en, anime.image_url
 FROM list_entry
 JOIN anime ON anime.mal_id = list_entry.mal_id
 WHERE list_entry.deleted_at IS NULL
@@ -30,12 +30,12 @@ SELECT * FROM list_entry WHERE sync_state = 'PENDING' ORDER BY updated_at;
 
 updatePending:
 UPDATE list_entry
-SET status = :status, updated_at = :updatedAt, deleted_at = NULL, sync_state = 'PENDING'
+SET status = :status, progress = :progress, score = :score, updated_at = :updatedAt, deleted_at = NULL, sync_state = 'PENDING'
 WHERE mal_id = :malId;
 
 insertPending:
-INSERT OR IGNORE INTO list_entry (id, mal_id, status, updated_at, deleted_at, sync_state)
-VALUES (?, ?, ?, ?, NULL, 'PENDING');
+INSERT OR IGNORE INTO list_entry (id, mal_id, status, progress, score, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, NULL, 'PENDING');
 
 softDelete:
 UPDATE list_entry
@@ -53,12 +53,12 @@ UPDATE list_entry SET id = :newId WHERE id = :oldId;
 
 updatePulled:
 UPDATE list_entry
-SET status = :status, updated_at = :updatedAt, deleted_at = :deletedAt, sync_state = 'SYNCED'
+SET status = :status, progress = :progress, score = :score, updated_at = :updatedAt, deleted_at = :deletedAt, sync_state = 'SYNCED'
 WHERE id = :id;
 
 insertPulled:
-INSERT OR IGNORE INTO list_entry (id, mal_id, status, updated_at, deleted_at, sync_state)
-VALUES (?, ?, ?, ?, ?, 'SYNCED');
+INSERT OR IGNORE INTO list_entry (id, mal_id, status, progress, score, updated_at, deleted_at, sync_state)
+VALUES (?, ?, ?, ?, ?, ?, ?, 'SYNCED');
 
 countPending:
 SELECT COUNT(*) FROM list_entry WHERE sync_state = 'PENDING';

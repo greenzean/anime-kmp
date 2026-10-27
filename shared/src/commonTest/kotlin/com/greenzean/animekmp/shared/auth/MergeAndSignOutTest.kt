@@ -77,7 +77,7 @@ private class Device(
         at: Long,
     ) {
         clock.millis = at
-        library.setStatus(malId, status)
+        library.saveEntry(malId, status, 0, null)
     }
 
     fun statuses(): Map<Int, String> =

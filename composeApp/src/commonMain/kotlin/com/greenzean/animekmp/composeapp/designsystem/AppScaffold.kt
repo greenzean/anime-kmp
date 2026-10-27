@@ -7,6 +7,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -52,11 +54,13 @@ fun AppScaffold(
     modifier: Modifier = Modifier,
     onNavigateBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    snackbarHostState: SnackbarHostState? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         topBar = { AppTopBar(title = title, onNavigateBack = onNavigateBack, actions = actions) },
+        snackbarHost = { snackbarHostState?.let { SnackbarHost(it) } },
         content = content,
     )
 }

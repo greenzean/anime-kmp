@@ -20,8 +20,11 @@ import com.greenzean.animekmp.shared.details.presentation.DetailsViewModel
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
+import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
+import com.greenzean.animekmp.shared.library.domain.RemoveFromLibraryUseCase
+import com.greenzean.animekmp.shared.library.domain.RestoreEntryUseCase
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
 import com.greenzean.animekmp.shared.mal.data.malModule
@@ -124,6 +127,9 @@ class KoinGraphTest {
             DeleteAccountUseCase::class,
             ObserveLibraryUseCase::class,
             AddToLibraryUseCase::class,
+            EditEntryUseCase::class,
+            RemoveFromLibraryUseCase::class,
+            RestoreEntryUseCase::class,
             LibraryLocalDataSource::class,
             SyncEngine::class,
             SessionManager::class,

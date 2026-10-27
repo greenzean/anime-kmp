@@ -1,7 +1,9 @@
 package com.greenzean.animekmp.shared.library.presentation
 
 import app.cash.turbine.test
+import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
 import com.greenzean.animekmp.shared.library.domain.Anime
+import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
@@ -32,6 +34,7 @@ class LibraryViewModelTest {
     private val bebop = Anime(1, "Cowboy Bebop")
     private val local = FakeLibraryLocalDataSource()
     private val settings = FakeDisplaySettings()
+    private val scheduler = FakeSyncScheduler()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -39,7 +42,12 @@ class LibraryViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = LibraryViewModel(ObserveLibraryUseCase(local), ObserveTitleLanguageUseCase(settings))
+    private fun viewModel() =
+        LibraryViewModel(
+            ObserveLibraryUseCase(local),
+            ObserveTitleLanguageUseCase(settings),
+            EditEntryUseCase(local, scheduler),
+        )
 
     @Test
     fun entryClickEmitsNavigateToDetails() =
@@ -88,6 +96,9 @@ class LibraryViewModelTest {
                 "Frieren: Beyond Journey's End",
                 "https://img/52991.jpg",
                 WatchStatus.PLAN_TO_WATCH,
+                0,
+                null,
+                null,
                 SyncState.PENDING,
             ),
             entry,
@@ -136,27 +147,92 @@ class LibraryViewModelTest {
                 .syncState,
         )
     }
+
+    @Test
+    fun showsProgressScoreAndTotalEpisodes() {
+        local.put(frieren.copy(episodes = 28), SyncState.SYNCED, WatchStatus.WATCHING, progress = 5, score = 9)
+
+        val entry =
+            viewModel()
+                .state.value.entries
+                .single()
+
+        assertEquals(5, entry.progress)
+        assertEquals(28, entry.totalEpisodes)
+        assertEquals(9, entry.score)
+    }
+
+    @Test
+    fun incrementClickAddsOneEpisodeAndRequestsSync() =
+        runTest {
+            local.put(frieren.copy(episodes = 28), SyncState.SYNCED, WatchStatus.WATCHING, progress = 5)
+            val viewModel = viewModel()
+
+            viewModel.onAction(LibraryAction.OnIncrementClick(52991))
+            advanceUntilIdle()
+
+            assertEquals(SavedEntry(52991, WatchStatus.WATCHING, 6, null), local.savedEntries.single())
+            assertEquals(
+                6,
+                viewModel.state.value.entries
+                    .single()
+                    .progress,
+            )
+            assertEquals(1, scheduler.requests)
+        }
+
+    @Test
+    fun incrementingTheLastEpisodeCompletesTheEntry() =
+        runTest {
+            local.put(frieren.copy(episodes = 28), SyncState.SYNCED, WatchStatus.WATCHING, progress = 27)
+            val viewModel = viewModel()
+
+            viewModel.onAction(LibraryAction.OnIncrementClick(52991))
+            advanceUntilIdle()
+
+            val entry =
+                viewModel.state.value.entries
+                    .single()
+            assertEquals(WatchStatus.COMPLETED, entry.status)
+            assertEquals(28, entry.progress)
+        }
 }
+
+data class SavedEntry(
+    val malId: Int,
+    val status: WatchStatus,
+    val progress: Int,
+    val score: Int?,
+)
 
 class FakeLibraryLocalDataSource : LibraryLocalDataSource {
     val savedAnime = mutableListOf<Anime>()
+    val savedEntries = mutableListOf<SavedEntry>()
+    val removedMalIds = mutableListOf<Int>()
+    private val known = mutableMapOf<Int, Anime>()
     private val library = MutableStateFlow<List<LibraryEntry>>(emptyList())
 
     override fun observeLibrary(): Flow<List<LibraryEntry>> = library
 
+    override suspend fun getEntry(malId: Int): LibraryEntry? = library.value.firstOrNull { it.anime.malId == malId }
+
     override suspend fun saveAnime(anime: Anime) {
         savedAnime += anime
+        known[anime.malId] = anime
     }
 
-    override suspend fun setStatus(
+    override suspend fun saveEntry(
         malId: Int,
         status: WatchStatus,
+        progress: Int,
+        score: Int?,
     ) {
-        val anime = savedAnime.last { it.malId == malId }
-        put(anime, SyncState.PENDING, status)
+        savedEntries += SavedEntry(malId, status, progress, score)
+        put(known.getValue(malId), SyncState.PENDING, status, progress, score)
     }
 
     override suspend fun remove(malId: Int) {
+        removedMalIds += malId
         library.update { entries -> entries.filterNot { it.anime.malId == malId } }
     }
 
@@ -164,10 +240,21 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
         anime: Anime,
         syncState: SyncState,
         status: WatchStatus = WatchStatus.PLAN_TO_WATCH,
+        progress: Int = 0,
+        score: Int? = null,
     ) {
+        known[anime.malId] = anime
         library.update { entries ->
             entries.filterNot { it.anime.malId == anime.malId } +
-                LibraryEntry("entry-${anime.malId}", anime, status, Instant.fromEpochMilliseconds(0), syncState)
+                LibraryEntry(
+                    "entry-${anime.malId}",
+                    anime,
+                    status,
+                    progress,
+                    score,
+                    Instant.fromEpochMilliseconds(0),
+                    syncState,
+                )
         }
     }
 }

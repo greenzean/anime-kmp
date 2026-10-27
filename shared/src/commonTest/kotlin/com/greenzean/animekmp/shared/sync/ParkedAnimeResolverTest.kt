@@ -69,7 +69,17 @@ class ParkedAnimeResolverTest {
 
     private suspend fun park(malId: Int) {
         sync.applyPage(
-            listOf(SyncChange("entry-$malId", malId, WatchStatus.WATCHING, Instant.fromEpochMilliseconds(5), null)),
+            listOf(
+                SyncChange(
+                    "entry-$malId",
+                    malId,
+                    WatchStatus.WATCHING,
+                    0,
+                    null,
+                    Instant.fromEpochMilliseconds(5),
+                    null,
+                ),
+            ),
             "cursor",
         )
     }

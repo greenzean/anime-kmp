@@ -13,6 +13,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SqlDelightLibraryDataSourceTest {
@@ -25,9 +26,9 @@ class SqlDelightLibraryDataSourceTest {
     fun tearDown() = driver.close()
 
     @Test
-    fun setStatusForUnknownAnimeFailsForeignKey() =
+    fun saveEntryForUnknownAnimeFailsForeignKey() =
         runTest {
-            assertFailsWith<Exception> { repository.setStatus(999, WatchStatus.WATCHING) }
+            assertFailsWith<Exception> { repository.saveEntry(999, WatchStatus.WATCHING, 0, null) }
         }
 
     @Test
@@ -37,7 +38,7 @@ class SqlDelightLibraryDataSourceTest {
                 Anime(52991, "Sousou no Frieren", "Frieren: Beyond Journey's End", "https://img/52991.jpg"),
             )
 
-            repository.setStatus(52991, WatchStatus.PLAN_TO_WATCH)
+            repository.saveEntry(52991, WatchStatus.PLAN_TO_WATCH, 0, null)
 
             repository.observeLibrary().test {
                 val anime = awaitItem().single().anime
@@ -61,12 +62,12 @@ class SqlDelightLibraryDataSourceTest {
         }
 
     @Test
-    fun setStatusAddsPendingEntry() =
+    fun saveEntryAddsPendingEntry() =
         runTest {
             repository.observeLibrary().test {
                 assertTrue(awaitItem().isEmpty())
 
-                repository.setStatus(bebop, WatchStatus.WATCHING)
+                repository.saveEntry(bebop, WatchStatus.WATCHING, 0, null)
 
                 val entry = awaitItem().single()
                 assertEquals("Cowboy Bebop", entry.anime.title)
@@ -77,16 +78,16 @@ class SqlDelightLibraryDataSourceTest {
         }
 
     @Test
-    fun setStatusTwiceUpdatesTheSameEntry() =
+    fun saveEntryTwiceUpdatesTheSameEntry() =
         runTest {
-            repository.setStatus(bebop, WatchStatus.WATCHING)
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 0, null)
             val id =
                 db.listEntryQueries
                     .selectPending()
                     .executeAsOne()
                     .id
 
-            repository.setStatus(bebop, WatchStatus.COMPLETED)
+            repository.saveEntry(bebop, WatchStatus.COMPLETED, 0, null)
 
             val row = db.listEntryQueries.selectPending().executeAsOne()
             assertEquals(id, row.id)
@@ -96,7 +97,7 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun markSyncedClearsPendingUntilNextLocalWrite() =
         runTest {
-            repository.setStatus(bebop, WatchStatus.WATCHING)
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 0, null)
             val row = db.listEntryQueries.selectPending().executeAsOne()
 
             db.listEntryQueries.markSynced(row.id, row.updated_at)
@@ -107,7 +108,7 @@ class SqlDelightLibraryDataSourceTest {
                     .isEmpty(),
             )
 
-            repository.setStatus(bebop, WatchStatus.DROPPED)
+            repository.saveEntry(bebop, WatchStatus.DROPPED, 0, null)
             assertEquals(
                 1,
                 db.listEntryQueries
@@ -120,7 +121,7 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun removeHidesEntryButKeepsPendingTombstone() =
         runTest {
-            repository.setStatus(bebop, WatchStatus.WATCHING)
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 0, null)
 
             repository.remove(bebop)
 
@@ -135,10 +136,10 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun readdingAfterRemoveRevivesTheEntry() =
         runTest {
-            repository.setStatus(bebop, WatchStatus.WATCHING)
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 0, null)
             repository.remove(bebop)
 
-            repository.setStatus(bebop, WatchStatus.PLAN_TO_WATCH)
+            repository.saveEntry(bebop, WatchStatus.PLAN_TO_WATCH, 0, null)
 
             val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
             assertEquals(null, row.deleted_at)
@@ -148,7 +149,6 @@ class SqlDelightLibraryDataSourceTest {
     @Test
     fun invalidStatusIsRejectedByCheckConstraint() {
         assertFailsWith<Exception> {
-            // Plain INSERT: insertPending uses OR IGNORE, which would swallow the CHECK violation.
             driver.execute(
                 null,
                 "INSERT INTO list_entry (id, mal_id, status, updated_at) " +
@@ -157,4 +157,166 @@ class SqlDelightLibraryDataSourceTest {
             )
         }
     }
+
+    @Test
+    fun saveEntryStoresProgressAndScore() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 7, 9)
+
+            val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
+            assertEquals(7L, row.progress)
+            assertEquals(9L, row.score)
+            assertEquals("PENDING", row.sync_state)
+        }
+
+    @Test
+    fun saveEntryWithNoScoreStoresNull() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.PLAN_TO_WATCH, 0, null)
+
+            val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
+            assertEquals(0L, row.progress)
+            assertNull(row.score)
+        }
+
+    @Test
+    fun saveEntryAgainUpdatesProgressAndScoreInPlace() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 2, null)
+            val id =
+                db.listEntryQueries
+                    .selectByMalId(bebop.toLong())
+                    .executeAsOne()
+                    .id
+
+            repository.saveEntry(bebop, WatchStatus.COMPLETED, 26, 10)
+
+            val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
+            assertEquals(id, row.id)
+            assertEquals(26L, row.progress)
+            assertEquals(10L, row.score)
+            assertEquals("COMPLETED", row.status)
+        }
+
+    @Test
+    fun saveEntryClearsAPreviousScore() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 2, 8)
+
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 2, null)
+
+            assertNull(
+                db.listEntryQueries
+                    .selectByMalId(bebop.toLong())
+                    .executeAsOne()
+                    .score,
+            )
+        }
+
+    @Test
+    fun observeLibraryShowsProgressScoreAndEpisodes() =
+        runTest {
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", "Frieren", null, episodes = 28))
+            repository.saveEntry(52991, WatchStatus.WATCHING, 5, 9)
+
+            repository.observeLibrary().test {
+                val entry = awaitItem().single()
+                assertEquals(5, entry.progress)
+                assertEquals(9, entry.score)
+                assertEquals(28, entry.anime.episodes)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+    @Test
+    fun saveAnimeKeepsKnownEpisodesWhenTheNewCopyHasNone() =
+        runTest {
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", "Frieren", null, episodes = 28))
+
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", "Frieren", null, episodes = null))
+
+            assertEquals(
+                28L,
+                db.animeQueries
+                    .selectByMalId(52991)
+                    .executeAsOne()
+                    .episodes,
+            )
+        }
+
+    @Test
+    fun saveAnimeUpdatesEpisodesWhenTheyChange() =
+        runTest {
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", episodes = 12))
+
+            repository.saveAnime(Anime(52991, "Sousou no Frieren", episodes = 28))
+
+            assertEquals(
+                28L,
+                db.animeQueries
+                    .selectByMalId(52991)
+                    .executeAsOne()
+                    .episodes,
+            )
+        }
+
+    @Test
+    fun getEntryReturnsTheEntryWithItsAnime() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)
+
+            val entry = repository.getEntry(bebop)!!
+
+            assertEquals("Cowboy Bebop", entry.anime.title)
+            assertEquals(WatchStatus.WATCHING, entry.status)
+            assertEquals(3, entry.progress)
+            assertEquals(6, entry.score)
+            assertEquals(SyncState.PENDING, entry.syncState)
+        }
+
+    @Test
+    fun getEntryIsNullForAnimeNotInTheLibrary() =
+        runTest {
+            assertNull(repository.getEntry(bebop))
+        }
+
+    @Test
+    fun getEntryIsNullAfterRemove() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)
+
+            repository.remove(bebop)
+
+            assertNull(repository.getEntry(bebop))
+        }
+
+    @Test
+    fun restoreWithSaveEntryRevivesTheTombstoneWithItsValues() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)
+            val snapshot = repository.getEntry(bebop)!!
+            repository.remove(bebop)
+
+            repository.saveEntry(bebop, snapshot.status, snapshot.progress, snapshot.score)
+
+            val row = db.listEntryQueries.selectByMalId(bebop.toLong()).executeAsOne()
+            assertNull(row.deleted_at)
+            assertEquals(snapshot.id, row.id)
+            assertEquals(3L, row.progress)
+            assertEquals(6L, row.score)
+            assertEquals("PENDING", row.sync_state)
+            assertEquals(snapshot.status, repository.getEntry(bebop)!!.status)
+        }
+
+    @Test
+    fun removeKeepsProgressAndScoreOnTheTombstone() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)
+
+            repository.remove(bebop)
+
+            val tombstone = db.listEntryQueries.selectPending().executeAsOne()
+            assertEquals(3L, tombstone.progress)
+            assertEquals(6L, tombstone.score)
+        }
 }

@@ -7,7 +7,9 @@ import com.greenzean.animekmp.shared.details.presentation.AiringStatus
 import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
+import com.greenzean.animekmp.shared.details.presentation.EntryEditUi
 import com.greenzean.animekmp.shared.details.presentation.MalDate
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
 
 private val previewDetails =
     AnimeDetailsUi(
@@ -23,7 +25,12 @@ private val previewDetails =
         startDate = MalDate(2023, 9, 29),
     )
 
-private val loaded = DetailsState(previewDetails, inLibrary = false, status = DetailsStatus.Loaded)
+private val previewEntry =
+    EntryEditUi(WatchStatus.WATCHING, progress = 12, totalEpisodes = 28, score = 9, selectableEpisodes = 28)
+
+private val planEntry = previewEntry.copy(status = WatchStatus.PLAN_TO_WATCH, progress = 0, score = null)
+
+private val loaded = DetailsState(previewDetails, entry = null, status = DetailsStatus.Loaded)
 
 @Preview
 @Composable
@@ -35,11 +42,35 @@ private fun DetailsLoadedDarkPreview() = DetailsPreview(loaded, darkTheme = true
 
 @Preview
 @Composable
-private fun DetailsInLibraryLightPreview() = DetailsPreview(loaded.copy(inLibrary = true), darkTheme = false)
+private fun DetailsInLibraryLightPreview() = DetailsPreview(loaded.copy(entry = previewEntry), darkTheme = false)
 
 @Preview
 @Composable
-private fun DetailsInLibraryDarkPreview() = DetailsPreview(loaded.copy(inLibrary = true), darkTheme = true)
+private fun DetailsInLibraryDarkPreview() = DetailsPreview(loaded.copy(entry = previewEntry), darkTheme = true)
+
+@Preview
+@Composable
+private fun DetailsPlanToWatchLightPreview() = DetailsPreview(loaded.copy(entry = planEntry), darkTheme = false)
+
+@Preview
+@Composable
+private fun DetailsPlanToWatchDarkPreview() = DetailsPreview(loaded.copy(entry = planEntry), darkTheme = true)
+
+@Preview
+@Composable
+private fun DetailsOfflineEditorLightPreview() =
+    DetailsPreview(
+        DetailsState(entry = previewEntry.copy(totalEpisodes = null, score = null), status = DetailsStatus.Offline),
+        darkTheme = false,
+    )
+
+@Preview
+@Composable
+private fun DetailsOfflineEditorDarkPreview() =
+    DetailsPreview(
+        DetailsState(entry = previewEntry.copy(totalEpisodes = null, score = null), status = DetailsStatus.Offline),
+        darkTheme = true,
+    )
 
 @Preview
 @Composable

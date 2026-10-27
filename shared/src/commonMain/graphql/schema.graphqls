@@ -59,6 +59,8 @@ type ListEntryChange {
   deletedAt: Instant
   id: UUID!
   malId: Int!
+  progress: Int!
+  score: Int
   status: ListStatus!
   updatedAt: Instant!
 }
@@ -106,6 +108,8 @@ input ListEntryChangeInput {
   deletedAt: Instant
   id: UUID!
   malId: Int!
+  progress: Int!
+  score: Int
   status: ListStatus!
   updatedAt: Instant!
 }

@@ -28,6 +28,7 @@ class ScalarAdaptersTest {
                 id = "00000000-0000-0000-0000-0000000000aa",
                 malId = 1,
                 status = ListStatus.WATCHING,
+                progress = 0,
                 updatedAt = instant,
                 deletedAt = Optional.Absent,
             )
