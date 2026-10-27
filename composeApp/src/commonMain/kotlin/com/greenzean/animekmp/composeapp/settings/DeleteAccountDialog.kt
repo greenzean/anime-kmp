@@ -14,10 +14,16 @@ import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.spacing
-import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
-import com.greenzean.animekmp.shared.auth.domain.SignInError
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_cancel
+import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.delete_account_confirm_with_google
+import com.greenzean.animekmp.composeapp.generated.resources.delete_account_deleted
+import com.greenzean.animekmp.composeapp.generated.resources.delete_account_kept
+import com.greenzean.animekmp.composeapp.generated.resources.delete_account_permanent
+import com.greenzean.animekmp.composeapp.generated.resources.delete_account_title
 import com.greenzean.animekmp.shared.auth.presentation.DeletePrompt
-import com.greenzean.animekmp.shared.core.domain.DataError
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun DeleteAccountDialog(
@@ -38,21 +44,18 @@ fun DeleteAccountDialog(
 
 @Composable
 internal fun DeleteAccountTitle() {
-    Text("Delete account", modifier = Modifier.semantics { heading() })
+    Text(stringResource(Res.string.delete_account_title), modifier = Modifier.semantics { heading() })
 }
 
 @Composable
 internal fun DeleteAccountBody(prompt: DeletePrompt) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
-        Text("This permanently deletes your account and cannot be undone.")
-        Text(
-            "Deleted from our server: your account, your synced library and every sign-in session on all " +
-                "your devices.",
-        )
-        Text("Kept: the copy of your library on this device. You can keep using the app without an account.")
-        Text("You will confirm with Google to prove the account is yours.")
+        Text(stringResource(Res.string.delete_account_permanent))
+        Text(stringResource(Res.string.delete_account_deleted))
+        Text(stringResource(Res.string.delete_account_kept))
+        Text(stringResource(Res.string.delete_account_confirm_with_google))
         if (prompt is DeletePrompt.Failed) {
-            AppBanner(message = prompt.error.deleteMessage())
+            AppBanner(message = prompt.error.toDeleteUiText().asString())
         }
     }
 }
@@ -69,14 +72,17 @@ internal fun DeleteAccountActions(
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs),
     ) {
         AppButton(
-            text = if (prompt is DeletePrompt.Failed) "Try again" else "Delete account",
+            text =
+                stringResource(
+                    if (prompt is DeletePrompt.Failed) Res.string.action_try_again else Res.string.delete_account_title,
+                ),
             onClick = onConfirm,
             style = AppButtonStyle.Destructive,
             loading = deleting,
             modifier = Modifier.fillMaxWidth(),
         )
         AppButton(
-            text = "Cancel",
+            text = stringResource(Res.string.action_cancel),
             onClick = onDismiss,
             style = AppButtonStyle.Text,
             enabled = !deleting,
@@ -84,22 +90,3 @@ internal fun DeleteAccountActions(
         )
     }
 }
-
-private fun SignInError.deleteMessage(): String =
-    when (this) {
-        is SignInError.Google -> {
-            when (reason) {
-                GoogleSignInError.NO_CREDENTIAL -> "No Google account was found on this device."
-                GoogleSignInError.NOT_CONFIGURED -> "Sign-in is not set up in this build."
-                GoogleSignInError.CANCELLED, GoogleSignInError.UNKNOWN -> "Google sign-in failed. Try again."
-            }
-        }
-
-        is SignInError.Server -> {
-            when (reason) {
-                DataError.Network.NO_INTERNET, DataError.Network.REQUEST_TIMEOUT -> "No connection. Try again online."
-                DataError.Network.UNAUTHORIZED -> "Choose the Google account you signed in with and try again."
-                else -> "Could not reach the server. Try again later."
-            }
-        }
-    }

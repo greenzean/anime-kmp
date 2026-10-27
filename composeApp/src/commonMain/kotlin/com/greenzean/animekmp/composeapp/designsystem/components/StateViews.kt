@@ -23,8 +23,15 @@ import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_retry
+import com.greenzean.animekmp.composeapp.generated.resources.error_something_went_wrong
+import com.greenzean.animekmp.composeapp.generated.resources.preview_empty_action
+import com.greenzean.animekmp.composeapp.generated.resources.preview_empty_message
+import com.greenzean.animekmp.composeapp.generated.resources.preview_empty_title
+import com.greenzean.animekmp.composeapp.generated.resources.preview_error_message
+import org.jetbrains.compose.resources.stringResource
 
-/** Nothing to show yet. [actionText] and [onAction] add an optional call to action such as "Add anime". */
 @Composable
 fun EmptyState(
     title: String,
@@ -45,13 +52,12 @@ fun EmptyState(
     )
 }
 
-/** Something failed. The message is announced politely to screen readers; [onRetry] shows a retry button. */
 @Composable
 fun ErrorState(
     message: String,
     modifier: Modifier = Modifier,
-    title: String = "Something went wrong",
-    retryText: String = "Retry",
+    title: String = stringResource(Res.string.error_something_went_wrong),
+    retryText: String = stringResource(Res.string.action_retry),
     onRetry: (() -> Unit)? = null,
 ) {
     StateLayout(
@@ -114,12 +120,12 @@ private fun StateViewsPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             EmptyState(
-                title = "Nothing here yet",
-                message = "Add an anime to start your library.",
-                actionText = "Add anime",
+                title = stringResource(Res.string.preview_empty_title),
+                message = stringResource(Res.string.preview_empty_message),
+                actionText = stringResource(Res.string.preview_empty_action),
                 onAction = {},
             )
-            ErrorState(message = "Check your connection and try again.", onRetry = {})
+            ErrorState(message = stringResource(Res.string.preview_error_message), onRetry = {})
         }
     }
 }

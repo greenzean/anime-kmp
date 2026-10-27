@@ -15,11 +15,9 @@ data class Spacing(
     val xxl: Dp = 32.dp,
 )
 
-/** Smallest size a tappable control may have. */
 val MinTouchTarget: Dp = 48.dp
 
 private val AppSpacing = Spacing()
 
-/** Spacing tokens are constants, so they are read directly instead of through a CompositionLocal. */
 val MaterialTheme.spacing: Spacing
     get() = AppSpacing

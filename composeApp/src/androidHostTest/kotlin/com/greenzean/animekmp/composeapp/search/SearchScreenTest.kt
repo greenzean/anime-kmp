@@ -13,6 +13,18 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_retry
+import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.cd_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.cd_searching
+import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
+import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
+import com.greenzean.animekmp.composeapp.generated.resources.offline_title
+import com.greenzean.animekmp.composeapp.generated.resources.search_empty_message
+import com.greenzean.animekmp.composeapp.generated.resources.search_empty_title
+import com.greenzean.animekmp.composeapp.generated.resources.search_idle_title
+import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.search.presentation.SearchAction
 import com.greenzean.animekmp.shared.search.presentation.SearchResultUi
 import com.greenzean.animekmp.shared.search.presentation.SearchState
@@ -81,14 +93,14 @@ class SearchScreenTest {
     @Test
     fun idleInvitesTheUserToType() =
         runComposeUiTest {
-            SearchRobot(this, SearchState()).assertTextShown("Find an anime")
+            SearchRobot(this, SearchState()).assertTextShown(str(Res.string.search_idle_title))
         }
 
     @Test
     fun loadingShowsAProgressIndicatorWithALabel() =
         runComposeUiTest {
             SearchRobot(this, SearchState(query = "frieren", status = SearchStatus.Loading))
-                .assertDescriptionShown("Searching")
+                .assertDescriptionShown(str(Res.string.cd_searching))
         }
 
     @Test
@@ -101,16 +113,16 @@ class SearchScreenTest {
     fun emptyNamesTheQuery() =
         runComposeUiTest {
             SearchRobot(this, SearchState(query = " zzzz ", status = SearchStatus.Empty))
-                .assertTextShown("No results")
-                .assertTextShown("Nothing matched \"zzzz\". Try another title.")
+                .assertTextShown(str(Res.string.search_empty_title))
+                .assertTextShown(str(Res.string.search_empty_message, "zzzz"))
         }
 
     @Test
     fun offlineRetrySendsRetry() =
         runComposeUiTest {
             SearchRobot(this, SearchState(query = "frieren", status = SearchStatus.Offline))
-                .assertTextShown("You're offline")
-                .clickText("Try again")
+                .assertTextShown(str(Res.string.offline_title))
+                .clickText(str(Res.string.action_try_again))
                 .assertActions(SearchAction.OnRetryClick)
         }
 
@@ -118,8 +130,8 @@ class SearchScreenTest {
     fun errorRetrySendsRetry() =
         runComposeUiTest {
             SearchRobot(this, SearchState(query = "frieren", status = SearchStatus.Error))
-                .assertTextShown("MyAnimeList could not be reached. Try again.")
-                .clickText("Retry")
+                .assertTextShown(str(Res.string.error_mal_unreachable))
+                .clickText(str(Res.string.action_retry))
                 .assertActions(SearchAction.OnRetryClick)
         }
 
@@ -141,7 +153,7 @@ class SearchScreenTest {
     fun addSendsAddForThatResultOnly() =
         runComposeUiTest {
             SearchRobot(this, results)
-                .clickDescription("Add Frieren to library")
+                .clickDescription(str(Res.string.cd_add_to_library, "Frieren"))
                 .assertActions(SearchAction.OnAddClick(52991))
         }
 
@@ -149,14 +161,14 @@ class SearchScreenTest {
     fun resultsInTheLibraryShowInLibraryInsteadOfAdd() =
         runComposeUiTest {
             SearchRobot(this, results)
-                .assertTextShown("In library")
-                .assertDescriptionMissing("Add Steins;Gate to library")
-                .assertDescriptionShown("Add Frieren to library")
+                .assertTextShown(str(Res.string.label_in_library))
+                .assertDescriptionMissing(str(Res.string.cd_add_to_library, "Steins;Gate"))
+                .assertDescriptionShown(str(Res.string.cd_add_to_library, "Frieren"))
         }
 
     @Test
     fun addButtonMeetsTheMinimumTouchTarget() =
         runComposeUiTest {
-            SearchRobot(this, results).assertDescriptionIsTouchTarget("Add Frieren to library")
+            SearchRobot(this, results).assertDescriptionIsTouchTarget(str(Res.string.cd_add_to_library, "Frieren"))
         }
 }

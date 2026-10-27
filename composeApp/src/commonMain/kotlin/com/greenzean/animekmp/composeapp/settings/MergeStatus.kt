@@ -13,14 +13,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import com.greenzean.animekmp.composeapp.core.UiText
 import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppCard
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
+import com.greenzean.animekmp.composeapp.generated.resources.action_done
+import com.greenzean.animekmp.composeapp.generated.resources.action_retry
+import com.greenzean.animekmp.composeapp.generated.resources.merge_done_title
+import com.greenzean.animekmp.composeapp.generated.resources.merge_error_offline
+import com.greenzean.animekmp.composeapp.generated.resources.merge_error_server
+import com.greenzean.animekmp.composeapp.generated.resources.merge_error_unauthorized
+import com.greenzean.animekmp.composeapp.generated.resources.merge_merging_message
+import com.greenzean.animekmp.composeapp.generated.resources.merge_merging_title
+import com.greenzean.animekmp.composeapp.generated.resources.merge_rejected
+import com.greenzean.animekmp.composeapp.generated.resources.merge_sent
+import com.greenzean.animekmp.composeapp.generated.resources.merge_total
 import com.greenzean.animekmp.shared.auth.domain.MergeSummary
 import com.greenzean.animekmp.shared.auth.presentation.MergeState
 import com.greenzean.animekmp.shared.core.domain.DataError
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MergeStatus(
@@ -46,9 +62,9 @@ private fun MergingCard(modifier: Modifier = Modifier) {
         ) {
             CircularProgressIndicator(modifier = Modifier.size(MaterialTheme.spacing.xl))
             Column {
-                Text("Merging your library", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.merge_merging_title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Adding this device's anime to your account.",
+                    stringResource(Res.string.merge_merging_message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -64,22 +80,22 @@ private fun MergeSummaryCard(
     modifier: Modifier = Modifier,
 ) {
     AppCard(modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-        Text("Library merged", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.merge_done_title), style = MaterialTheme.typography.titleMedium)
         Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.xs)) {
             if (summary.sent > 0) {
-                SummaryLine("${summary.sent} ${summary.sent.entries()} from this device merged into your account.")
+                SummaryLine(pluralStringResource(Res.plurals.merge_sent, summary.sent, summary.sent))
             }
-            SummaryLine("Your library now has ${summary.total} anime.")
+            SummaryLine(stringResource(Res.string.merge_total, summary.total))
             if (summary.rejected > 0) {
                 Text(
-                    "${summary.rejected} ${summary.rejected.entries()} could not be added and stay on this device.",
+                    pluralStringResource(Res.plurals.merge_rejected, summary.rejected, summary.rejected),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
         }
         AppButton(
-            text = "Done",
+            text = stringResource(Res.string.action_done),
             onClick = onDismiss,
             style = AppButtonStyle.Tonal,
             modifier = Modifier.align(Alignment.End),
@@ -100,25 +116,29 @@ private fun MergeFailedBanner(
     modifier: Modifier = Modifier,
 ) {
     val canRetry = error != DataError.Network.UNAUTHORIZED
-    AppBanner(message = error.mergeMessage(), modifier = modifier) {
-        AppButton(text = "Dismiss", onClick = onDismiss, style = AppButtonStyle.Text)
-        if (canRetry) AppButton(text = "Retry", onClick = onRetry, style = AppButtonStyle.Text)
+    AppBanner(message = error.mergeMessage().asString(), modifier = modifier) {
+        AppButton(text = stringResource(Res.string.action_dismiss), onClick = onDismiss, style = AppButtonStyle.Text)
+        if (canRetry) {
+            AppButton(
+                text = stringResource(Res.string.action_retry),
+                onClick = onRetry,
+                style = AppButtonStyle.Text,
+            )
+        }
     }
 }
 
-private fun DataError.mergeMessage(): String =
+private fun DataError.mergeMessage(): UiText =
     when (this) {
         DataError.Network.UNAUTHORIZED -> {
-            "Your session ended. Sign in again to merge your library."
+            UiText.StringResource(Res.string.merge_error_unauthorized)
         }
 
         DataError.Network.NO_INTERNET, DataError.Network.REQUEST_TIMEOUT -> {
-            "You are signed in, but your library was not merged yet. It will finish when you are online."
+            UiText.StringResource(Res.string.merge_error_offline)
         }
 
         else -> {
-            "The server could not be reached. Your library will be merged later."
+            UiText.StringResource(Res.string.merge_error_server)
         }
     }
-
-private fun Int.entries() = if (this == 1) "entry" else "entries"

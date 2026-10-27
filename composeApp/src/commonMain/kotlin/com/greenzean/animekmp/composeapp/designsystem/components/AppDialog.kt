@@ -11,6 +11,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_cancel
+import com.greenzean.animekmp.composeapp.generated.resources.preview_choice_destructive
+import com.greenzean.animekmp.composeapp.generated.resources.preview_choice_primary
+import com.greenzean.animekmp.composeapp.generated.resources.preview_choice_text
+import com.greenzean.animekmp.composeapp.generated.resources.preview_choice_title
+import com.greenzean.animekmp.composeapp.generated.resources.preview_dialog_confirm
+import com.greenzean.animekmp.composeapp.generated.resources.preview_dialog_dismiss
+import com.greenzean.animekmp.composeapp.generated.resources.preview_dialog_text
+import com.greenzean.animekmp.composeapp.generated.resources.preview_dialog_title
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AppDialog(
@@ -110,11 +121,11 @@ private fun AppDialogDarkPreview() = AppDialogPreview(darkTheme = true)
 private fun AppDialogPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         AppDialog(
-            title = "Discard changes?",
-            text = "Your edits have not been saved to the library.",
-            confirmText = "Discard",
+            title = stringResource(Res.string.preview_dialog_title),
+            text = stringResource(Res.string.preview_dialog_text),
+            confirmText = stringResource(Res.string.preview_dialog_confirm),
             onConfirm = {},
-            dismissText = "Keep editing",
+            dismissText = stringResource(Res.string.preview_dialog_dismiss),
             onDismiss = {},
         )
     }
@@ -132,13 +143,13 @@ private fun AppChoiceDialogDarkPreview() = AppChoiceDialogPreview(darkTheme = tr
 private fun AppChoiceDialogPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         AppChoiceDialog(
-            title = "Remove this?",
-            text = "A safe choice, a destructive choice and a cancel.",
-            primaryText = "Keep",
+            title = stringResource(Res.string.preview_choice_title),
+            text = stringResource(Res.string.preview_choice_text),
+            primaryText = stringResource(Res.string.preview_choice_primary),
             onPrimary = {},
-            destructiveText = "Delete",
+            destructiveText = stringResource(Res.string.preview_choice_destructive),
             onDestructive = {},
-            dismissText = "Cancel",
+            dismissText = stringResource(Res.string.action_cancel),
             onDismiss = {},
         )
     }

@@ -17,6 +17,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
+import com.greenzean.animekmp.composeapp.generated.resources.action_retry
+import com.greenzean.animekmp.composeapp.generated.resources.preview_something_went_wrong
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AppBanner(
@@ -56,11 +61,11 @@ private fun AppBannerDarkPreview() = AppBannerPreview(darkTheme = true)
 private fun AppBannerPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         AppBanner(
-            message = "Something went wrong. Try again.",
+            message = stringResource(Res.string.preview_something_went_wrong),
             modifier = Modifier.padding(MaterialTheme.spacing.lg),
         ) {
-            AppButton(text = "Dismiss", onClick = {}, style = AppButtonStyle.Text)
-            AppButton(text = "Retry", onClick = {}, style = AppButtonStyle.Text)
+            AppButton(text = stringResource(Res.string.action_dismiss), onClick = {}, style = AppButtonStyle.Text)
+            AppButton(text = stringResource(Res.string.action_retry), onClick = {}, style = AppButtonStyle.Text)
         }
     }
 }

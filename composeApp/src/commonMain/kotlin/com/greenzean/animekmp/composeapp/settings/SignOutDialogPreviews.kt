@@ -12,7 +12,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.components.AppChoiceDialogActions
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_cancel
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_delete
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_keep
+import com.greenzean.animekmp.composeapp.generated.resources.sign_out_title
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
+import org.jetbrains.compose.resources.stringResource
 
 @Preview
 @Composable
@@ -57,14 +63,14 @@ private fun SignOutPreview(
                 modifier = Modifier.padding(MaterialTheme.spacing.xl),
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.lg),
             ) {
-                Text(SIGN_OUT_TITLE, style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(Res.string.sign_out_title), style = MaterialTheme.typography.headlineSmall)
                 Text(prompt.message())
                 AppChoiceDialogActions(
-                    primaryText = SIGN_OUT_KEEP,
+                    primaryText = stringResource(Res.string.sign_out_keep),
                     onPrimary = {},
-                    destructiveText = SIGN_OUT_DELETE,
+                    destructiveText = stringResource(Res.string.sign_out_delete),
                     onDestructive = {},
-                    dismissText = SIGN_OUT_CANCEL,
+                    dismissText = stringResource(Res.string.action_cancel),
                     onDismiss = {},
                     busy = prompt !is SignOutPrompt.Ready,
                 )

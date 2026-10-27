@@ -11,6 +11,16 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.cd_settings
+import com.greenzean.animekmp.composeapp.generated.resources.library_empty_message
+import com.greenzean.animekmp.composeapp.generated.resources.library_empty_title
+import com.greenzean.animekmp.composeapp.generated.resources.library_row_supporting
+import com.greenzean.animekmp.composeapp.generated.resources.sync_state_pending
+import com.greenzean.animekmp.composeapp.generated.resources.sync_state_synced
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_completed
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
+import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
@@ -45,12 +55,12 @@ private class LibraryRobot(
 
     fun clickText(text: String) = apply { test.onNodeWithText(text).performClick() }
 
-    fun clickSettings() = apply { test.onNodeWithContentDescription("Settings").performClick() }
+    fun clickSettings() = apply { test.onNodeWithContentDescription(str(Res.string.cd_settings)).performClick() }
 
     fun assertSettingsIsTouchTarget() =
         apply {
             test
-                .onNodeWithContentDescription("Settings")
+                .onNodeWithContentDescription(str(Res.string.cd_settings))
                 .assertTouchWidthIsEqualTo(48.dp)
                 .assertTouchHeightIsEqualTo(48.dp)
         }
@@ -77,16 +87,27 @@ class LibraryScreenTest {
     fun rowsShowStatusAndSyncState() =
         runComposeUiTest {
             LibraryRobot(this, library)
-                .assertTextShown("Plan to watch · Pending")
-                .assertTextShown("Completed · Synced")
+                .assertTextShown(
+                    str(
+                        Res.string.library_row_supporting,
+                        str(Res.string.watch_status_plan_to_watch),
+                        str(Res.string.sync_state_pending),
+                    ),
+                ).assertTextShown(
+                    str(
+                        Res.string.library_row_supporting,
+                        str(Res.string.watch_status_completed),
+                        str(Res.string.sync_state_synced),
+                    ),
+                )
         }
 
     @Test
     fun emptyLibraryExplainsHowToAddAnime() =
         runComposeUiTest {
             LibraryRobot(this, LibraryState())
-                .assertTextShown("Your library is empty")
-                .assertTextShown("Find an anime in the Search tab and add it here.")
+                .assertTextShown(str(Res.string.library_empty_title))
+                .assertTextShown(str(Res.string.library_empty_message))
         }
 
     @Test

@@ -26,13 +26,12 @@ import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.MinTouchTarget
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.cd_in_progress
 import com.greenzean.animekmp.composeapp.generated.resources.google_g
+import com.greenzean.animekmp.composeapp.generated.resources.sign_in_with_google
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
-private const val LABEL = "Sign in with Google"
-
-// Google branding guidelines: https://developers.google.com/identity/branding-guidelines
-// Fixed brand colors (light and dark variants), not part of the app color scheme.
 private val LightFill = Color(0xFFFFFFFF)
 private val LightStroke = Color(0xFF747775)
 private val LightText = Color(0xFF1F1F1F)
@@ -40,11 +39,6 @@ private val DarkFill = Color(0xFF131314)
 private val DarkStroke = Color(0xFF8E918F)
 private val DarkText = Color(0xFFE3E3E3)
 
-/**
- * "Sign in with Google" button following Google's branding: official "G" (aspect ratio kept),
- * fixed text, 12dp left of the logo, 10dp between logo and text, 12dp right of the text, 1dp stroke.
- * While [loading] it shows a spinner at the same size and ignores taps.
- */
 @Composable
 fun GoogleSignInButton(
     onClick: () -> Unit,
@@ -52,6 +46,8 @@ fun GoogleSignInButton(
     loading: Boolean = false,
     darkTheme: Boolean = isSystemInDarkTheme(),
 ) {
+    val label = stringResource(Res.string.sign_in_with_google)
+    val inProgress = stringResource(Res.string.cd_in_progress, label)
     val fill = if (darkTheme) DarkFill else LightFill
     val stroke = if (darkTheme) DarkStroke else LightStroke
     val text = if (darkTheme) DarkText else LightText
@@ -61,7 +57,7 @@ fun GoogleSignInButton(
         modifier =
             modifier
                 .defaultMinSize(minWidth = 220.dp, minHeight = MinTouchTarget)
-                .semantics { contentDescription = if (loading) "$LABEL, in progress" else LABEL },
+                .semantics { contentDescription = if (loading) inProgress else label },
         shape = MaterialTheme.shapes.extraLarge,
         colors =
             ButtonDefaults.buttonColors(
@@ -80,13 +76,12 @@ fun GoogleSignInButton(
             if (loading) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = text)
             } else {
-                // The "G" is 200x204 px; height 20dp with the ratio kept.
                 Image(
                     painter = painterResource(Res.drawable.google_g),
                     contentDescription = null,
                     modifier = Modifier.height(20.dp),
                 )
-                Text(LABEL, style = MaterialTheme.typography.labelLarge)
+                Text(label, style = MaterialTheme.typography.labelLarge)
             }
         }
     }

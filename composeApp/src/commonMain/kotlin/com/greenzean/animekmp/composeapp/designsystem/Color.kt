@@ -5,7 +5,6 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Indigo seed 0xFF3F51B5. Values match the design canvas (docs/design-system.md).
 internal val LightColors: ColorScheme =
     lightColorScheme(
         primary = Color(0xFF3F51B5),

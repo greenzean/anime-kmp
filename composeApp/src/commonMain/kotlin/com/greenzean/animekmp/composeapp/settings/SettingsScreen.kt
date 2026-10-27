@@ -36,15 +36,22 @@ import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppCard
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
-import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
-import com.greenzean.animekmp.shared.auth.domain.SignInError
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
+import com.greenzean.animekmp.composeapp.generated.resources.settings_account_heading
+import com.greenzean.animekmp.composeapp.generated.resources.settings_delete_account
+import com.greenzean.animekmp.composeapp.generated.resources.settings_sign_out
+import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_message
+import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_title
+import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_out_message
+import com.greenzean.animekmp.composeapp.generated.resources.settings_title
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountState
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
-import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsState
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -98,7 +105,11 @@ fun SettingsScreen(
             onDismiss = { onAction(AccountAction.OnDismissDeleteAccount) },
         )
     }
-    AppScaffold(title = "Settings", onNavigateBack = onNavigateBack, modifier = modifier) { padding ->
+    AppScaffold(
+        title = stringResource(Res.string.settings_title),
+        onNavigateBack = onNavigateBack,
+        modifier = modifier,
+    ) { padding ->
         Column(
             modifier =
                 Modifier
@@ -109,7 +120,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md),
         ) {
             Text(
-                "Account",
+                stringResource(Res.string.settings_account_heading),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.xs).semantics { heading() },
@@ -146,13 +157,13 @@ private fun SignedInAccount(
             modifier = Modifier.fillMaxWidth(),
         ) {
             AppButton(
-                text = "Sign out",
+                text = stringResource(Res.string.settings_sign_out),
                 onClick = onSignOut,
                 style = AppButtonStyle.Outlined,
                 modifier = Modifier.fillMaxWidth(),
             )
             AppButton(
-                text = "Delete account",
+                text = stringResource(Res.string.settings_delete_account),
                 onClick = onDeleteAccount,
                 style = AppButtonStyle.Destructive,
                 modifier = Modifier.fillMaxWidth(),
@@ -177,9 +188,9 @@ private fun AccountSummary() {
             Icon(AppIcons.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
         }
         Column {
-            Text("Signed in with Google", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.settings_signed_in_title), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Your library syncs to your account.",
+                stringResource(Res.string.settings_signed_in_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -194,7 +205,7 @@ private fun SignedOutAccount(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
         Text(
-            "An account is optional. Sign in to sync your library between your devices.",
+            stringResource(Res.string.settings_signed_out_message),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -203,7 +214,7 @@ private fun SignedOutAccount(
             loading = state.isSigningIn,
         )
         state.error?.let { error ->
-            ErrorBanner(message = error.message(), onDismiss = { onAction(AccountAction.OnDismissError) })
+            ErrorBanner(message = error.toUiText().asString(), onDismiss = { onAction(AccountAction.OnDismissError) })
         }
     }
 }
@@ -214,25 +225,6 @@ private fun ErrorBanner(
     onDismiss: () -> Unit,
 ) {
     AppBanner(message = message) {
-        AppButton(text = "Dismiss", onClick = onDismiss, style = AppButtonStyle.Text)
+        AppButton(text = stringResource(Res.string.action_dismiss), onClick = onDismiss, style = AppButtonStyle.Text)
     }
 }
-
-private fun SignInError.message(): String =
-    when (this) {
-        is SignInError.Google -> {
-            when (reason) {
-                GoogleSignInError.NO_CREDENTIAL -> "No Google account was found on this device."
-                GoogleSignInError.NOT_CONFIGURED -> "Sign-in is not set up in this build."
-                GoogleSignInError.CANCELLED, GoogleSignInError.UNKNOWN -> "Google sign-in failed. Try again."
-            }
-        }
-
-        is SignInError.Server -> {
-            when (reason) {
-                DataError.Network.NO_INTERNET, DataError.Network.REQUEST_TIMEOUT -> "No connection. Try again online."
-                DataError.Network.UNAUTHORIZED -> "The server did not accept this sign-in. Try again."
-                else -> "Could not reach the server. Try again later."
-            }
-        }
-    }

@@ -20,6 +20,19 @@ import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
 import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.cd_settings
+import com.greenzean.animekmp.composeapp.generated.resources.library_empty_message
+import com.greenzean.animekmp.composeapp.generated.resources.library_empty_title
+import com.greenzean.animekmp.composeapp.generated.resources.library_row_supporting
+import com.greenzean.animekmp.composeapp.generated.resources.library_title
+import com.greenzean.animekmp.composeapp.generated.resources.sync_state_pending
+import com.greenzean.animekmp.composeapp.generated.resources.sync_state_synced
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_completed
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_dropped
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_on_hold
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
+import com.greenzean.animekmp.composeapp.generated.resources.watch_status_watching
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
@@ -27,6 +40,8 @@ import com.greenzean.animekmp.shared.library.presentation.LibraryAction
 import com.greenzean.animekmp.shared.library.presentation.LibraryEvent
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -53,18 +68,18 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
 ) {
     AppScaffold(
-        title = "My library",
+        title = stringResource(Res.string.library_title),
         modifier = modifier,
         actions = {
             IconButton(onClick = { onAction(LibraryAction.OnSettingsClick) }) {
-                Icon(AppIcons.Settings, contentDescription = "Settings")
+                Icon(AppIcons.Settings, contentDescription = stringResource(Res.string.cd_settings))
             }
         },
     ) { padding ->
         if (state.entries.isEmpty()) {
             EmptyState(
-                title = "Your library is empty",
-                message = "Find an anime in the Search tab and add it here.",
+                title = stringResource(Res.string.library_empty_title),
+                message = stringResource(Res.string.library_empty_message),
                 modifier = Modifier.padding(padding).padding(MaterialTheme.spacing.lg),
             )
         } else {
@@ -83,7 +98,12 @@ private fun LibraryList(
         items(state.entries, key = { it.id }) { entry ->
             AppListRow(
                 title = entry.title,
-                supportingText = "${entry.status.label()} · ${entry.syncState.label()}",
+                supportingText =
+                    stringResource(
+                        Res.string.library_row_supporting,
+                        stringResource(entry.status.label()),
+                        stringResource(entry.syncState.label()),
+                    ),
                 onClick = { onAction(LibraryAction.OnEntryClick(entry.malId)) },
                 leading = { AnimeCover(entry.imageUrl) },
             )
@@ -91,19 +111,19 @@ private fun LibraryList(
     }
 }
 
-private fun WatchStatus.label(): String =
+private fun WatchStatus.label(): StringResource =
     when (this) {
-        WatchStatus.WATCHING -> "Watching"
-        WatchStatus.COMPLETED -> "Completed"
-        WatchStatus.ON_HOLD -> "On hold"
-        WatchStatus.DROPPED -> "Dropped"
-        WatchStatus.PLAN_TO_WATCH -> "Plan to watch"
+        WatchStatus.WATCHING -> Res.string.watch_status_watching
+        WatchStatus.COMPLETED -> Res.string.watch_status_completed
+        WatchStatus.ON_HOLD -> Res.string.watch_status_on_hold
+        WatchStatus.DROPPED -> Res.string.watch_status_dropped
+        WatchStatus.PLAN_TO_WATCH -> Res.string.watch_status_plan_to_watch
     }
 
-private fun SyncState.label(): String =
+private fun SyncState.label(): StringResource =
     when (this) {
-        SyncState.PENDING -> "Pending"
-        SyncState.SYNCED -> "Synced"
+        SyncState.PENDING -> Res.string.sync_state_pending
+        SyncState.SYNCED -> Res.string.sync_state_synced
     }
 
 @Preview

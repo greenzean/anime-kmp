@@ -17,7 +17,7 @@ fun MalAnimeDetails.toDetailsUi(language: TitleLanguage): AnimeDetailsUi {
         meanScore = summary.mean,
         genres = genres,
         airingStatus = summary.status.toAiringStatus(),
-        startDate = startDate?.let(::formatMalDate),
+        startDate = startDate?.let(::parseMalDate),
     )
 }
 
@@ -29,17 +29,10 @@ private fun String?.toAiringStatus(): AiringStatus? =
         else -> null
     }
 
-private val MonthNames =
-    listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
-
-internal fun formatMalDate(raw: String): String? {
+internal fun parseMalDate(raw: String): MalDate? {
     val parts = raw.split("-")
     val year = parts.getOrNull(0)?.toIntOrNull() ?: return null
-    val month = parts.getOrNull(1)?.toIntOrNull()?.let { MonthNames.getOrNull(it - 1) }
-    val day = parts.getOrNull(2)?.toIntOrNull()
-    return when {
-        month == null -> "$year"
-        day == null -> "$month $year"
-        else -> "$month $day, $year"
-    }
+    val month = parts.getOrNull(1)?.toIntOrNull()?.takeIf { it in 1..12 }
+    val day = if (month != null) parts.getOrNull(2)?.toIntOrNull() else null
+    return MalDate(year, month, day)
 }

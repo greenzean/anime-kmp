@@ -21,11 +21,38 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.action_retry
+import com.greenzean.animekmp.composeapp.generated.resources.action_try_again
+import com.greenzean.animekmp.composeapp.generated.resources.airing_finished
+import com.greenzean.animekmp.composeapp.generated.resources.airing_not_yet_aired
+import com.greenzean.animekmp.composeapp.generated.resources.cd_back
+import com.greenzean.animekmp.composeapp.generated.resources.cd_loading_details
+import com.greenzean.animekmp.composeapp.generated.resources.details_facts_separator
+import com.greenzean.animekmp.composeapp.generated.resources.details_mal_score
+import com.greenzean.animekmp.composeapp.generated.resources.details_no_synopsis
+import com.greenzean.animekmp.composeapp.generated.resources.details_not_found_message
+import com.greenzean.animekmp.composeapp.generated.resources.details_not_found_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_started
+import com.greenzean.animekmp.composeapp.generated.resources.details_starts
+import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_message
+import com.greenzean.animekmp.composeapp.generated.resources.details_throttled_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_title
+import com.greenzean.animekmp.composeapp.generated.resources.details_view_on_mal
+import com.greenzean.animekmp.composeapp.generated.resources.episodes_count
+import com.greenzean.animekmp.composeapp.generated.resources.error_mal_unreachable
+import com.greenzean.animekmp.composeapp.generated.resources.label_in_library
+import com.greenzean.animekmp.composeapp.generated.resources.offline_title
+import com.greenzean.animekmp.composeapp.plural
+import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.details.presentation.AiringStatus
 import com.greenzean.animekmp.shared.details.presentation.AnimeDetailsUi
 import com.greenzean.animekmp.shared.details.presentation.DetailsAction
 import com.greenzean.animekmp.shared.details.presentation.DetailsState
 import com.greenzean.animekmp.shared.details.presentation.DetailsStatus
+import com.greenzean.animekmp.shared.details.presentation.MalDate
+import org.jetbrains.compose.resources.StringResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import kotlin.test.Test
@@ -43,8 +70,23 @@ private val frieren =
         meanScore = 9.3,
         genres = listOf("Adventure", "Drama"),
         airingStatus = AiringStatus.Finished,
-        startDate = "Sep 29, 2023",
+        startDate = MalDate(2023, 9, 29),
     )
+
+private fun facts(
+    airing: StringResource,
+    episodes: Int,
+    startedLabel: String,
+    date: String,
+): String {
+    val start = if (startedLabel == "Starts") Res.string.details_starts else Res.string.details_started
+    return listOf(
+        str(airing),
+        plural(Res.plurals.episodes_count, episodes, episodes),
+        str(Res.string.details_mal_score, "9.3"),
+        str(start, date),
+    ).joinToString(str(Res.string.details_facts_separator))
+}
 
 private val loaded = DetailsState(frieren, inLibrary = false, status = DetailsStatus.Loaded)
 
@@ -80,7 +122,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(DetailsState())
 
-            onNodeWithContentDescription("Loading details").assertIsDisplayed()
+            onNodeWithContentDescription(str(Res.string.cd_loading_details)).assertIsDisplayed()
         }
 
     @Test
@@ -90,7 +132,7 @@ class DetailsScreenTest {
 
             onNodeWithText("Frieren: Beyond Journey's End").assertIsDisplayed()
             onNodeWithText("Sousou no Frieren").assertIsDisplayed()
-            onNodeWithText("Finished airing · 28 episodes · MAL score 9.3 · Started Sep 29, 2023").assertIsDisplayed()
+            onNodeWithText(facts(Res.string.airing_finished, 28, "Started", "Sep 29, 2023")).assertIsDisplayed()
             onNodeWithText("Adventure").assertIsDisplayed()
             onNodeWithText("Drama").assertIsDisplayed()
             onNodeWithText("After the party of heroes defeated the Demon King.").performScrollTo().assertIsDisplayed()
@@ -101,23 +143,35 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(loaded.copy(details = frieren.copy(episodes = 1)))
 
-            onNodeWithText("Finished airing · 1 episode · MAL score 9.3 · Started Sep 29, 2023").assertIsDisplayed()
+            onNodeWithText(facts(Res.string.airing_finished, 1, "Started", "Sep 29, 2023")).assertIsDisplayed()
         }
 
     @Test
     fun animeNotYetAiredSaysStartsInsteadOfStarted() =
         runComposeUiTest {
-            show(loaded.copy(details = frieren.copy(airingStatus = AiringStatus.NotYetAired, startDate = "Oct 2027")))
+            val upcoming = frieren.copy(airingStatus = AiringStatus.NotYetAired, startDate = MalDate(2027, 10, null))
+            show(loaded.copy(details = upcoming))
 
-            onNodeWithText("Not yet aired · 28 episodes · MAL score 9.3 · Starts Oct 2027").assertIsDisplayed()
+            onNodeWithText(facts(Res.string.airing_not_yet_aired, 28, "Starts", "Oct 2027")).assertIsDisplayed()
         }
+
+    @Test
+    fun dateWithOnlyAYearOrMonthAndYearIsFormatted() {
+        listOf(MalDate(2023, null, null) to "2023", MalDate(2023, 9, null) to "Sep 2023").forEach { (date, text) ->
+            runComposeUiTest {
+                show(loaded.copy(details = frieren.copy(startDate = date)))
+
+                onNodeWithText(str(Res.string.details_started, text), substring = true).assertIsDisplayed()
+            }
+        }
+    }
 
     @Test
     fun theTopBarTitleIsGenericSoTheAnimeTitleIsReadOnce() =
         runComposeUiTest {
             show(loaded)
 
-            onNodeWithText("Details").assertIsDisplayed()
+            onNodeWithText(str(Res.string.details_title)).assertIsDisplayed()
             onAllNodesWithText("Frieren: Beyond Journey's End").assertCountEquals(1)
         }
 
@@ -126,7 +180,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(loaded.copy(details = frieren.copy(synopsis = null)))
 
-            onNodeWithText("No synopsis available.").assertIsDisplayed()
+            onNodeWithText(str(Res.string.details_no_synopsis)).assertIsDisplayed()
         }
 
     @Test
@@ -147,13 +201,16 @@ class DetailsScreenTest {
             )
 
             onNodeWithText("Sousou no Frieren").assertDoesNotExist()
-            onNodeWithText("Finished airing", substring = true).assertDoesNotExist()
-            onNodeWithText("episodes", substring = true).assertDoesNotExist()
-            onNodeWithText("MAL score", substring = true).assertDoesNotExist()
+            onNodeWithText(str(Res.string.airing_finished), substring = true).assertDoesNotExist()
+            onNodeWithText(
+                plural(Res.plurals.episodes_count, 28, 28).substringAfter(" "),
+                substring = true,
+            ).assertDoesNotExist()
+            onNodeWithText(str(Res.string.details_mal_score, "").trim(), substring = true).assertDoesNotExist()
             onNodeWithText("Adventure").assertDoesNotExist()
             onNodeWithText("Drama").assertDoesNotExist()
-            onNodeWithText("Started", substring = true).assertDoesNotExist()
-            onNodeWithText("Starts", substring = true).assertDoesNotExist()
+            onNodeWithText(str(Res.string.details_started, "").trim(), substring = true).assertDoesNotExist()
+            onNodeWithText(str(Res.string.details_starts, "").trim(), substring = true).assertDoesNotExist()
         }
 
     @Test
@@ -161,7 +218,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             val screen = show(loaded)
 
-            onNodeWithText("Add to library").performScrollTo().performClick()
+            onNodeWithText(str(Res.string.action_add_to_library)).performScrollTo().performClick()
 
             assertEquals(listOf<DetailsAction>(DetailsAction.OnAddClick), screen.actions)
         }
@@ -171,8 +228,8 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(loaded.copy(inLibrary = true))
 
-            onNodeWithText("In library").assertIsDisplayed()
-            onNodeWithText("Add to library").assertDoesNotExist()
+            onNodeWithText(str(Res.string.label_in_library)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_add_to_library)).assertDoesNotExist()
         }
 
     @Test
@@ -180,7 +237,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(loaded)
 
-            onNodeWithText("In library").assertDoesNotExist()
+            onNodeWithText(str(Res.string.label_in_library)).assertDoesNotExist()
         }
 
     @Test
@@ -188,7 +245,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             val screen = show(loaded)
 
-            onNodeWithText("View on MyAnimeList").performScrollTo().performClick()
+            onNodeWithText(str(Res.string.details_view_on_mal)).performScrollTo().performClick()
 
             assertEquals(listOf("https://myanimelist.net/anime/52991"), screen.openedUrls)
         }
@@ -198,7 +255,7 @@ class DetailsScreenTest {
         runComposeUiTest {
             val screen = show(loaded)
 
-            onNodeWithContentDescription("Back").performClick()
+            onNodeWithContentDescription(str(Res.string.cd_back)).performClick()
 
             assertEquals(listOf<DetailsAction>(DetailsAction.OnBackClick), screen.actions)
         }
@@ -209,7 +266,7 @@ class DetailsScreenTest {
             runComposeUiTest {
                 show(DetailsState(details = frieren.takeIf { status == DetailsStatus.Loaded }, status = status))
 
-                onNodeWithContentDescription("Back").assertIsDisplayed()
+                onNodeWithContentDescription(str(Res.string.cd_back)).assertIsDisplayed()
             }
         }
     }
@@ -219,8 +276,33 @@ class DetailsScreenTest {
         runComposeUiTest {
             val screen = show(DetailsState(status = DetailsStatus.Offline))
 
-            onNodeWithText("You're offline").assertIsDisplayed()
-            onNodeWithText("Try again").performClick()
+            onNodeWithText(str(Res.string.offline_title)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_try_again)).performClick()
+
+            assertEquals(listOf<DetailsAction>(DetailsAction.OnRetryClick), screen.actions)
+        }
+
+    @Test
+    fun notFoundExplainsTheAnimeIsMissingWithoutRetry() =
+        runComposeUiTest {
+            show(DetailsState(status = DetailsStatus.NotFound))
+
+            onNodeWithText(str(Res.string.details_not_found_title)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.details_not_found_message)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_retry)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.action_try_again)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.error_mal_unreachable)).assertDoesNotExist()
+        }
+
+    @Test
+    fun throttledSaysMalIsBusyAndOffersRetry() =
+        runComposeUiTest {
+            val screen = show(DetailsState(status = DetailsStatus.Throttled))
+
+            onNodeWithText(str(Res.string.details_throttled_title)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.details_throttled_message)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.error_mal_unreachable)).assertDoesNotExist()
+            onNodeWithText(str(Res.string.action_retry)).performClick()
 
             assertEquals(listOf<DetailsAction>(DetailsAction.OnRetryClick), screen.actions)
         }
@@ -230,8 +312,8 @@ class DetailsScreenTest {
         runComposeUiTest {
             val screen = show(DetailsState(status = DetailsStatus.Error))
 
-            onNodeWithText("MyAnimeList could not be reached. Try again.").assertIsDisplayed()
-            onNodeWithText("Retry").performClick()
+            onNodeWithText(str(Res.string.error_mal_unreachable)).assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_retry)).performClick()
 
             assertEquals(listOf<DetailsAction>(DetailsAction.OnRetryClick), screen.actions)
         }
@@ -241,9 +323,11 @@ class DetailsScreenTest {
         runComposeUiTest {
             show(loaded)
 
-            onNodeWithText("Add to library").assertHeightIsAtLeast(48.dp)
-            onNodeWithText("View on MyAnimeList").assertHeightIsAtLeast(48.dp)
-            onNodeWithContentDescription("Back").assertTouchWidthIsEqualTo(48.dp).assertTouchHeightIsEqualTo(48.dp)
+            onNodeWithText(str(Res.string.action_add_to_library)).assertHeightIsAtLeast(48.dp)
+            onNodeWithText(str(Res.string.details_view_on_mal)).assertHeightIsAtLeast(48.dp)
+            onNodeWithContentDescription(
+                str(Res.string.cd_back),
+            ).assertTouchWidthIsEqualTo(48.dp).assertTouchHeightIsEqualTo(48.dp)
         }
 
     @Test
@@ -258,7 +342,7 @@ class DetailsScreenTest {
             }
 
             assertTrue(background.luminance() < 0.5f)
-            onNodeWithText("Add to library").assertIsDisplayed()
+            onNodeWithText(str(Res.string.action_add_to_library)).assertIsDisplayed()
             onNodeWithText("Sousou no Frieren").assertIsDisplayed()
         }
 

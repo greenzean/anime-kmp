@@ -24,6 +24,16 @@ import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.MinTouchTarget
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_add_to_library
+import com.greenzean.animekmp.composeapp.generated.resources.cd_in_progress
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_destructive
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_disabled
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_loading
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_outlined
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_text
+import com.greenzean.animekmp.composeapp.generated.resources.preview_button_tonal
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun AppButton(
@@ -34,10 +44,11 @@ fun AppButton(
     enabled: Boolean = true,
     loading: Boolean = false,
 ) {
+    val inProgress = stringResource(Res.string.cd_in_progress, text)
     val buttonModifier =
         modifier
             .defaultMinSize(minHeight = MinTouchTarget)
-            .semantics { if (loading) contentDescription = "$text, in progress" }
+            .semantics { if (loading) contentDescription = inProgress }
     val active = enabled && !loading
     val content: @Composable () -> Unit = { ButtonContent(text = text, loading = loading) }
     when (style) {
@@ -104,13 +115,17 @@ private fun AppButtonPreview(darkTheme: Boolean) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            AppButton("Add to library", onClick = {})
-            AppButton("Tonal", onClick = {}, style = AppButtonStyle.Tonal)
-            AppButton("Outlined", onClick = {}, style = AppButtonStyle.Outlined)
-            AppButton("Text", onClick = {}, style = AppButtonStyle.Text)
-            AppButton("Destructive", onClick = {}, style = AppButtonStyle.Destructive)
-            AppButton("Loading", onClick = {}, loading = true)
-            AppButton("Disabled", onClick = {}, enabled = false)
+            AppButton(stringResource(Res.string.action_add_to_library), onClick = {})
+            AppButton(stringResource(Res.string.preview_button_tonal), onClick = {}, style = AppButtonStyle.Tonal)
+            AppButton(stringResource(Res.string.preview_button_outlined), onClick = {}, style = AppButtonStyle.Outlined)
+            AppButton(stringResource(Res.string.preview_button_text), onClick = {}, style = AppButtonStyle.Text)
+            AppButton(
+                stringResource(Res.string.preview_button_destructive),
+                onClick = {},
+                style = AppButtonStyle.Destructive,
+            )
+            AppButton(stringResource(Res.string.preview_button_loading), onClick = {}, loading = true)
+            AppButton(stringResource(Res.string.preview_button_disabled), onClick = {}, enabled = false)
         }
     }
 }

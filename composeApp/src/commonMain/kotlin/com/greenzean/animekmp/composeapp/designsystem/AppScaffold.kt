@@ -14,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.cd_back
+import org.jetbrains.compose.resources.stringResource
 
-/** Top app bar with a title, an optional back action and an actions slot. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
@@ -36,7 +38,7 @@ fun AppTopBar(
         navigationIcon = {
             if (onNavigateBack != null) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(AppIcons.ArrowBack, contentDescription = "Back")
+                    Icon(AppIcons.ArrowBack, contentDescription = stringResource(Res.string.cd_back))
                 }
             }
         },
@@ -44,7 +46,6 @@ fun AppTopBar(
     )
 }
 
-/** Screen scaffold used by every screen: top bar plus content that receives the inner padding. */
 @Composable
 fun AppScaffold(
     title: String,

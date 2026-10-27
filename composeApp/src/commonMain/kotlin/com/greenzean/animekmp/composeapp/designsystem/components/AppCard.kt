@@ -15,8 +15,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.spacing
+import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.preview_card_body
+import com.greenzean.animekmp.composeapp.generated.resources.settings_account_heading
+import org.jetbrains.compose.resources.stringResource
 
-/** Groups related content on a surfaceContainer background with the large shape. */
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
@@ -47,8 +50,8 @@ private fun AppCardDarkPreview() = AppCardPreview(darkTheme = true)
 private fun AppCardPreview(darkTheme: Boolean) {
     ThemedPreview(darkTheme) {
         AppCard(modifier = Modifier.padding(16.dp)) {
-            Text("Account", style = MaterialTheme.typography.titleMedium)
-            Text("Cards group related content.", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(Res.string.settings_account_heading), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.preview_card_body), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
