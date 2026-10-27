@@ -48,9 +48,11 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
             implementation(libs.ktor.client.mock)
+            implementation(libs.koin.test)
         }
         getByName("androidHostTest").dependencies {
             implementation(libs.sqldelight.sqlite.driver)
+            implementation(libs.konsist)
         }
     }
 }

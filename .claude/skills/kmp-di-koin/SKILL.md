@@ -153,3 +153,5 @@ Use the `*Of` constructor-reference form by default. Only use the lambda form wh
 - [ ] Put any platform-only dependency in `platformModule`, not in a feature module
 - [ ] Use `koinViewModel()` in all Root composables
 - [ ] Verify the Koin module graph in a `commonTest` (`checkModules`/`verify`) once the feature is wired
+- [ ] Add the module to `KoinGraphTest` and `KoinVerifyTest` (`shared`), plus a stand-in for any new host-provided type; `:shared:allTests` fails when a definition or a view model dependency cannot be resolved
+- [ ] View models take use cases only: `ViewModelDependencyRuleTest` (Konsist) fails on a `*Repository` or `*DataSource` constructor parameter

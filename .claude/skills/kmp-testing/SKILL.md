@@ -270,3 +270,10 @@ class LibraryScreenTest {
 - Cover every screen's states, actions, accessibility labels and UX rules with `runComposeUiTest` tests (see View Tests).
 - Write E2E Compose tests for critical user flows.
 - Use the robot pattern for complex UI/E2E tests with multiple test cases or shared interaction sequences.
+
+---
+
+## Architecture and DI Checks (run in `:shared:allTests`)
+
+- **Koin graph:** `KoinGraphTest` (`commonTest`) builds the full module list with test stand-ins for the host-provided pieces (driver, stores, configs, `SyncScheduler`, authorizers) and resolves every view model and use case. `KoinVerifyTest` (`androidHostTest`) runs Koin `verify()` on the same list. A new module, view model or host-provided type must be added to both, or the build fails.
+- **View model rule:** `ViewModelDependencyRuleTest` (`androidHostTest`, Konsist, JVM only) fails when a `*ViewModel` constructor takes a `*Repository` or `*DataSource`. Add a use case instead.
