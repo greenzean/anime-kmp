@@ -18,6 +18,8 @@ kotlin {
                 .get()
                 .toInt()
         androidResources.enable = true
+
+        withHostTest { isIncludeAndroidResources = true }
     }
 
     if (providers.gradleProperty("animekmp.enableIos").get().toBoolean()) {
@@ -43,9 +45,26 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+        getByName("androidHostTest").dependencies {
+            implementation(libs.junit)
+            implementation(libs.robolectric)
+            implementation(libs.compose.ui.test.junit4)
+            implementation(libs.compose.ui.test.manifest)
+        }
     }
 }
 
 dependencies {
     androidRuntimeClasspath(compose.uiTooling)
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs(
+        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
 }

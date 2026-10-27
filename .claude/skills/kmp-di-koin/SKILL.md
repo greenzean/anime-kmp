@@ -9,7 +9,7 @@ description: |
 ## Principles
 
 - One Koin module per feature layer (`data`, `presentation`) — create it only if there are dependencies to provide. Modules are plain `val`s in the feature's package in `shared` (`shared.<feature>.data`, `shared.<feature>.presentation`).
-- Modules are assembled once, in `initKoin` (in `composeApp/commonMain`), and started from `androidApp`'s `Application` class. Feature packages never call `startKoin` themselves.
+- Modules are assembled once, in `initKoin` (in `shared/commonMain`, `shared/InitKoin.kt`), and started from `androidApp`'s `Application` class. Feature packages never call `startKoin` themselves.
 - Platform-only dependencies (Ktor engine, SQLDelight driver, secure token storage, Android `Context`) come from a `platformModule` (`expect`/`actual`), so everything else stays in `commonMain`.
 - In Compose Root composables, always inject ViewModels via `koinViewModel()`.
 
@@ -59,7 +59,7 @@ val coreDataModule = module {
 Register all modules in a shared `initKoin` entry point in common code, and expose platform-only dependencies through an `expect`/`actual` `platformModule`:
 
 ```kotlin
-// composeApp/commonMain — shared entry point, called by every platform
+// shared/commonMain — shared entry point, called by every platform
 fun initKoin(config: KoinAppDeclaration? = null) {
     startKoin {
         config?.invoke(this)

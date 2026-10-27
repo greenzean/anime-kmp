@@ -5,19 +5,21 @@ import androidx.lifecycle.viewModelScope
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
-import com.greenzean.animekmp.shared.mal.domain.MalAnimeRepository
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeSummary
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.toAnime
-import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
+import com.greenzean.animekmp.shared.search.domain.SearchAnimeUseCase
+import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import com.greenzean.animekmp.shared.settings.domain.pick
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -33,18 +35,20 @@ private data class SearchProgress(
 )
 
 class SearchViewModel(
-    private val repository: MalAnimeRepository,
+    private val searchAnime: SearchAnimeUseCase,
     observeLibrary: ObserveLibraryUseCase,
     private val addToLibrary: AddToLibraryUseCase,
-    displaySettings: DisplaySettings,
+    observeTitleLanguage: ObserveTitleLanguageUseCase,
 ) : ViewModel() {
     private val progress = MutableStateFlow(SearchProgress())
     private val libraryIds = observeLibrary().map { entries -> entries.mapTo(mutableSetOf()) { it.anime.malId } }
+    private val _events = Channel<SearchEvent>()
+    val events = _events.receiveAsFlow()
     private var searchJob: Job? = null
     private var loadMoreJob: Job? = null
 
     val state: StateFlow<SearchState> =
-        combine(progress, libraryIds, displaySettings.titleLanguage) { current, ids, language ->
+        combine(progress, libraryIds, observeTitleLanguage()) { current, ids, language ->
             SearchState(
                 query = current.query,
                 results =
@@ -58,10 +62,29 @@ class SearchViewModel(
 
     fun onAction(action: SearchAction) {
         when (action) {
-            is SearchAction.OnQueryChange -> onQueryChange(action.text)
-            is SearchAction.OnAddClick -> onAddClick(action.malId)
-            SearchAction.OnRetryClick -> startSearch(delayMs = 0)
-            SearchAction.OnLoadMore -> loadMore()
+            is SearchAction.OnQueryChange -> {
+                onQueryChange(action.text)
+            }
+
+            is SearchAction.OnAddClick -> {
+                onAddClick(action.malId)
+            }
+
+            is SearchAction.OnResultClick -> {
+                viewModelScope.launch {
+                    _events.send(
+                        SearchEvent.NavigateToDetails(action.malId),
+                    )
+                }
+            }
+
+            SearchAction.OnRetryClick -> {
+                startSearch(delayMs = 0)
+            }
+
+            SearchAction.OnLoadMore -> {
+                loadMore()
+            }
         }
     }
 
@@ -82,7 +105,7 @@ class SearchViewModel(
             viewModelScope.launch {
                 delay(delayMs)
                 progress.update { it.copy(found = emptyList(), status = SearchStatus.Loading, hasMore = false) }
-                when (val result = repository.search(query)) {
+                when (val result = searchAnime(query)) {
                     is Result.Success -> {
                         val page = result.data
                         progress.update {
@@ -114,7 +137,7 @@ class SearchViewModel(
         if (current.status != SearchStatus.Results || !current.hasMore || loadMoreJob?.isActive == true) return
         loadMoreJob =
             viewModelScope.launch {
-                val result = repository.search(current.query.trim(), pageStart = current.found.size)
+                val result = searchAnime(current.query.trim(), pageStart = current.found.size)
                 if (result is Result.Success) {
                     progress.update {
                         val known = it.found.mapTo(mutableSetOf()) { item -> item.malId }

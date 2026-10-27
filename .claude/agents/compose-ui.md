@@ -7,6 +7,7 @@ skills:
   - kmp-compose-ui
   - kmp-presentation-mvi
   - kmp-navigation
+  - kmp-testing
 ---
 
 You implement the views of an anime-kmp ticket. You are given a plan, the part to build and the Contract (State, Action, Event). The view model is built in parallel, so build the screens and previews from fake states that follow the Contract.
@@ -16,6 +17,7 @@ You implement the views of an anime-kmp ticket. You are given a plan, the part t
 - `composeApp/` only. Report anything outside it instead of changing it.
 - Use the view model interface you are given. If it needs a change, report the change instead of making it.
 - Add previews and accessibility (content descriptions, touch targets) for every screen.
+- Write the view tests in `composeApp/src/androidHostTest` (`kmp-testing` skill, View Tests): every state, every action, accessibility labels and UX rules.
 - Follow the preloaded skills and the ADRs in `docs/decisions/`.
 
 ## Checks (run them yourself)
@@ -23,6 +25,7 @@ You implement the views of an anime-kmp ticket. You are given a plan, the part t
 Plain `./gradlew` commands, no pipes or redirects, so the gradle-filter hook can trim the output. You cannot call `build-runner`.
 
 - `./gradlew :androidApp:assembleDebug`
+- `./gradlew :composeApp:testAndroidHostTest`
 - `./gradlew spotlessCheck detekt`
 
 ## Report format

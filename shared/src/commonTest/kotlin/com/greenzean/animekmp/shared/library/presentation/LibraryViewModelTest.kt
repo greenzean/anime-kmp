@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.shared.library.presentation
 
+import app.cash.turbine.test
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
@@ -7,6 +8,7 @@ import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
+import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -35,7 +39,33 @@ class LibraryViewModelTest {
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = LibraryViewModel(ObserveLibraryUseCase(local), settings)
+    private fun viewModel() = LibraryViewModel(ObserveLibraryUseCase(local), ObserveTitleLanguageUseCase(settings))
+
+    @Test
+    fun entryClickEmitsNavigateToDetails() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.events.test {
+                viewModel.onAction(LibraryAction.OnEntryClick(52991))
+                advanceUntilIdle()
+
+                assertEquals(LibraryEvent.NavigateToDetails(52991), awaitItem())
+            }
+        }
+
+    @Test
+    fun settingsClickEmitsNavigateToSettings() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.events.test {
+                viewModel.onAction(LibraryAction.OnSettingsClick)
+                advanceUntilIdle()
+
+                assertEquals(LibraryEvent.NavigateToSettings, awaitItem())
+            }
+        }
 
     @Test
     fun startsEmpty() {
@@ -54,6 +84,7 @@ class LibraryViewModelTest {
         assertEquals(
             EntryUi(
                 "entry-52991",
+                52991,
                 "Frieren: Beyond Journey's End",
                 "https://img/52991.jpg",
                 WatchStatus.PLAN_TO_WATCH,

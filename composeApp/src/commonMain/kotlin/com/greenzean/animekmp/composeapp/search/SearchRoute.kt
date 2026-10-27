@@ -9,8 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object SearchRoute
 
-fun NavGraphBuilder.searchGraph() {
+fun NavGraphBuilder.searchGraph(onNavigateToDetails: (Int) -> Unit) {
     composable<SearchRoute> {
-        SearchRoot(modifier = Modifier.safeDrawingPadding())
+        SearchRoot(onNavigateToDetails = onNavigateToDetails, modifier = Modifier.safeDrawingPadding())
     }
 }

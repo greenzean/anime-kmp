@@ -7,3 +7,10 @@ naming:
 style:
   UnusedPrivateFunction:
     ignoreAnnotated: ['Preview']
+  MagicNumber:
+    excludes: ['**/test/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**']
+
+complexity:
+  TooManyFunctions:
+    excludes: ['**/test/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidHostTest/**']
+

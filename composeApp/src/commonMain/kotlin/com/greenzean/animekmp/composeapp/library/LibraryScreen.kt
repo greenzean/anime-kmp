@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.greenzean.animekmp.composeapp.core.ObserveAsEvents
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.components.AnimeCover
@@ -22,6 +23,8 @@ import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
+import com.greenzean.animekmp.shared.library.presentation.LibraryAction
+import com.greenzean.animekmp.shared.library.presentation.LibraryEvent
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -29,24 +32,31 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun LibraryRoot(
     onNavigateToSettings: () -> Unit,
+    onNavigateToDetails: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    LibraryScreen(state = state, onNavigateToSettings = onNavigateToSettings, modifier = modifier)
+    ObserveAsEvents(viewModel.events) { event ->
+        when (event) {
+            is LibraryEvent.NavigateToDetails -> onNavigateToDetails(event.malId)
+            LibraryEvent.NavigateToSettings -> onNavigateToSettings()
+        }
+    }
+    LibraryScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
 }
 
 @Composable
 fun LibraryScreen(
     state: LibraryState,
-    onNavigateToSettings: () -> Unit,
+    onAction: (LibraryAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AppScaffold(
         title = "My library",
         modifier = modifier,
         actions = {
-            IconButton(onClick = onNavigateToSettings) {
+            IconButton(onClick = { onAction(LibraryAction.OnSettingsClick) }) {
                 Icon(AppIcons.Settings, contentDescription = "Settings")
             }
         },
@@ -58,7 +68,7 @@ fun LibraryScreen(
                 modifier = Modifier.padding(padding).padding(MaterialTheme.spacing.lg),
             )
         } else {
-            LibraryList(state = state, contentPadding = padding)
+            LibraryList(state = state, onAction = onAction, contentPadding = padding)
         }
     }
 }
@@ -66,6 +76,7 @@ fun LibraryScreen(
 @Composable
 private fun LibraryList(
     state: LibraryState,
+    onAction: (LibraryAction) -> Unit,
     contentPadding: PaddingValues,
 ) {
     LazyColumn(contentPadding = contentPadding) {
@@ -73,6 +84,7 @@ private fun LibraryList(
             AppListRow(
                 title = entry.title,
                 supportingText = "${entry.status.label()} · ${entry.syncState.label()}",
+                onClick = { onAction(LibraryAction.OnEntryClick(entry.malId)) },
                 leading = { AnimeCover(entry.imageUrl) },
             )
         }
@@ -115,14 +127,21 @@ private fun LibraryScreenPreview(
     darkTheme: Boolean,
     state: LibraryState = previewLibrary,
 ) {
-    ThemedPreview(darkTheme) { LibraryScreen(state = state, onNavigateToSettings = {}) }
+    ThemedPreview(darkTheme) { LibraryScreen(state = state, onAction = {}) }
 }
 
 private val previewLibrary =
     LibraryState(
         entries =
             listOf(
-                EntryUi("1", "Frieren: Beyond Journey's End", null, WatchStatus.PLAN_TO_WATCH, SyncState.PENDING),
-                EntryUi("2", "Steins;Gate", null, WatchStatus.COMPLETED, SyncState.SYNCED),
+                EntryUi(
+                    "1",
+                    52991,
+                    "Frieren: Beyond Journey's End",
+                    null,
+                    WatchStatus.PLAN_TO_WATCH,
+                    SyncState.PENDING,
+                ),
+                EntryUi("2", 9253, "Steins;Gate", null, WatchStatus.COMPLETED, SyncState.SYNCED),
             ),
     )

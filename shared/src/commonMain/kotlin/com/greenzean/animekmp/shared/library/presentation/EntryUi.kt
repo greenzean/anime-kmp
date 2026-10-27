@@ -8,6 +8,7 @@ import com.greenzean.animekmp.shared.settings.domain.pick
 
 data class EntryUi(
     val id: String,
+    val malId: Int,
     val title: String,
     val imageUrl: String?,
     val status: WatchStatus,
@@ -17,6 +18,7 @@ data class EntryUi(
 fun LibraryEntry.toEntryUi(language: TitleLanguage): EntryUi =
     EntryUi(
         id = id,
+        malId = anime.malId,
         title = language.pick(anime.title, anime.titleEn),
         imageUrl = anime.imageUrl,
         status = status,

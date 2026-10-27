@@ -18,7 +18,7 @@ This skill uses `Result<T, E>`, `DataError`, and the extension helpers defined i
 
 - The UI reads and writes **only the local database** (source of truth). It never waits on the network.
 - A sync component pushes local changes to the server and pulls remote changes into the local DB (Apollo operations).
-- Only the **server** talks to MyAnimeList. The client is untrusted and never calls MAL.
+- Only the **app** talks to MyAnimeList (ADR 0007). The server never calls MAL and stores no platform tokens or platform user data. The client is untrusted by our server.
 
 ---
 

@@ -8,6 +8,7 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 - **Split commits by layer:** when the user says to commit, make several commits (server, shared, composeApp, docs and config), each one building on its own, never one commit per ticket. Procedure: `commit-split` skill.
 - **Stage new files right away:** `git add` every file you create as soon as it exists, so it is tracked. Staging is not committing; the rule above still applies.
 - **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it.
+- **Load the matching skill before writing code of its kind:** `kmp-presentation-mvi` (view models, State/Action/Event, Root/Screen), `kmp-compose-ui`, `kmp-navigation`, `kmp-di-koin`, `kmp-data-layer`, `kmp-testing`. The plan names the skills it will use. Skills do not load by themselves; calling them is part of the work.
 - **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
 - **Design is part of every view ticket:** a ticket with `composeApp` screens includes their visual design in its acceptance criteria (previews in light and dark, accessibility, screenshots), built on the design system from M2-6a (#86), the only separate design ticket.
 - **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.
@@ -32,6 +33,7 @@ Details of where things live: `codebase-overview` skill.
 ## Code rules
 
 - Business logic, data layer, sync, API client and view models live in `commonMain`.
+- View models depend on use cases (`shared/<feature>/domain`), never on repositories or data sources.
 - Only multiplatform libraries (no Retrofit, Hilt; verify Room KMP support before using it).
 - Platform APIs (secure storage, notifications, file picker, connectivity, background work) go behind interfaces / `expect/actual`.
 - Local DB is the source of truth; the UI reads and writes only locally.
