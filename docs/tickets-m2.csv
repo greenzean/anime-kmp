@@ -152,6 +152,60 @@ M2-12,Anime details screen,feature,M2,"feature,phase-1",sonnet,"shared, composeA
 - Fields: cover, title in the chosen language with the other title below it, synopsis, episodes, airing status, MAL mean score, genres, start date.
 - A **View on MyAnimeList** link opens the browser, for attribution.
 - Offline with nothing cached: the same offline view as Search. Cache rules: the existing `MalAnimeRepository` ones."
+M2-12a,Check DI graph and view models,chore,M2,"chore,phase-1",sonnet,shared,"**Goal:** a wrong view model dependency or a broken Koin wiring fails the build, not the emulator check.
+
+**Where in the app:** nowhere (tests only).
+
+**Acceptance:**
+- A Koin graph test in `shared` builds the full module list and fails when a definition cannot be resolved, including the use cases and `parametersOf(malId)` for the details view model.
+- A Konsist rule fails the build when a `*ViewModel` constructor takes a `*Repository` or a `*DataSource`. It runs in `:shared:allTests`, so CI enforces it.
+- Break each check once and see it fail.
+- The `kmp-di-koin` and `kmp-testing` skills mention both checks.
+
+**Depends on:** M2-12.
+
+**Out of scope:** other architecture rules (package dependencies, naming).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Konsist is the tool for the view model rule; check library version and KMP support with a search before adding it.
+- The Koin test uses `verify()` or `checkModules` if it supports the KMP setup; otherwise a test that resolves every view model."
+M2-12b,Test Settings and For you screens,chore,M2,"chore,phase-1",sonnet,composeApp,"**Goal:** the Settings and For you screens have the same view tests as Search, Library and Details.
+
+**Where in the app:** nowhere (tests only).
+
+**Acceptance:**
+- `runComposeUiTest` tests in `composeApp/src/androidHostTest` for Settings (including the Display settings screen) and For you, as the `kmp-testing` skill describes: every state, every action, accessibility labels, UX rules, 48dp touch targets.
+- Robot pattern, one robot per screen.
+- Break each behavior once and see a test fail.
+- A bug found while testing is fixed in this ticket if it is small, otherwise a new ticket.
+
+**Depends on:** M2-12.
+
+**Out of scope:** new screens or visual changes.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Test the stateless `Screen(state, onAction)` composables only. Roots stay covered by the view model tests."
+M2-12c,Move texts to string resources,chore,M2,"chore,phase-1",sonnet,"shared, composeApp","**Goal:** all texts of the app come from string resources, so the app can be translated later and the code has no text literals.
+
+**Where in the app:** every screen (no visible change in English).
+
+**Contract:** `UiText` (a string resource with arguments, or a plain string) in `composeApp` (`shared` cannot reach the resources) for texts built from typed state, such as error messages. View models keep typed state: statuses, errors and a `MalDate` instead of formatted dates.
+
+**Acceptance:**
+- Every user-visible string in `composeApp` and in the `shared` mappers is a string resource, including `contentDescription` values.
+- View model states hold typed values (errors, statuses, `MalDate`) instead of formatted English strings; `composeApp` maps them to `UiText`.
+- The MAL ""not found"" and ""throttled"" errors on the details screen show their own clear message instead of the generic one.
+- `@Stable` or immutable collections on the states that hold lists, if the compiler report shows they are unstable.
+- Existing view and view model tests pass, reading the texts from the resources.
+- Emulator check of every screen; no visible change in English.
+
+**Depends on:** M2-12.
+
+**Out of scope:** adding a second language.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Compose Multiplatform resources (`Res.string`) are used, as the skill describes. Verify support in the current version before starting.
+- Do this before M2-13, so the new editing screens start with resources."
 M2-13,"Track status, episodes and score",feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","**Goal:** the user records where they are in an anime and what they think of it.
 
 **Where in the app:** on the details screen of an anime that is in the library: a status selector, episodes watched with + and −, a score from 1 to 10 (or none), and **Remove from library**. Library rows show status, progress, score and sync state.
