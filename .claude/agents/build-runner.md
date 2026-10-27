@@ -13,11 +13,10 @@ You run Gradle tasks for anime-kmp and report the result compactly.
 |---|---|
 | Lint | `./gradlew spotlessCheck detekt` |
 | Android build and app tests | `./gradlew :androidApp:assembleDebug :shared:allTests :composeApp:testAndroidHostTest` |
-| Server build and tests | `./gradlew :server:build` |
-| Regenerate the committed SDL | `./gradlew :server:test -PupdateSchema` |
+| Server compile | `./gradlew :server:compileKotlin` |
 
 - Run plain `./gradlew` commands with no pipes, redirects or `tail`, so the gradle-filter hook can trim the output.
-- `:server:build` needs Docker for Testcontainers. If Docker is not running, say so and stop; do not start it.
+- Never run `:server:test`, `:server:build` or `-PupdateSchema`: they need Docker, which runs on the mini PC. Server tests go through the user's `server-tests` command, which the main session runs. If you are asked for server tests, say so and stop.
 - On a failure, read the cause from `build/reports/tests/` (test reports) or the detekt reports under `build/reports/`.
 
 ## Report format

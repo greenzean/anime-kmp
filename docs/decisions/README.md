@@ -22,7 +22,7 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0001 | [AGP 9 module layout](0001-agp9-module-layout.md) | Accepted | M0-2 |
 | 0002 | [Lint and format tooling](0002-lint-tooling.md) | Accepted | M0-3 |
 | 0003 | [GraphQL server library](0003-graphql-server.md) | Accepted | M0-7 |
-| 0004 | [Client/server contract](0004-shared-contract.md) | Accepted | M0-8 |
+| 0004 | [Client/server contract](0004-shared-contract.md) | Accepted; routing order superseded by 0015 | M0-8 |
 | 0005 | [Postgres access, migrations and test database](0005-postgres-access.md) | Accepted | M1-3 |
 | 0006 | [Sync protocol](0006-sync-protocol.md) | Accepted | M1-5 |
 | 0007 | [Client-side platform access](0007-client-side-platform-access.md) | Accepted | M2 MVP brief |
@@ -33,3 +33,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0012 | [Sign-out revokes the refresh token](0012-sign-out-revokes-refresh-token.md) | Accepted | M2-29 |
 | 0013 | [Account deletion](0013-account-deletion.md) | Accepted | M2-8 |
 | 0014 | [The mini PC runs the server and deploys after passing tests](0014-mini-pc-runs-server-and-deploys.md) | Accepted | M2-30 |
+| 0015 | [Parts are built in parallel against a Contract](0015-parallel-parts-against-a-contract.md) | Accepted | M2-12d |

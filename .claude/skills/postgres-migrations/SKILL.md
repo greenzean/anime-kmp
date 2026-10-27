@@ -19,7 +19,7 @@ server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 ## Rules
 
 - Files are `V<n>__snake_case_description.sql`, numbers consecutive. One concern per migration.
-- Nothing is deployed before M2-25, so until the first deploy migrations may be squashed or edited (wipe the local database with `docker compose down -v`). After the first deploy, never edit a migration: fix forward with a new `V<n+1>`.
+- Nothing is deployed before M2-25, so until the first deploy migrations may be squashed or edited (reset the mini PC database with `server-deploy --reset`). After the first deploy, never edit a migration: fix forward with a new `V<n+1>`.
 - No seed data in migrations. The server keeps no anime catalog (ADR 0009); the app seeds its own debug catalog.
 - Tables: singular snake_case names, `TIMESTAMPTZ` for times, `UUID` ids for client-created rows (list entries), identity `BIGINT` for server-owned rows (anime), `TEXT` + `CHECK` for enums.
 - Sync tables carry `updated_at` and a nullable `deleted_at` tombstone. Rows are soft-deleted, never removed, so pulls can report deletions.
@@ -32,11 +32,12 @@ server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 
 ## Tests
 
-`MigrationTest` starts `postgres:18-alpine` with Testcontainers, runs `connectDatabase()` and asserts on the schema and constraints. It needs Docker locally; CI runners have it. Add a test for each new constraint.
+`MigrationTest` starts `postgres:18-alpine` with Testcontainers, runs `connectDatabase()` and asserts on the schema and constraints. It needs Docker, which runs on the mini PC: run it with `server-tests`, never locally; CI runners have Docker. Add a test for each new constraint.
 
 ## Verify
 
 ```
-./gradlew :server:test
-docker compose up -d postgres   # then run the server with DATABASE_* set and check flyway_schema_history
+server-tests :server:test
 ```
+
+When it passes it deploys the server and the database to the mini PC; check `flyway_schema_history` there.

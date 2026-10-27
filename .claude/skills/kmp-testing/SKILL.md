@@ -79,8 +79,8 @@ fun `clicking entry sends NavigateToDetail event`() = runTest {
 Prefer **fakes** (not mocks) for repository dependencies. A fake is a simple in-memory implementation:
  
 ```kotlin
-class FakeLibraryRepository : LibraryRepository {
-    private val entries = MutableStateFlow<List<LibraryEntry>>(emptyList())
+class FakeLibraryRepository(initial: List<LibraryEntry> = emptyList()) : LibraryRepository {
+    private val entries = MutableStateFlow(initial)
     var shouldReturnError = false
 
     override fun observeLibrary(): Flow<List<LibraryEntry>> = entries
@@ -105,13 +105,12 @@ A use case that only forwards to the repository is already covered by the ViewMo
 ```kotlin
 @Test
 fun `returns entries sorted by most recent`() = runTest {
-    val repo = FakeLibraryRepository().apply { /* seed out-of-order entries */ }
+    val repo = FakeLibraryRepository(initial = listOf(entry(updatedAt = 1), entry(updatedAt = 3), entry(updatedAt = 2)))
     val getLibrary = GetLibraryUseCase(repo)
 
     val result = getLibrary()
 
-    assertTrue(result is Result.Success)
-    // assert ordering on (result as Result.Success).data
+    assertEquals(listOf(3L, 2L, 1L), (result as Result.Success).data.map { it.updatedAt })
 }
 ```
  
@@ -143,7 +142,6 @@ class ImageCompressor(private val ioDispatcher: CoroutineDispatcher = Dispatcher
     suspend fun compress(bytes: ByteArray): ByteArray = withContext(ioDispatcher) { ... }
 }
  
-// In test:
 val compressor = ImageCompressor(ioDispatcher = UnconfinedTestDispatcher())
 ```
  
@@ -197,7 +195,6 @@ For complex end-to-end or multi-step UI tests, use the **Robot Pattern** to sepa
 Every robot function returns `this` so calls can be chained like a builder:
 
 ```kotlin
-// Robot class — owns all UI interactions for the screen
 class LibraryRobot(private val composeTestRule: ComposeUiTest) {
 
     fun setContent(

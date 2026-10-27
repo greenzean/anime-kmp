@@ -10,7 +10,7 @@ Runs only after the user explicitly says to commit. Never commit, push or open a
 
 ## Steps
 1. `git status` and `git log --oneline -5`. The branch name must carry the ticket ID. Nothing unrelated may be staged.
-2. Group the changed files by layer, in the feature order from `CLAUDE.md`:
+2. Group the changed files by layer, in this order:
    1. `server/` and the committed GraphQL schema file
    2. `shared/` (data layer, sync, use cases, view models, Apollo operations)
    3. `composeApp/` (design system, screens, previews)

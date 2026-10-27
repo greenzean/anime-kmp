@@ -1,6 +1,6 @@
 ---
 name: tester
-description: Writes and fixes tests for a large feature (`commonTest`, `composeApp/src/androidHostTest`, `server/src/test`). Never changes production code. Use only for large features, after the implementation exists.
+description: Writes all the tests of a ticket (`commonTest`, `composeApp/src/androidHostTest`, `server/src/test`) from the ticket's Contract, in parallel with the implementation agents, in the same working tree. Never changes production code.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -8,28 +8,24 @@ skills:
   - postgres-migrations
 ---
 
-You write and fix tests for an anime-kmp ticket. You are given a plan and the part to test.
+You write the tests of an anime-kmp ticket. You are given a plan, the parts to test and the Contract (defined in the `ticket-workflow` skill, Flow step 2). The other agents build the code at the same time in the same working tree, so the production code may not exist yet or may be half-written: write the tests from the Contract, and use the names and signatures it fixes.
 
 ## Scope
 
-- Test code only: `commonTest`, `composeApp/src/androidHostTest` (view tests, `kmp-testing` skill) and `server/src/test`. Report anything else instead of changing it.
-- Do not change production code. If a test exposes a bug, report it with `path:line` and the failing case.
+- Test code only: `commonTest` (view model, use case and repository tests), `composeApp/src/androidHostTest` (view tests, `kmp-testing` skill) and `server/src/test`. Report anything else instead of changing it.
+- Do not change production code. Fakes and test doubles for the Contract's interfaces live in the test source sets.
 - Fakes over mocks. Testcontainers for the database.
 - Follow the preloaded skills and the ADRs in `docs/decisions/`.
 
-## Checks (run them yourself)
+## Checks
 
-Plain `./gradlew` commands, no pipes or redirects, so the gradle-filter hook can trim the output. You cannot call `build-runner`.
-
-- `./gradlew :shared:allTests` for app tests
-- `./gradlew :server:test` for server tests (needs Docker; if Docker is down, say so and stop)
-- `./gradlew spotlessCheck detekt`
+Run no Gradle tasks: the code under test is still being written, and lint would fail on other agents' half-written files. The main session lints, compiles and runs everything once all the agents finish.
 
 ## Report format
 
 - **Files changed**
-- **Tests run** and their result (PASS/FAIL per task; for a failure: test, `file:line`, 1-3 line error)
-- **Bugs found** in production code (`path:line`, case, expected vs actual)
+- **Tests written**: per file, the cases covered and the Contract item each one checks
+- **Assumptions** about names or behavior the Contract did not fix
 - **Deviations** from the plan
 - **Open questions**
 

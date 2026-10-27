@@ -1,6 +1,6 @@
 ---
 name: build-ci
-description: Changes build and CI configuration: version catalog, Gradle files, GitHub workflows, detekt, editorconfig, Docker files. Use only for large features or build changes, with a plan and the part to build.
+description: Changes build and CI configuration: version catalog, Gradle files, GitHub workflows, detekt, editorconfig, Docker files. Started in parallel with the other parts' agents, in the same working tree, touching only its own part, when a ticket changes the build.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
 skills:
@@ -16,18 +16,15 @@ You change the build and CI setup of anime-kmp. You are given a plan and the par
 - No secrets in workflows. Fork PRs get no secrets.
 - Follow the preloaded skill and the ADRs in `docs/decisions/`.
 
-## Checks (run them yourself)
+## Checks
 
-Plain `./gradlew` commands, no pipes or redirects, so the gradle-filter hook can trim the output. You cannot call `build-runner`.
+Run no Gradle tasks, and never `server-tests`, `server-deploy` or Docker. The other agents are writing at the same time, so a build, lint or test run now would fail on their half-written files and tell you nothing. The main session lints, compiles and runs everything once all the agents finish.
 
-- `./gradlew spotlessCheck detekt`
-- `./gradlew :androidApp:assembleDebug :shared:allTests` after Gradle or catalog changes
-- `./gradlew :server:build` when the server build changed (needs Docker; if Docker is down, say so and stop)
+Check version changes against their sources instead, as described in Scope.
 
 ## Report format
 
 - **Files changed**
-- **Tests run** and their result (PASS/FAIL per task; for a failure: task, `file:line`, 1-3 line error)
 - **Version changes**: old, new, source URL, release date
 - **Deviations** from the plan
 - **Open questions**

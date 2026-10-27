@@ -4,21 +4,14 @@ Offline-first anime tracker. Kotlin Multiplatform + Compose Multiplatform app, K
 
 ## Working rules (always apply)
 
-- **No commits, pushes, or PRs** until the user explicitly says so.
-- **Split commits by layer:** when the user says to commit, make several commits (server, shared, composeApp, docs and config), each one building on its own, never one commit per ticket. Procedure: `commit-split` skill.
-- **Stage new files right away:** `git add` every file you create as soon as it exists, so it is tracked. Staging is not committing; the rule above still applies.
-- **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it.
-- **Load the matching skill before writing code of its kind:** `kmp-presentation-mvi` (view models, State/Action/Event, Root/Screen), `kmp-compose-ui`, `kmp-navigation`, `kmp-di-koin`, `kmp-data-layer`, `kmp-testing`. The plan names the skills it will use. Skills do not load by themselves; calling them is part of the work.
-- **No attribution lines** in commit messages or PR descriptions (no `Co-Authored-By`, no "Generated with Claude Code").
-- **Design is part of every view ticket:** a ticket with `composeApp` screens includes their visual design in its acceptance criteria (previews in light and dark, accessibility, screenshots), built on the design system from M2-6a (#86), the only separate design ticket.
-- **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Workflow, template and Definition of Done: `ticket-workflow` skill.
-- **Every feature ticket ends usable:** the user can reach it from the app (a button, a tab or a Settings row). No API-only or view-only tickets: the API and the view that shows it are one ticket. Tickets are numbered in work order and depend only on lower numbers.
-- **Plain ticket titles:** say what the user can do, in at most 6 words (for example "Connect your MAL account").
-- **Questions are answered when a ticket is written,** in its Decisions section. When a ticket starts, ask only if the code contradicts the ticket.
-- **Models:** default is `sonnet` (plans and executes small tickets). Tickets labeled `opus-plan` are planned with `/model opusplan` (Opus in plan mode, Sonnet after approval). Switch at the start of a session, not mid-session.
-- **Where things run:** only the Android app, the emulator and Gradle builds run on the Mac. The server, PostgreSQL and Docker (compose, Testcontainers) run on the mini PC, never on the Mac: do not start Docker Desktop or `docker compose` locally. Docker is denied for Claude Code on the Mac. Server tests: `server-tests` (script outside the repo); when they pass it runs `server-deploy`, which deploys the server and DB to the mini PC without asking (ADR 0014); no deploy when the tests fail or were not run. The host and address details stay out of the repo (it is public).
+- **No commits, pushes, or PRs** until the user explicitly says so. Then follow the `commit-split` skill: several commits by layer, each one building on its own. No attribution lines.
+- **Stage new files right away:** `git add` every file you create as soon as it exists. Staging is not committing.
+- **Plan first, then execute.** Every task gets a plan; execution starts only after the user approves it. The plan names the skills it will use and, for a ticket, the parts it touches and the Contract.
+- **Load the matching skill before writing code of its kind:** `kmp-presentation-mvi`, `kmp-compose-ui`, `kmp-navigation`, `kmp-di-koin`, `kmp-data-layer`, `kmp-testing`. Skills do not load by themselves.
+- **One ticket per session.** Tickets are GitHub issues in `greenzean/anime-kmp`. Load the `ticket-workflow` skill when planning or starting a ticket: template, models, the Contract, the parallel agents (one per touched part, plus `tester`) and the Definition of Done.
+- **Where things run:** only the Android app, the emulator and Gradle builds run on the Mac. The server, PostgreSQL and Docker (compose, Testcontainers) run on the mini PC: never start Docker Desktop or `docker compose` locally; Docker is denied for Claude Code. Server tests: `server-tests`, which runs `server-deploy` when they pass, without asking (ADR 0014). Host and address details stay out of the repo (it is public).
 - Verify versions, prices, API terms and library support with a search; say what could not be verified.
-- Keep prompts and changes scoped to the ticket (touch only the modules it names).
+- Keep changes scoped to the ticket (touch only the modules it names).
 
 ## Modules
 
@@ -41,20 +34,6 @@ Details of where things live: `codebase-overview` skill.
 - Treat the client as untrusted on our server. Never commit secrets (`.env`, keystores).
 - **No comments in code:** no KDoc, no `//` or `/* */`, no SQL `--`. Names and tests carry the meaning; reasons go in ADRs and PR text. When you touch a file, remove the comments that are already in it. This overrides matching the comment style of surrounding code.
 
-## Delegation
-
-The main session is the orchestrator and implements tickets itself. Subagents start cold and cost tokens, so use them only for:
-
-- `build-runner`: Gradle builds and tests (reports only failures).
-- `Explore`: codebase search.
-- `researcher`: versions, prices, API terms.
-- `docs`: formatting ADRs, README sections, ticket text from decisions already made.
-- `reviewer`, `security-reviewer`: **only when the user asks.**
-- `shared-kmp` and `compose-ui` **in parallel** for every ticket that touches both `shared` and `composeApp`: the plan fixes the ticket's Contract (State, Action, Event) first, then `shared-kmp` builds the API, data and view model while `compose-ui` builds the screens and previews from fake states. The main session wires DI and navigation and checks the result.
-- Other area agents (`server`, `tester`, `build-ci`) only for large features. Area agents run their own Gradle checks, because subagents cannot call `build-runner`.
-
-Subagents never delegate further. Order inside a ticket: server schema and SDL first (when the server changes), then app back end and views in parallel, then tests.
-
 ## Token habits
 
-Default effort is medium. Prefer `gh` over a GitHub MCP server. `/clear` between unrelated tickets.
+Default effort is medium. Prefer `gh` over a GitHub MCP server.

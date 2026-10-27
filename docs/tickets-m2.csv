@@ -206,6 +206,29 @@ M2-12c,Move texts to string resources,chore,M2,"chore,phase-1",sonnet,"shared, c
 **Decisions** (made when the ticket was written; ask only if the code contradicts them):
 - Compose Multiplatform resources (`Res.string`) are used, as the skill describes. Verify support in the current version before starting.
 - Do this before M2-13, so the new editing screens start with resources."
+M2-12d,Clean up the Claude setup,chore,M2,"chore,phase-1",sonnet,docs and config,"**Goal:** the Claude Code setup (CLAUDE.md, skills, agents, hooks, settings) has one source of truth per rule and no conflicts.
+
+**Where in the app:** nowhere.
+
+**Contract:** none. Parts touched: docs and config only.
+
+**Acceptance:**
+- CLAUDE.md keeps only the always-on rules; ticket flow, models, delegation and Definition of Done live in `ticket-workflow`.
+- Parallel delegation: one agent per touched part started in one batch in the same working tree, `tester` writes all tests, the Contract is written to disk first, no server-first order.
+- No Docker instructions for the Mac in agents or skills.
+- No comments in skill code samples.
+- The project settings no longer pin a model; the Gradle hook shows `BUILD SUCCESSFUL`.
+- `android-*` skills moved out of the user-level folders into the koalaboox project.
+- The skill-reminder hook is removed.
+
+**Depends on:** M2-12c.
+
+**Out of scope:** application code.
+
+**Decisions:**
+- SDL change is written once by the main session when the plan is approved; the drift test in `server-tests` checks the server code after all the agents finish.
+- Agents never run `server-tests` or `server-deploy`; the main session does after all the agents finish.
+- No worktrees: the no-commit rule means a worktree would not see the uncommitted Contract files."
 M2-13,"Track status, episodes and score",feature,M2,"feature,opus-plan,phase-1",opusplan,"server, shared, composeApp","**Goal:** the user records where they are in an anime and what they think of it.
 
 **Where in the app:** on the details screen of an anime that is in the library: a status selector, episodes watched with + and −, a score from 1 to 10 (or none), and **Remove from library**. Library rows show status, progress, score and sync state.
