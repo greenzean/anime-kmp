@@ -6,6 +6,8 @@ import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.library.data.SharedPreferencesLibrarySettings
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.mal.data.KeystoreMalTokenStore
+import com.greenzean.animekmp.shared.mal.data.SharedPreferencesMalAccountStore
+import com.greenzean.animekmp.shared.mal.domain.MalAccountStore
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
 import com.greenzean.animekmp.shared.settings.data.SharedPreferencesDisplaySettings
@@ -21,6 +23,7 @@ actual val platformModule =
         single<LibrarySettings> { SharedPreferencesLibrarySettings(androidContext()) }
         single<SessionStore> { KeystoreSessionStore(androidContext()) }
         single<MalTokenStore> { KeystoreMalTokenStore(androidContext()) }
+        single<MalAccountStore> { SharedPreferencesMalAccountStore(androidContext()) }
         single<RandomBytes> {
             val random = SecureRandom()
             RandomBytes { size -> ByteArray(size).also(random::nextBytes) }

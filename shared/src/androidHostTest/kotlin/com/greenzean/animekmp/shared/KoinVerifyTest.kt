@@ -10,10 +10,12 @@ import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
 import com.greenzean.animekmp.shared.mal.data.malModule
+import com.greenzean.animekmp.shared.mal.domain.MalAccountStore
 import com.greenzean.animekmp.shared.mal.domain.MalAuthorizer
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
+import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
 import com.greenzean.animekmp.shared.search.presentation.searchPresentationModule
 import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
 import com.greenzean.animekmp.shared.settings.presentation.settingsPresentationModule
@@ -37,6 +39,7 @@ class KoinVerifyTest {
                 libraryPresentationModule,
                 detailsPresentationModule,
                 searchPresentationModule,
+                malPresentationModule,
                 settingsPresentationModule,
             )
         }.verify(
@@ -47,6 +50,7 @@ class KoinVerifyTest {
                     LibrarySettings::class,
                     SessionStore::class,
                     MalTokenStore::class,
+                    MalAccountStore::class,
                     RandomBytes::class,
                     ServerConfig::class,
                     MalConfig::class,

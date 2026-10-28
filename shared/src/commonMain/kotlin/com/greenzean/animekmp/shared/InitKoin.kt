@@ -7,6 +7,7 @@ import com.greenzean.animekmp.shared.details.presentation.detailsPresentationMod
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
 import com.greenzean.animekmp.shared.mal.data.malModule
+import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
 import com.greenzean.animekmp.shared.search.presentation.searchPresentationModule
 import com.greenzean.animekmp.shared.settings.presentation.settingsPresentationModule
 import com.greenzean.animekmp.shared.sync.data.syncDataModule
@@ -27,6 +28,7 @@ fun initKoin(config: KoinAppDeclaration? = null): KoinApplication =
             libraryPresentationModule,
             searchPresentationModule,
             detailsPresentationModule,
+            malPresentationModule,
             settingsPresentationModule,
         )
     }

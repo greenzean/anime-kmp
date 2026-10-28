@@ -119,6 +119,19 @@
     <string name="settings_signed_out_message">An account is optional. Sign in to sync your library between your devices.</string>
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_delete_account">Delete account</string>
+    <string name="settings_mal_title">MyAnimeList</string>
+    <string name="settings_mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
+    <string name="settings_mal_consent_accept">I understand</string>
+    <string name="settings_mal_connect">Connect MyAnimeList</string>
+    <string name="settings_mal_connecting">Connecting to MyAnimeList</string>
+    <string name="settings_mal_connected_as">Connected as %1$s</string>
+    <string name="settings_mal_connected_no_name">Connected to MyAnimeList</string>
+    <string name="settings_mal_disconnect">Disconnect</string>
+    <string name="settings_mal_error_cancelled">The connection was cancelled.</string>
+    <string name="settings_mal_error_denied">MyAnimeList did not grant access.</string>
+    <string name="settings_mal_error_no_browser">No browser was found to sign in to MyAnimeList.</string>
+    <string name="settings_mal_error_no_internet">No internet connection. Check it and try again.</string>
+    <string name="settings_mal_error_other">Could not connect to MyAnimeList. Try again.</string>
     <string name="sign_in_with_google">Sign in with Google</string>
 
     <string name="display_heading">Display</string>

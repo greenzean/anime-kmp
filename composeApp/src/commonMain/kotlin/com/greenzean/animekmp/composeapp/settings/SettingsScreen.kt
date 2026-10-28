@@ -48,6 +48,9 @@ import com.greenzean.animekmp.composeapp.generated.resources.settings_title
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountState
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsState
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
@@ -61,9 +64,11 @@ fun SettingsRoot(
     openDeleteAccount: Boolean = false,
     viewModel: AccountViewModel = koinViewModel(),
     displayViewModel: DisplaySettingsViewModel = koinViewModel(),
+    malViewModel: MalAccountViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val displayState by displayViewModel.state.collectAsStateWithLifecycle()
+    val malState by malViewModel.state.collectAsStateWithLifecycle()
     var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }
     LaunchedEffect(state.sessionChecked, state.isSignedIn, pendingDeleteAccount) {
         if (pendingDeleteAccount && state.sessionChecked) {
@@ -78,6 +83,8 @@ fun SettingsRoot(
         modifier = modifier,
         displayState = displayState,
         onDisplayAction = displayViewModel::onAction,
+        malState = malState,
+        onMalAction = malViewModel::onAction,
     )
 }
 
@@ -89,6 +96,8 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     displayState: DisplaySettingsState = DisplaySettingsState(),
     onDisplayAction: (DisplaySettingsAction) -> Unit = {},
+    malState: MalAccountState = MalAccountState(),
+    onMalAction: (MalAccountAction) -> Unit = {},
 ) {
     state.signOutPrompt?.let { prompt ->
         SignOutDialog(
@@ -140,6 +149,7 @@ fun SettingsScreen(
                 onRetry = { onAction(AccountAction.OnRetryMerge) },
                 onDismiss = { onAction(AccountAction.OnDismissMerge) },
             )
+            MalAccountSection(state = malState, onAction = onMalAction)
             DisplaySection(state = displayState, onAction = onDisplayAction)
         }
     }
