@@ -33,6 +33,7 @@ import com.greenzean.animekmp.shared.library.domain.SetLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
 import com.greenzean.animekmp.shared.mal.data.malModule
+import com.greenzean.animekmp.shared.mal.domain.MalAccountStore
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeRepository
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
@@ -42,6 +43,8 @@ import com.greenzean.animekmp.shared.mal.domain.MalRedirectHandler
 import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
+import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
 import com.greenzean.animekmp.shared.search.presentation.SearchViewModel
 import com.greenzean.animekmp.shared.search.presentation.searchPresentationModule
 import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
@@ -70,6 +73,16 @@ class KoinGraphTest {
                     override val titleLanguage = MutableStateFlow(TitleLanguage.entries.first())
 
                     override fun setTitleLanguage(language: TitleLanguage) = Unit
+                }
+            }
+            single<MalAccountStore> {
+                object : MalAccountStore {
+                    override val consentGiven = MutableStateFlow(false)
+                    override val username = MutableStateFlow<String?>(null)
+
+                    override fun setConsent(given: Boolean) = Unit
+
+                    override fun setUsername(name: String?) = Unit
                 }
             }
             single<LibrarySettings> {
@@ -125,6 +138,7 @@ class KoinGraphTest {
                 libraryPresentationModule,
                 detailsPresentationModule,
                 searchPresentationModule,
+                malPresentationModule,
                 settingsPresentationModule,
             )
         }
@@ -162,6 +176,7 @@ class KoinGraphTest {
         assertNotNull(app.koin.get<SearchViewModel>())
         assertNotNull(app.koin.get<DisplaySettingsViewModel>())
         assertNotNull(app.koin.get<AccountViewModel>())
+        assertNotNull(app.koin.get<MalAccountViewModel>())
         assertNotNull(app.koin.get<DetailsViewModel> { parametersOf(MAL_ID) })
         app.close()
     }
