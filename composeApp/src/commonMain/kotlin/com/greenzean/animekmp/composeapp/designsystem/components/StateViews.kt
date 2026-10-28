@@ -40,8 +40,10 @@ fun EmptyState(
     icon: ImageVector = AppIcons.List,
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
+    actionModifier: Modifier = Modifier,
 ) {
     StateLayout(
+        actionModifier = actionModifier,
         title = title,
         message = message,
         icon = icon,
@@ -81,6 +83,7 @@ private fun StateLayout(
     onAction: (() -> Unit)?,
     contentColor: Color,
     modifier: Modifier = Modifier,
+    actionModifier: Modifier = Modifier,
     containerColor: Color = Color.Transparent,
 ) {
     val spacing = MaterialTheme.spacing
@@ -101,7 +104,7 @@ private fun StateLayout(
                 text = actionText,
                 onClick = onAction,
                 style = AppButtonStyle.Outlined,
-                modifier = Modifier.padding(top = spacing.sm),
+                modifier = actionModifier.padding(top = spacing.sm),
             )
         }
     }

@@ -44,6 +44,17 @@
     <string name="library_title">My library</string>
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_message">Find an anime in the Search tab and add it here.</string>
+    <string name="library_search_hint">Search your library</string>
+    <string name="library_filter_all">All</string>
+    <string name="library_sort_label">Sort</string>
+    <string name="library_sort_last_updated">Last updated</string>
+    <string name="library_sort_title">Title</string>
+    <string name="library_sort_score">Score</string>
+    <string name="library_no_results_title">No results</string>
+    <string name="library_no_results_message">Nothing in your library matches the search or filter.</string>
+    <string name="library_clear_filters">Clear filters</string>
+    <string name="cd_library_search_clear">Clear search</string>
+    <string name="cd_library_sort">Sort library</string>
     <string name="library_row_supporting">%1$s · %2$s</string>
     <string name="watch_status_watching">Watching</string>
     <string name="watch_status_completed">Completed</string>
