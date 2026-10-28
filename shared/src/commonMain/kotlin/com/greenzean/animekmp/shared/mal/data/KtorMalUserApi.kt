@@ -82,7 +82,7 @@ class KtorMalUserApi(
     }
 }
 
-private fun MalAuthError.toApiError(): MalApiError =
+internal fun MalAuthError.toApiError(): MalApiError =
     when (this) {
         MalAuthError.NO_INTERNET -> MalApiError.NO_CONNECTION
         MalAuthError.RATE_LIMITED -> MalApiError.THROTTLED

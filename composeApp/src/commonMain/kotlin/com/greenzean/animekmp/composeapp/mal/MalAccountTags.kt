@@ -1,4 +1,4 @@
-package com.greenzean.animekmp.composeapp.settings
+package com.greenzean.animekmp.composeapp.mal
 
 object MalAccountTags {
     const val CONSENT_ACCEPT = "mal_consent_accept"
