@@ -24,7 +24,10 @@ class MalAnimeRepository(
     ): Result<MalSearchPage, MalError> {
         val key = query.trim().lowercase()
         if (key.isEmpty()) return Result.Success(MalSearchPage(emptyList(), false))
-        return load(
+        return loadCached(
+            cache = cache,
+            clock = clock,
+            throttle = throttle,
             cached = cache.search(key, pageStart),
             ttl = MAL_SEARCH_TTL,
             fetch = { api.search(key, MAL_SEARCH_PAGE_SIZE, pageStart) },
@@ -33,7 +36,10 @@ class MalAnimeRepository(
     }
 
     suspend fun details(malId: Int): Result<MalAnimeDetails, MalError> =
-        load(
+        loadCached(
+            cache = cache,
+            clock = clock,
+            throttle = throttle,
             cached = cache.details(malId),
             ttl = MAL_DETAILS_TTL,
             fetch = { api.details(malId) },
@@ -41,28 +47,31 @@ class MalAnimeRepository(
         )
 
     suspend fun clearCache() = cache.clear()
+}
 
-    private suspend fun <T> load(
-        cached: Cached<T>?,
-        ttl: Duration,
-        fetch: suspend () -> Result<T, MalApiError>,
-        save: suspend (T, Instant) -> Unit,
-    ): Result<T, MalError> {
-        if (cached != null && clock.now() - cached.fetchedAt < ttl) return Result.Success(cached.value)
-        return when (val result = throttle.run(fetch)) {
-            is Result.Success -> {
-                val now = clock.now()
-                save(result.data, now)
-                cache.deleteFetchedBefore(now - MAL_STALE_LIMIT)
+internal suspend fun <T> loadCached(
+    cache: MalAnimeCache,
+    clock: Clock,
+    throttle: MalThrottle,
+    cached: Cached<T>?,
+    ttl: Duration,
+    fetch: suspend () -> Result<T, MalApiError>,
+    save: suspend (T, Instant) -> Unit,
+): Result<T, MalError> {
+    if (cached != null && clock.now() - cached.fetchedAt < ttl) return Result.Success(cached.value)
+    return when (val result = throttle.run(fetch)) {
+        is Result.Success -> {
+            val now = clock.now()
+            save(result.data, now)
+            cache.deleteFetchedBefore(now - MAL_STALE_LIMIT)
+            result
+        }
+
+        is Result.Error -> {
+            if (result.error == MalError.NoConnection && cached != null) {
+                Result.Success(cached.value)
+            } else {
                 result
-            }
-
-            is Result.Error -> {
-                if (result.error == MalError.NoConnection && cached != null) {
-                    Result.Success(cached.value)
-                } else {
-                    result
-                }
             }
         }
     }

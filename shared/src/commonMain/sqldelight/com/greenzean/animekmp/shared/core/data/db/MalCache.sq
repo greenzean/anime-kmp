@@ -12,6 +12,12 @@ CREATE TABLE mal_search (
     PRIMARY KEY (query_key, page_start)
 );
 
+CREATE TABLE mal_suggestions (
+    page_start INTEGER NOT NULL PRIMARY KEY,
+    payload    TEXT    NOT NULL,
+    fetched_at INTEGER NOT NULL
+);
+
 selectDetails:
 SELECT payload, fetched_at FROM mal_anime_details WHERE mal_id = ?;
 
@@ -35,3 +41,15 @@ DELETE FROM mal_anime_details;
 
 deleteAllSearch:
 DELETE FROM mal_search;
+
+selectSuggestions:
+SELECT payload, fetched_at FROM mal_suggestions WHERE page_start = ?;
+
+saveSuggestions:
+INSERT OR REPLACE INTO mal_suggestions (page_start, payload, fetched_at) VALUES (?, ?, ?);
+
+deleteSuggestionsFetchedBefore:
+DELETE FROM mal_suggestions WHERE fetched_at < ?;
+
+deleteAllSuggestions:
+DELETE FROM mal_suggestions;
