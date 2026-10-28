@@ -1,9 +1,17 @@
 package com.greenzean.animekmp.shared.library.domain
 
+import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import kotlinx.coroutines.flow.Flow
 
 interface LibraryLocalDataSource {
-    fun observeLibrary(): Flow<List<LibraryEntry>>
+    fun observeLibrary(
+        query: String,
+        status: WatchStatus?,
+        sort: LibrarySort,
+        titleLanguage: TitleLanguage,
+    ): Flow<List<LibraryEntry>>
+
+    fun observeActiveCount(): Flow<Int>
 
     suspend fun getEntry(malId: Int): LibraryEntry?
 

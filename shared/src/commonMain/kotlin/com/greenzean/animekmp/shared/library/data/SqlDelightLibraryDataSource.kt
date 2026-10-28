@@ -2,11 +2,14 @@ package com.greenzean.animekmp.shared.library.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import app.cash.sqldelight.coroutines.mapToOne
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
+import com.greenzean.animekmp.shared.library.domain.LibrarySort
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -22,12 +25,28 @@ class SqlDelightLibraryDataSource(
     private val clock: Clock = Clock.System,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : LibraryLocalDataSource {
-    override fun observeLibrary(): Flow<List<LibraryEntry>> =
+    override fun observeLibrary(
+        query: String,
+        status: WatchStatus?,
+        sort: LibrarySort,
+        titleLanguage: TitleLanguage,
+    ): Flow<List<LibraryEntry>> =
         db.listEntryQueries
-            .selectActiveWithAnime()
-            .asFlow()
+            .selectActiveWithAnime(
+                status = status?.name,
+                query = query.trim().escapeLike(),
+                sort = sort.name,
+                useEnglishTitle = if (titleLanguage == TitleLanguage.ENGLISH) 1L else 0L,
+            ).asFlow()
             .mapToList(dispatcher)
             .map { rows -> rows.map { it.toLibraryEntry() } }
+
+    override fun observeActiveCount(): Flow<Int> =
+        db.listEntryQueries
+            .countActive()
+            .asFlow()
+            .mapToOne(dispatcher)
+            .map { it.toInt() }
 
     override suspend fun getEntry(malId: Int): LibraryEntry? =
         withContext(dispatcher) {
@@ -76,3 +95,5 @@ class SqlDelightLibraryDataSource(
             Unit
         }
 }
+
+private fun String.escapeLike(): String = replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

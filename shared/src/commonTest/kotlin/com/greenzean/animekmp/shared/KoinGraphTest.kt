@@ -22,9 +22,14 @@ import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
+import com.greenzean.animekmp.shared.library.domain.LibrarySettings
+import com.greenzean.animekmp.shared.library.domain.LibrarySort
+import com.greenzean.animekmp.shared.library.domain.ObserveLibraryIsEmptyUseCase
+import com.greenzean.animekmp.shared.library.domain.ObserveLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.RemoveFromLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.RestoreEntryUseCase
+import com.greenzean.animekmp.shared.library.domain.SetLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
 import com.greenzean.animekmp.shared.mal.data.malModule
@@ -65,6 +70,13 @@ class KoinGraphTest {
                     override val titleLanguage = MutableStateFlow(TitleLanguage.entries.first())
 
                     override fun setTitleLanguage(language: TitleLanguage) = Unit
+                }
+            }
+            single<LibrarySettings> {
+                object : LibrarySettings {
+                    override val sort = MutableStateFlow(LibrarySort.LAST_UPDATED)
+
+                    override fun setSort(sort: LibrarySort) = Unit
                 }
             }
             single<SessionStore> {
@@ -126,6 +138,9 @@ class KoinGraphTest {
             SignOutUseCase::class,
             DeleteAccountUseCase::class,
             ObserveLibraryUseCase::class,
+            ObserveLibraryIsEmptyUseCase::class,
+            ObserveLibrarySortUseCase::class,
+            SetLibrarySortUseCase::class,
             AddToLibraryUseCase::class,
             EditEntryUseCase::class,
             RemoveFromLibraryUseCase::class,

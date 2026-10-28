@@ -12,6 +12,8 @@ data class Anime(
 
 enum class WatchStatus { WATCHING, COMPLETED, ON_HOLD, DROPPED, PLAN_TO_WATCH }
 
+enum class LibrarySort { LAST_UPDATED, TITLE, SCORE }
+
 enum class SyncState { PENDING, SYNCED }
 
 data class LibraryEntry(

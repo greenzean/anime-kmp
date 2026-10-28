@@ -20,7 +20,18 @@ SELECT list_entry.id, list_entry.mal_id, list_entry.status,
 FROM list_entry
 JOIN anime ON anime.mal_id = list_entry.mal_id
 WHERE list_entry.deleted_at IS NULL
-ORDER BY anime.title;
+  AND (:status IS NULL OR list_entry.status = :status)
+  AND (
+      anime.title LIKE '%' || :query || '%' ESCAPE '\'
+      OR COALESCE(anime.title_en, '') LIKE '%' || :query || '%' ESCAPE '\'
+  )
+ORDER BY
+    CASE WHEN :sort = 'LAST_UPDATED' THEN list_entry.updated_at END DESC,
+    CASE WHEN :sort = 'SCORE' AND list_entry.score IS NULL THEN 1 ELSE 0 END ASC,
+    CASE WHEN :sort = 'SCORE' THEN list_entry.score END DESC,
+    LOWER(CASE WHEN :useEnglishTitle = 1 THEN COALESCE(anime.title_en, anime.title) ELSE anime.title END) ASC,
+    LOWER(anime.title) ASC,
+    list_entry.mal_id ASC;
 
 selectByMalId:
 SELECT * FROM list_entry WHERE mal_id = ?;

@@ -82,7 +82,7 @@ private class Device(
 
     fun statuses(): Map<Int, String> =
         db.listEntryQueries
-            .selectActiveWithAnime()
+            .selectActiveWithAnime(status = null, query = "%%", sort = "LAST_UPDATED", useEnglishTitle = 0L)
             .executeAsList()
             .associate { it.mal_id.toInt() to it.status }
 
