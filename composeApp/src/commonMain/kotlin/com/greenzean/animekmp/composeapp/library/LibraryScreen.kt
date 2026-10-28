@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.composeapp.library
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,30 +11,29 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.greenzean.animekmp.composeapp.core.ObserveAsEvents
+import com.greenzean.animekmp.composeapp.core.label
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.composeapp.designsystem.components.AnimeCover
 import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
+import com.greenzean.animekmp.composeapp.designsystem.components.AppScoreStar
 import com.greenzean.animekmp.composeapp.designsystem.components.EmptyState
 import com.greenzean.animekmp.composeapp.designsystem.icons.AppIcons
 import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.cd_library_increment
 import com.greenzean.animekmp.composeapp.generated.resources.cd_settings
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value
+import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value_unknown
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_message
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_title
 import com.greenzean.animekmp.composeapp.generated.resources.library_row_supporting
 import com.greenzean.animekmp.composeapp.generated.resources.library_title
-import com.greenzean.animekmp.composeapp.generated.resources.sync_state_pending
-import com.greenzean.animekmp.composeapp.generated.resources.sync_state_synced
-import com.greenzean.animekmp.composeapp.generated.resources.watch_status_completed
-import com.greenzean.animekmp.composeapp.generated.resources.watch_status_dropped
-import com.greenzean.animekmp.composeapp.generated.resources.watch_status_on_hold
-import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
-import com.greenzean.animekmp.composeapp.generated.resources.watch_status_watching
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
@@ -40,7 +41,6 @@ import com.greenzean.animekmp.shared.library.presentation.LibraryAction
 import com.greenzean.animekmp.shared.library.presentation.LibraryEvent
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -96,35 +96,55 @@ private fun LibraryList(
 ) {
     LazyColumn(contentPadding = contentPadding) {
         items(state.entries, key = { it.id }) { entry ->
+            val status = stringResource(entry.status.label())
+            val supportingText =
+                if (entry.status == WatchStatus.PLAN_TO_WATCH) {
+                    status
+                } else {
+                    stringResource(Res.string.library_row_supporting, status, entry.progressText())
+                }
+            val incrementDescription = stringResource(Res.string.cd_library_increment, entry.title)
+            val hasScore = entry.score != null
+            val canIncrement = entry.status == WatchStatus.WATCHING
             AppListRow(
                 title = entry.title,
-                supportingText =
-                    stringResource(
-                        Res.string.library_row_supporting,
-                        stringResource(entry.status.label()),
-                        stringResource(entry.syncState.label()),
-                    ),
+                supportingText = supportingText,
                 onClick = { onAction(LibraryAction.OnEntryClick(entry.malId)) },
                 leading = { AnimeCover(entry.imageUrl) },
+                trailing =
+                    if (hasScore || canIncrement) {
+                        {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.sm),
+                            ) {
+                                if (hasScore) {
+                                    AppScoreStar(entry.score)
+                                }
+                                if (canIncrement) {
+                                    IconButton(onClick = { onAction(LibraryAction.OnIncrementClick(entry.malId)) }) {
+                                        Icon(AppIcons.Add, contentDescription = incrementDescription)
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    },
             )
         }
     }
 }
 
-private fun WatchStatus.label(): StringResource =
-    when (this) {
-        WatchStatus.WATCHING -> Res.string.watch_status_watching
-        WatchStatus.COMPLETED -> Res.string.watch_status_completed
-        WatchStatus.ON_HOLD -> Res.string.watch_status_on_hold
-        WatchStatus.DROPPED -> Res.string.watch_status_dropped
-        WatchStatus.PLAN_TO_WATCH -> Res.string.watch_status_plan_to_watch
+@Composable
+private fun EntryUi.progressText(): String {
+    val total = totalEpisodes
+    return if (total == null) {
+        stringResource(Res.string.entry_progress_value_unknown, progress)
+    } else {
+        stringResource(Res.string.entry_progress_value, progress, total)
     }
-
-private fun SyncState.label(): StringResource =
-    when (this) {
-        SyncState.PENDING -> Res.string.sync_state_pending
-        SyncState.SYNCED -> Res.string.sync_state_synced
-    }
+}
 
 @Preview
 @Composable
@@ -159,9 +179,13 @@ private val previewLibrary =
                     52991,
                     "Frieren: Beyond Journey's End",
                     null,
-                    WatchStatus.PLAN_TO_WATCH,
+                    WatchStatus.WATCHING,
+                    12,
+                    28,
+                    9,
                     SyncState.PENDING,
                 ),
-                EntryUi("2", 9253, "Steins;Gate", null, WatchStatus.COMPLETED, SyncState.SYNCED),
+                EntryUi("2", 9253, "Steins;Gate", null, WatchStatus.COMPLETED, 24, 24, null, SyncState.SYNCED),
+                EntryUi("3", 1, "One Piece", null, WatchStatus.PLAN_TO_WATCH, 0, null, null, SyncState.SYNCED),
             ),
     )

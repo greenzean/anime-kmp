@@ -6,6 +6,8 @@ query ChangesSince($cursor: String, $limit: Int) {
       id
       malId
       status
+      progress
+      score
       updatedAt
       deletedAt
     }

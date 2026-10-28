@@ -2,7 +2,8 @@ CREATE TABLE anime (
     mal_id    INTEGER NOT NULL PRIMARY KEY,
     title     TEXT    NOT NULL,
     title_en  TEXT,
-    image_url TEXT
+    image_url TEXT,
+    episodes  INTEGER
 );
 
 selectAll:
@@ -12,13 +13,14 @@ selectByMalId:
 SELECT * FROM anime WHERE mal_id = ?;
 
 insertOrIgnore:
-INSERT OR IGNORE INTO anime (mal_id, title, title_en, image_url) VALUES (?, ?, ?, ?);
+INSERT OR IGNORE INTO anime (mal_id, title, title_en, image_url, episodes) VALUES (?, ?, ?, ?, ?);
 
 updateDetails:
 UPDATE anime
 SET title = :title,
     title_en = COALESCE(:titleEn, title_en),
-    image_url = COALESCE(:imageUrl, image_url)
+    image_url = COALESCE(:imageUrl, image_url),
+    episodes = COALESCE(:episodes, episodes)
 WHERE mal_id = :malId;
 
 countAll:

@@ -22,10 +22,6 @@ import com.greenzean.animekmp.shared.sync.domain.SyncApi
 import com.greenzean.animekmp.shared.sync.domain.SyncChange
 import com.greenzean.animekmp.shared.graphql.type.PushOutcome as GqlPushOutcome
 
-/**
- * Every call runs as the signed-in user: the access token goes in the Authorization header. A rejected token is
- * renewed once and the call retried; with no session nothing is sent and the result is UNAUTHORIZED.
- */
 class ApolloSyncApi(
     private val client: ApolloClient,
     private val sessions: SessionManager,
@@ -63,6 +59,8 @@ class ApolloSyncApi(
                                 id = it.id,
                                 malId = it.malId,
                                 status = WatchStatus.valueOf(it.status.rawValue),
+                                progress = it.progress,
+                                score = it.score,
                                 updatedAt = it.updatedAt,
                                 deletedAt = it.deletedAt,
                             )
@@ -95,7 +93,6 @@ private inline fun <T, R> Result<T, DataError.Network>.flatMap(
         is Result.Success -> next(data)
     }
 
-/** The server's typed auth error (`extensions.code`); it comes back as HTTP 200 with a GraphQL error. */
 internal fun ApolloResponse<*>.isUnauthenticated(): Boolean =
     errors?.any { it.extensions?.get("code") == UNAUTHENTICATED } == true
 
@@ -104,6 +101,8 @@ private fun SyncChange.toInput() =
         id = id,
         malId = malId,
         status = ListStatus.valueOf(status.name),
+        progress = progress,
+        score = Optional.presentIfNotNull(score),
         updatedAt = updatedAt,
         deletedAt = Optional.presentIfNotNull(deletedAt),
     )
@@ -111,12 +110,8 @@ private fun SyncChange.toInput() =
 private fun GqlPushOutcome.toDomain(): PushOutcome =
     when (this) {
         GqlPushOutcome.APPLIED -> PushOutcome.APPLIED
-
         GqlPushOutcome.IGNORED_STALE -> PushOutcome.IGNORED_STALE
-
         GqlPushOutcome.REJECTED_INVALID -> PushOutcome.REJECTED_INVALID
-
-        // A newer server may add outcomes; treat them as invalid so the row stays PENDING and is surfaced.
         else -> PushOutcome.REJECTED_INVALID
     }
 

@@ -3,11 +3,12 @@ package com.greenzean.animekmp.shared.sync.domain
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import kotlin.time.Instant
 
-/** A local list_entry row as the server sees it. [deletedAt] set means tombstone. */
 data class SyncChange(
     val id: String,
     val malId: Int,
     val status: WatchStatus,
+    val progress: Int,
+    val score: Int?,
     val updatedAt: Instant,
     val deletedAt: Instant?,
 )
@@ -32,7 +33,6 @@ data class Rejection(
 )
 
 sealed interface SyncResult {
-    /** [rejected] rows stay PENDING and are not retried by this run. */
     data class Success(
         val pushed: Int,
         val pulled: Int,

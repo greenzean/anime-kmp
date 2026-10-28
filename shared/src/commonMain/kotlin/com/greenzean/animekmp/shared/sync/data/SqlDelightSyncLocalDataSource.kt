@@ -83,6 +83,8 @@ class SqlDelightSyncLocalDataSource(
                 change.id,
                 change.malId.toLong(),
                 change.status.name,
+                change.progress.toLong(),
+                change.score?.toLong(),
                 change.updatedAt.toEpochMilliseconds(),
                 change.deletedAt?.toEpochMilliseconds(),
             )
@@ -96,6 +98,8 @@ class SqlDelightSyncLocalDataSource(
             change.id,
             change.malId.toLong(),
             change.status.name,
+            change.progress.toLong(),
+            change.score?.toLong(),
             change.updatedAt.toEpochMilliseconds(),
             change.deletedAt?.toEpochMilliseconds(),
         )
@@ -112,6 +116,8 @@ class SqlDelightSyncLocalDataSource(
         if (!localWins) {
             listEntries.updatePulled(
                 change.status.name,
+                change.progress.toLong(),
+                change.score?.toLong(),
                 updatedAt,
                 change.deletedAt?.toEpochMilliseconds(),
                 change.id,
@@ -126,6 +132,8 @@ private fun Parked_change.toSyncChange() =
         id = id,
         malId = mal_id.toInt(),
         status = WatchStatus.valueOf(status),
+        progress = progress.toInt(),
+        score = score?.toInt(),
         updatedAt = Instant.fromEpochMilliseconds(updated_at),
         deletedAt = deleted_at?.let(Instant::fromEpochMilliseconds),
     )
@@ -135,6 +143,8 @@ private fun List_entry.toSyncChange() =
         id = id,
         malId = mal_id.toInt(),
         status = WatchStatus.valueOf(status),
+        progress = progress.toInt(),
+        score = score?.toInt(),
         updatedAt = Instant.fromEpochMilliseconds(updated_at),
         deletedAt = deleted_at?.let(Instant::fromEpochMilliseconds),
     )

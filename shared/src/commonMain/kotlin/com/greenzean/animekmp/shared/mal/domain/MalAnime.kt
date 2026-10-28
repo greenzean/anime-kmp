@@ -18,7 +18,14 @@ data class MalAnimeSummary(
     val titleEn: String? = null,
 )
 
-fun MalAnimeSummary.toAnime(): Anime = Anime(malId = malId, title = title, titleEn = titleEn, imageUrl = imageUrl)
+fun MalAnimeSummary.toAnime(): Anime =
+    Anime(
+        malId = malId,
+        title = title,
+        titleEn = titleEn,
+        imageUrl = imageUrl,
+        episodes = numEpisodes?.takeIf { it > 0 },
+    )
 
 @Serializable
 data class MalRecommendation(

@@ -2,6 +2,8 @@ package com.greenzean.animekmp.shared.library.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
+import com.greenzean.animekmp.shared.library.domain.EntryEdit
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import kotlinx.coroutines.channels.Channel
@@ -18,6 +20,7 @@ import kotlinx.coroutines.launch
 class LibraryViewModel(
     observeLibrary: ObserveLibraryUseCase,
     observeTitleLanguage: ObserveTitleLanguageUseCase,
+    private val editEntry: EditEntryUseCase,
 ) : ViewModel() {
     private val _state = MutableStateFlow(LibraryState())
     val state: StateFlow<LibraryState> = _state.asStateFlow()
@@ -39,6 +42,10 @@ class LibraryViewModel(
                         LibraryEvent.NavigateToDetails(action.malId),
                     )
                 }
+            }
+
+            is LibraryAction.OnIncrementClick -> {
+                viewModelScope.launch { editEntry(action.malId, EntryEdit.Increment) }
             }
 
             LibraryAction.OnSettingsClick -> {

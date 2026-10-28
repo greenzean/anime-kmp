@@ -8,7 +8,7 @@ class AddToLibraryUseCase(
 ) {
     suspend operator fun invoke(anime: Anime) {
         local.saveAnime(anime)
-        local.setStatus(anime.malId, WatchStatus.PLAN_TO_WATCH)
+        local.saveEntry(anime.malId, WatchStatus.PLAN_TO_WATCH, progress = 0, score = null)
         scheduler.requestSync()
     }
 }

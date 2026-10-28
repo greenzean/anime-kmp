@@ -30,11 +30,13 @@ class ParkedChangesTest {
         id = id,
         malId = ANIME_ID,
         status = status,
+        progress = 0,
+        score = null,
         updatedAt = Instant.fromEpochMilliseconds(updatedAt),
         deletedAt = deletedAt?.let(Instant::fromEpochMilliseconds),
     )
 
-    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop", null, null)
+    private fun addAnime() = db.animeQueries.insertOrIgnore(ANIME_ID.toLong(), "Cowboy Bebop", null, null, null)
 
     private fun row() = db.listEntryQueries.selectByMalId(ANIME_ID.toLong()).executeAsOneOrNull()
 

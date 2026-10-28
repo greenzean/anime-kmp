@@ -9,6 +9,10 @@ sealed interface LibraryAction {
         val malId: Int,
     ) : LibraryAction
 
+    data class OnIncrementClick(
+        val malId: Int,
+    ) : LibraryAction
+
     data object OnSettingsClick : LibraryAction
 }
 

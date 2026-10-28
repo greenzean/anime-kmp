@@ -47,10 +47,14 @@ class SyncEngineTest {
         updatedAt: Long,
         status: WatchStatus = WatchStatus.COMPLETED,
         deletedAt: Long? = null,
+        progress: Int = 0,
+        score: Int? = null,
     ) = SyncChange(
         id,
         malId,
         status,
+        progress,
+        score,
         Instant.fromEpochMilliseconds(updatedAt),
         deletedAt?.let(Instant::fromEpochMilliseconds),
     )
@@ -64,8 +68,8 @@ class SyncEngineTest {
     @Test
     fun pushesPendingRowsAndMarksThemSynced() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
-            library.setStatus(9253, WatchStatus.DROPPED)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
+            library.saveEntry(9253, WatchStatus.DROPPED, 0, null)
 
             val result = engine.sync()
 
@@ -84,7 +88,7 @@ class SyncEngineTest {
     @Test
     fun pushesTombstones() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             engine.sync()
             library.remove(1)
 
@@ -99,7 +103,7 @@ class SyncEngineTest {
     @Test
     fun ignoredStaleCountsAsSynced() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             val id = row(1)!!.id
             api.pushOutcomes[id] = PushResult(id, PushOutcome.IGNORED_STALE, id)
 
@@ -111,7 +115,7 @@ class SyncEngineTest {
     @Test
     fun adoptsServerEntryIdOnPush() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             val id = row(1)!!.id
             api.pushOutcomes[id] = PushResult(id, PushOutcome.APPLIED, "server-id")
 
@@ -126,7 +130,7 @@ class SyncEngineTest {
     @Test
     fun rejectedRowsStayPendingAreSurfacedAndNotRetriedInTheRun() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             val id = row(1)!!.id
             api.pushOutcomes[id] = PushResult(id, PushOutcome.REJECTED_INVALID, id)
 
@@ -140,9 +144,9 @@ class SyncEngineTest {
     @Test
     fun editedDuringPushStaysPending() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             api.onPush = {
-                db.listEntryQueries.updatePending("COMPLETED", row(1)!!.updated_at + 1, 1)
+                db.listEntryQueries.updatePending("COMPLETED", 0, null, row(1)!!.updated_at + 1, 1)
             }
 
             engine.sync()
@@ -154,7 +158,7 @@ class SyncEngineTest {
     @Test
     fun pushFailureReturnsFailureKeepsPendingAndSkipsPull() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             api.pushError = DataError.Network.NO_INTERNET
 
             val result = engine.sync()
@@ -167,7 +171,7 @@ class SyncEngineTest {
     @Test
     fun pushesBeforePulling() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             engine.sync()
             assertEquals(listOf("push", "pull"), api.calls)
         }
@@ -215,7 +219,7 @@ class SyncEngineTest {
             engine.sync()
             assertEquals(null, row(99))
 
-            db.animeQueries.insertOrIgnore(99, "Late Arrival", null, null)
+            db.animeQueries.insertOrIgnore(99, "Late Arrival", null, null, null)
             api.pages.add(page("c1", false))
             val result = engine.sync()
 
@@ -226,7 +230,7 @@ class SyncEngineTest {
     @Test
     fun newerPendingRowIsNotOverwrittenByPull() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             val pending = row(1)!!
 
             local.applyPage(listOf(pulled(pending.id, 1, pending.updated_at - 10_000)), "c1")
@@ -238,7 +242,7 @@ class SyncEngineTest {
     @Test
     fun pullOverwritesSyncedRowAndAppliesTombstones() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             engine.sync()
             val id = row(1)!!.id
             val later = row(1)!!.updated_at + 5_000
@@ -253,7 +257,7 @@ class SyncEngineTest {
     @Test
     fun pulledRowWithDifferentIdRewritesLocalId() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
             engine.sync()
             val later = row(1)!!.updated_at + 5_000
             api.pages.add(page("c1", false, pulled("server-id", 1, later, WatchStatus.COMPLETED)))
@@ -278,11 +282,89 @@ class SyncEngineTest {
     @Test
     fun concurrentSyncCallsRunOneAfterAnother() =
         runTest {
-            library.setStatus(1, WatchStatus.WATCHING)
+            library.saveEntry(1, WatchStatus.WATCHING, 0, null)
 
             val results = listOf(async { engine.sync() }, async { engine.sync() }).awaitAll()
 
             results.forEach { assertIs<SyncResult.Success>(it) }
-            assertEquals(1, api.pushed.flatten().size) // the second run found nothing pending
+            assertEquals(1, api.pushed.flatten().size)
+        }
+
+    @Test
+    fun pushesProgressAndScore() =
+        runTest {
+            library.saveEntry(1, WatchStatus.WATCHING, 7, 9)
+
+            engine.sync()
+
+            val change = api.pushed.flatten().single()
+            assertEquals(7, change.progress)
+            assertEquals(9, change.score)
+        }
+
+    @Test
+    fun pushesAnEntryWithoutScore() =
+        runTest {
+            library.saveEntry(1, WatchStatus.WATCHING, 3, null)
+
+            engine.sync()
+
+            assertEquals(
+                null,
+                api.pushed
+                    .flatten()
+                    .single()
+                    .score,
+            )
+        }
+
+    @Test
+    fun pulledChangeStoresProgressAndScore() =
+        runTest {
+            api.pages += page("1", false, pulled("e1", 1, 100, WatchStatus.WATCHING, progress = 12, score = 8))
+
+            engine.sync()
+
+            val pulledRow = row(1)!!
+            assertEquals(12L, pulledRow.progress)
+            assertEquals(8L, pulledRow.score)
+        }
+
+    @Test
+    fun pulledChangeUpdatesProgressAndScoreOfAnExistingEntry() =
+        runTest {
+            library.saveEntry(1, WatchStatus.WATCHING, 1, null)
+            engine.sync()
+            val id = row(1)!!.id
+            val later = row(1)!!.updated_at + 5_000
+            api.pages += page("2", false, pulled(id, 1, later, WatchStatus.COMPLETED, progress = 26, score = 10))
+
+            engine.sync()
+
+            val updated = row(1)!!
+            assertEquals(26L, updated.progress)
+            assertEquals(10L, updated.score)
+            assertEquals("COMPLETED", updated.status)
+        }
+
+    @Test
+    fun progressAndScoreRoundTripThroughTheServer() =
+        runTest {
+            val server = FakeServerSyncApi()
+            val pushing = SyncEngine(server, local)
+            library.saveEntry(5114, WatchStatus.WATCHING, 20, 7)
+            pushing.sync()
+            assertEquals(20, server.change(5114)!!.progress)
+            assertEquals(7, server.change(5114)!!.score)
+
+            val otherDriver = createTestDriver()
+            val otherDb = AnimeDatabase(otherDriver).also(TestAnimeCatalog::apply)
+            val otherLocal = SqlDelightSyncLocalDataSource(otherDb, dispatcher)
+            SyncEngine(server, otherLocal).sync()
+
+            val received = otherDb.listEntryQueries.selectByMalId(5114L).executeAsOne()
+            assertEquals(20L, received.progress)
+            assertEquals(7L, received.score)
+            otherDriver.close()
         }
 }

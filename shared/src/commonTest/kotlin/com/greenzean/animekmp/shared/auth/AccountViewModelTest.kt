@@ -90,7 +90,7 @@ class AccountViewModelTest {
 
     @Test
     fun signingInSavesTheSessionAndMergesTheLibrary() {
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = viewModel()
         viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
 
@@ -106,7 +106,7 @@ class AccountViewModelTest {
     @Test
     fun aMergeWithoutConnectionStaysSignedInAndCanBeRetried() {
         server.offline = true
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = viewModel()
         viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
 
@@ -124,7 +124,7 @@ class AccountViewModelTest {
 
     @Test
     fun signOutAsksFirstThenKeepsTheLibrary() {
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = signedInViewModel()
 
         viewModel.onAction(AccountAction.OnSignOutClick)
@@ -139,7 +139,7 @@ class AccountViewModelTest {
 
     @Test
     fun signOutWithDeleteEmptiesTheLibrary() {
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = signedInViewModel()
 
         viewModel.onAction(AccountAction.OnSignOutClick)
@@ -153,7 +153,7 @@ class AccountViewModelTest {
     @Test
     fun signOutOfflineWarnsAboutUnsyncedChanges() {
         val viewModel = signedInViewModel()
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         server.offline = true
 
         viewModel.onAction(AccountAction.OnSignOutClick)
@@ -163,7 +163,7 @@ class AccountViewModelTest {
 
     @Test
     fun cancellingSignOutChangesNothing() {
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = signedInViewModel()
 
         viewModel.onAction(AccountAction.OnSignOutClick)
@@ -202,7 +202,7 @@ class AccountViewModelTest {
 
     @Test
     fun deleteAccountAsksFirstThenClearsTheSessionAndKeepsTheLibrary() {
-        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 10)
+        db.listEntryQueries.insertPending("e1", 1, "WATCHING", 0, null, 10)
         val viewModel = signedInViewModel()
 
         viewModel.onAction(AccountAction.OnDeleteAccountClick)

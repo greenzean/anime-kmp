@@ -10,6 +10,12 @@
     <string name="cd_searching">Searching</string>
     <string name="cd_in_progress">%1$s, in progress</string>
     <string name="cd_add_to_library">Add %1$s to library</string>
+    <string name="cd_progress_increment">Add one episode</string>
+    <string name="cd_progress_decrement">Remove one episode</string>
+    <string name="cd_progress_edit">Edit episodes watched, %1$s</string>
+    <string name="cd_library_increment">Add one episode of %1$s</string>
+    <string name="cd_score_star">%1$d out of 10</string>
+    <string name="cd_score_badge">Your score: %1$d out of 10</string>
 
     <string name="action_retry">Retry</string>
     <string name="action_try_again">Try again</string>
@@ -18,7 +24,18 @@
     <string name="action_done">Done</string>
     <string name="action_add">Add</string>
     <string name="action_add_to_library">Add to library</string>
+    <string name="action_remove_from_library">Remove from library</string>
+    <string name="action_undo">Undo</string>
     <string name="label_in_library">In library</string>
+    <string name="snackbar_removed_from_library">Removed from library</string>
+
+    <string name="entry_status_label">Status</string>
+    <string name="entry_progress_label">Episodes watched</string>
+    <string name="entry_progress_value">%1$d / %2$d</string>
+    <string name="entry_progress_value_unknown">%1$d / ?</string>
+    <string name="entry_progress_dialog_title">Episodes watched</string>
+    <string name="entry_score_label">Your score</string>
+    <string name="entry_score_none">No score</string>
 
     <string name="error_something_went_wrong">Something went wrong</string>
     <string name="error_mal_unreachable">MyAnimeList could not be reached. Try again.</string>
@@ -33,8 +50,6 @@
     <string name="watch_status_on_hold">On hold</string>
     <string name="watch_status_dropped">Dropped</string>
     <string name="watch_status_plan_to_watch">Plan to watch</string>
-    <string name="sync_state_pending">Pending</string>
-    <string name="sync_state_synced">Synced</string>
 
     <string name="search_title">Search</string>
     <string name="search_field_label">Search MyAnimeList</string>

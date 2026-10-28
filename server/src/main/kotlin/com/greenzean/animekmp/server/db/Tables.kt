@@ -17,6 +17,8 @@ object ListEntryTable : Table("list_entry") {
     val status = text("status")
     val updatedAt = timestampWithTimeZone("updated_at")
     val deletedAt = timestampWithTimeZone("deleted_at").nullable()
+    val progress = integer("progress")
+    val score = integer("score").nullable()
     val serverSeq = long("server_seq").databaseGenerated()
 
     override val primaryKey = PrimaryKey(id)

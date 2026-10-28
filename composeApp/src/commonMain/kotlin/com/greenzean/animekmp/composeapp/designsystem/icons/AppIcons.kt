@@ -21,6 +21,15 @@ object AppIcons {
         svgIcon("Star", "M12,17.27L18.18,21l-1.64,-7.03L22,9.24l-7.19,-0.61L12,2 9.19,8.63 2,9.24l5.46,4.73L5.82,21z")
     }
 
+    val StarOutline: ImageVector by lazy {
+        svgIcon(
+            "StarOutline",
+            "M22,9.24l-7.19,-0.62L12,2 9.19,8.63 2,9.24l5.46,4.73L5.82,21 12,17.27 18.18,21l-1.63,-7.03L22,9.24z" +
+                "M12,15.4l-3.76,2.27 1,-4.28 -3.32,-2.88 4.38,-0.38L12,6.1l1.71,4.04 4.38,0.38" +
+                "-3.32,2.88 1,4.28L12,15.4z",
+        )
+    }
+
     val Settings: ImageVector by lazy {
         svgIcon(
             "Settings",
@@ -36,6 +45,34 @@ object AppIcons {
                 "c0.12,-0.22 0.07,-0.47 -0.12,-0.61L19.14,12.94zM12,15.6c-1.98,0 -3.6,-1.62 -3.6,-3.6" +
                 "s1.62,-3.6 3.6,-3.6s3.6,1.62 3.6,3.6S13.98,15.6 12,15.6z",
         )
+    }
+
+    val Add: ImageVector by lazy {
+        icon("Add") {
+            moveTo(19f, 13f)
+            horizontalLineToRelative(-6f)
+            verticalLineToRelative(6f)
+            horizontalLineToRelative(-2f)
+            verticalLineToRelative(-6f)
+            horizontalLineTo(5f)
+            verticalLineToRelative(-2f)
+            horizontalLineToRelative(6f)
+            verticalLineTo(5f)
+            horizontalLineToRelative(2f)
+            verticalLineToRelative(6f)
+            horizontalLineToRelative(6f)
+            close()
+        }
+    }
+
+    val Remove: ImageVector by lazy {
+        icon("Remove") {
+            moveTo(19f, 13f)
+            horizontalLineTo(5f)
+            verticalLineToRelative(-2f)
+            horizontalLineToRelative(14f)
+            close()
+        }
     }
 
     val ArrowBack: ImageVector by lazy {

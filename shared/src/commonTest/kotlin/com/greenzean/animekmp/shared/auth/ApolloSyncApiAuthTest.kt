@@ -29,7 +29,6 @@ private const val UNAUTHENTICATED =
 private const val REFRESHED =
     """{"data":{"refreshSession":{"accessToken":"a2","accessTokenExpiresAt":"2026-10-22T12:15:00Z","refreshToken":"r2"}}}"""
 
-/** Answers with the scripted bodies in order and records every request's Authorization header. */
 private class ScriptedEngine(
     vararg bodies: String,
 ) : HttpEngine {

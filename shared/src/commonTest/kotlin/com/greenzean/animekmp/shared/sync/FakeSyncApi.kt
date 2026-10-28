@@ -13,7 +13,6 @@ class FakeSyncApi : SyncApi {
     val pullCursors = mutableListOf<String?>()
     val calls = mutableListOf<String>()
 
-    /** Per-id override; any id not listed is APPLIED with its own id. */
     val pushOutcomes = mutableMapOf<String, PushResult>()
     var pushError: DataError.Network? = null
     var pages = mutableListOf<Result<ChangesPage, DataError.Network>>()

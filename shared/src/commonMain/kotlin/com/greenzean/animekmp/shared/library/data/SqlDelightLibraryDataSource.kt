@@ -29,23 +29,41 @@ class SqlDelightLibraryDataSource(
             .mapToList(dispatcher)
             .map { rows -> rows.map { it.toLibraryEntry() } }
 
+    override suspend fun getEntry(malId: Int): LibraryEntry? =
+        withContext(dispatcher) {
+            val entry = db.listEntryQueries.selectByMalId(malId.toLong()).executeAsOneOrNull()
+            val anime = db.animeQueries.selectByMalId(malId.toLong()).executeAsOneOrNull()
+            if (entry == null || anime == null || entry.deleted_at != null) null else entry.toLibraryEntry(anime)
+        }
+
     override suspend fun saveAnime(anime: Anime) {
         withContext(dispatcher) {
+            val malId = anime.malId.toLong()
+            val episodes = anime.episodes?.toLong()
             db.transaction {
-                db.animeQueries.insertOrIgnore(anime.malId.toLong(), anime.title, anime.titleEn, anime.imageUrl)
-                db.animeQueries.updateDetails(anime.title, anime.titleEn, anime.imageUrl, anime.malId.toLong())
+                db.animeQueries.insertOrIgnore(malId, anime.title, anime.titleEn, anime.imageUrl, episodes)
+                db.animeQueries.updateDetails(anime.title, anime.titleEn, anime.imageUrl, episodes, malId)
             }
         }
     }
 
-    override suspend fun setStatus(
+    override suspend fun saveEntry(
         malId: Int,
         status: WatchStatus,
+        progress: Int,
+        score: Int?,
     ) = withContext(dispatcher) {
         val now = clock.now().toEpochMilliseconds()
         db.transaction {
-            db.listEntryQueries.updatePending(status.name, now, malId.toLong())
-            db.listEntryQueries.insertPending(Uuid.random().toString(), malId.toLong(), status.name, now)
+            db.listEntryQueries.updatePending(status.name, progress.toLong(), score?.toLong(), now, malId.toLong())
+            db.listEntryQueries.insertPending(
+                Uuid.random().toString(),
+                malId.toLong(),
+                status.name,
+                progress.toLong(),
+                score?.toLong(),
+                now,
+            )
         }
     }
 

@@ -2,19 +2,21 @@ package com.greenzean.animekmp.server.sync
 
 import java.time.Instant
 
+const val MAX_PROGRESS = 10000
+const val MIN_SCORE = 1
+const val MAX_SCORE = 10
+
 enum class PushOutcome {
     APPLIED,
     IGNORED_STALE,
     REJECTED_INVALID,
 }
 
-/** Last-write-wins (ADR 0006): apply only if strictly newer than the stored row, so ties and replays are no-ops. */
 fun isNewer(
     incoming: Instant,
     stored: Instant?,
 ): Boolean = stored == null || incoming.isAfter(stored)
 
-/** The cursor is an opaque string on the wire; today it is the decimal `server_seq` of the last row returned. */
 object Cursor {
     const val START = 0L
 

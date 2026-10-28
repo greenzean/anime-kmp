@@ -12,6 +12,9 @@ data class EntryUi(
     val title: String,
     val imageUrl: String?,
     val status: WatchStatus,
+    val progress: Int,
+    val totalEpisodes: Int?,
+    val score: Int?,
     val syncState: SyncState,
 )
 
@@ -22,5 +25,8 @@ fun LibraryEntry.toEntryUi(language: TitleLanguage): EntryUi =
         title = language.pick(anime.title, anime.titleEn),
         imageUrl = anime.imageUrl,
         status = status,
+        progress = progress,
+        totalEpisodes = anime.episodes,
+        score = score,
         syncState = syncState,
     )
