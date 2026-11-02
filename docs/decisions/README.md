@@ -35,3 +35,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0014 | [The mini PC runs the server and deploys after passing tests](0014-mini-pc-runs-server-and-deploys.md) | Accepted | M2-30 |
 | 0015 | [Parts are built in parallel against a Contract](0015-parallel-parts-against-a-contract.md) | Accepted | M2-12d |
 | 0016 | [App logging through a small AppLogger interface](0016-app-logging.md) | Accepted | M2-32 |
+| 0017 | [Reading MAL export files with xmlutil and okio, and filling imported anime images](0017-mal-export-reading-with-xmlutil-and-okio.md) | Accepted | M2-18 |
