@@ -53,6 +53,10 @@ import com.greenzean.animekmp.shared.export.presentation.ExportAction
 import com.greenzean.animekmp.shared.export.presentation.ExportEvent
 import com.greenzean.animekmp.shared.export.presentation.ExportState
 import com.greenzean.animekmp.shared.export.presentation.ExportViewModel
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileAction
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileEvent
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileState
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileViewModel
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
@@ -71,6 +75,7 @@ fun SettingsRoot(
     displayViewModel: DisplaySettingsViewModel = koinViewModel(),
     malViewModel: MalAccountViewModel = koinViewModel(),
     exportViewModel: ExportViewModel = koinViewModel(),
+    importViewModel: ImportFileViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val displayState by displayViewModel.state.collectAsStateWithLifecycle()
@@ -80,6 +85,13 @@ fun SettingsRoot(
     ObserveAsEvents(exportViewModel.events) { event ->
         when (event) {
             is ExportEvent.LaunchSaveDialog -> launchSaveDialog(event.fileName)
+        }
+    }
+    val importState by importViewModel.state.collectAsStateWithLifecycle()
+    val launchOpenDialog = rememberOpenDialogLauncher { importViewModel.onAction(ImportFileAction.OnFileChosen(it)) }
+    ObserveAsEvents(importViewModel.events) { event ->
+        when (event) {
+            ImportFileEvent.LaunchOpenDialog -> launchOpenDialog()
         }
     }
     var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }
@@ -100,6 +112,8 @@ fun SettingsRoot(
         onMalAction = malViewModel::onAction,
         exportState = exportState,
         onExportAction = exportViewModel::onAction,
+        importState = importState,
+        onImportAction = importViewModel::onAction,
     )
 }
 
@@ -115,6 +129,8 @@ fun SettingsScreen(
     onMalAction: (MalAccountAction) -> Unit = {},
     exportState: ExportState = ExportState(),
     onExportAction: (ExportAction) -> Unit = {},
+    importState: ImportFileState = ImportFileState(),
+    onImportAction: (ImportFileAction) -> Unit = {},
 ) {
     state.signOutPrompt?.let { prompt ->
         SignOutDialog(
@@ -151,24 +167,37 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = MaterialTheme.spacing.xs).semantics { heading() },
             )
-            AppCard {
-                if (state.isSignedIn) {
-                    SignedInAccount(
-                        onSignOut = { onAction(AccountAction.OnSignOutClick) },
-                        onDeleteAccount = { onAction(AccountAction.OnDeleteAccountClick) },
-                    )
-                } else {
-                    SignedOutAccount(state = state, onAction = onAction)
-                }
-            }
+            AccountCard(state = state, onAction = onAction)
             MergeStatus(
                 merge = state.merge,
                 onRetry = { onAction(AccountAction.OnRetryMerge) },
                 onDismiss = { onAction(AccountAction.OnDismissMerge) },
             )
             MalAccountSection(state = malState, onAction = onMalAction)
-            LibrarySection(state = exportState, onAction = onExportAction)
+            LibrarySection(
+                state = exportState,
+                onAction = onExportAction,
+                importState = importState,
+                onImportAction = onImportAction,
+            )
             DisplaySection(state = displayState, onAction = onDisplayAction)
+        }
+    }
+}
+
+@Composable
+private fun AccountCard(
+    state: AccountState,
+    onAction: (AccountAction) -> Unit,
+) {
+    AppCard {
+        if (state.isSignedIn) {
+            SignedInAccount(
+                onSignOut = { onAction(AccountAction.OnSignOutClick) },
+                onDeleteAccount = { onAction(AccountAction.OnDeleteAccountClick) },
+            )
+        } else {
+            SignedOutAccount(state = state, onAction = onAction)
         }
     }
 }

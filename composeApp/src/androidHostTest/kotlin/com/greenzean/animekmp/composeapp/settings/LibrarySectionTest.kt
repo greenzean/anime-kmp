@@ -31,6 +31,7 @@ import com.greenzean.animekmp.shared.export.domain.ExportError
 import com.greenzean.animekmp.shared.export.presentation.ExportAction
 import com.greenzean.animekmp.shared.export.presentation.ExportState
 import com.greenzean.animekmp.shared.export.presentation.ExportStatus
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileState
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -50,6 +51,8 @@ private class LibrarySectionRobot(
                 LibrarySection(
                     state = ExportState(status),
                     onAction = { actions += it },
+                    importState = ImportFileState(),
+                    onImportAction = {},
                 )
             }
         }

@@ -6,6 +6,7 @@ import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
 import com.greenzean.animekmp.shared.export.domain.ExportError
 import com.greenzean.animekmp.shared.export.presentation.ExportState
 import com.greenzean.animekmp.shared.export.presentation.ExportStatus
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileState
 
 private const val PREVIEW_COUNT = 42
 
@@ -60,6 +61,11 @@ private fun LibrarySectionPreview(
     darkTheme: Boolean,
 ) {
     ThemedPreview(darkTheme) {
-        LibrarySection(state = ExportState(status = status), onAction = {})
+        LibrarySection(
+            state = ExportState(status = status),
+            onAction = {},
+            importState = ImportFileState(),
+            onImportAction = {},
+        )
     }
 }

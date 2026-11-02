@@ -140,6 +140,23 @@
     <string name="settings_export_error_empty">Your library is empty, so there is nothing to export.</string>
     <string name="settings_export_error_write">Could not save the file. Try again.</string>
     <string name="cd_export_mal">Export your library to a MyAnimeList file</string>
+    <string name="settings_import_mal">Import MAL file</string>
+    <string name="settings_import_importing">Importing your library</string>
+    <plurals name="settings_import_added">
+        <item quantity="one">Added %1$d entry</item>
+        <item quantity="other">Added %1$d entries</item>
+    </plurals>
+    <plurals name="settings_import_kept_yours">
+        <item quantity="one">Kept your version of %1$d entry</item>
+        <item quantity="other">Kept your version of %1$d entries</item>
+    </plurals>
+    <plurals name="settings_import_invalid">
+        <item quantity="one">Skipped %1$d invalid entry</item>
+        <item quantity="other">Skipped %1$d invalid entries</item>
+    </plurals>
+    <string name="settings_import_error_unreadable">Could not read the file. Try again.</string>
+    <string name="settings_import_error_not_mal">This is not a MyAnimeList export file.</string>
+    <string name="cd_import_mal">Import a library from a MyAnimeList export file</string>
     <string name="mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
     <string name="mal_consent_accept">I understand</string>
     <string name="mal_connect">Connect MyAnimeList</string>
