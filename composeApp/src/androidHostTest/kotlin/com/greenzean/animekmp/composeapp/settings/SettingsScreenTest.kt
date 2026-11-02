@@ -181,6 +181,8 @@ private class SettingsRobot(
 
     fun assertTagShown(tag: String) = apply { test.onNodeWithTag(tag).assertIsDisplayed() }
 
+    fun assertTagMissing(tag: String) = apply { test.onNodeWithTag(tag).assertDoesNotExist() }
+
     fun clickTag(tag: String) = apply { test.onNodeWithTag(tag).performClick() }
 
     fun assertMalActions(vararg expected: MalAccountAction) = apply { assertEquals(expected.toList(), malActions) }
@@ -605,5 +607,26 @@ class SettingsScreenTest {
                 .assertTagShown(MalAccountTags.DISCONNECT)
                 .clickTag(MalAccountTags.DISCONNECT)
                 .assertMalActions(MalAccountAction.OnDisconnectClick)
+        }
+
+    @Test
+    fun malImportRowIsShownOnlyWhileConnected() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.Connected("francisco")))
+                .assertTagShown(MalImportTags.ROW)
+        }
+
+    @Test
+    fun malImportRowIsMissingWhenNotConnected() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NotConnected))
+                .assertTagMissing(MalImportTags.ROW)
+        }
+
+    @Test
+    fun malImportRowIsMissingWhileConsentIsPending() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NeedsConsent))
+                .assertTagMissing(MalImportTags.ROW)
         }
 }

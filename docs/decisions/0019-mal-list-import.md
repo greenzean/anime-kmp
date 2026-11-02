@@ -52,6 +52,7 @@ Other rules:
 - Harder: MAL gives no total, so the loader shows a count and no percentage.
 - Risk: the import runs on every login, so a large list keeps the throttle busy for a while.
 - Risk: the schema change has no migration. Installs made before this ticket are not migrated, as with [ADR 0018](0018-conflicts-stored-locally-user-picks-version.md).
-- Not verified: paging beyond the first page of the list. [ADR 0008](0008-mal-api.md) lists this as not tested. M2-20 checks it on a real account with more than 100 entries.
-- Not verified: the exact throttle behaviour under the 500 ms spacing for a full list. Check during M2-20 on a real account.
+- Checked on a real account with 277 entries: paging beyond the first page worked, and a failure after page 1 resumed from the stored offset 100. [ADR 0008](0008-mal-api.md) listed this as not tested.
+- Not verified: a throttled (429) or blocked (403) answer from the real MAL API; covered by tests only.
+- Known: after a resume the count shown starts from the stored offset and the summary counts only the entries merged after the resume.
 - Follow-ups: M2-21 removes app-only entries when the user asks. M2-22 uses `on_mal` to detect removals on MAL.

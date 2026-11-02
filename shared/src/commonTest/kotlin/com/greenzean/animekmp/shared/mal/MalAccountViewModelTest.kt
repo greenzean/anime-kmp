@@ -54,7 +54,12 @@ class MalAccountViewModelTest {
                 ObserveMalAccountUseCase(harness.auth, harness.accountStore),
                 AcceptMalConsentUseCase(harness.accountStore),
                 ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start),
-                DisconnectMalUseCase(harness.auth, harness.accountStore, harness.repository),
+                DisconnectMalUseCase(
+                    harness.auth,
+                    harness.accountStore,
+                    harness.repository,
+                    FakeMalImportProgressStore(),
+                ),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { } }
         return viewModel

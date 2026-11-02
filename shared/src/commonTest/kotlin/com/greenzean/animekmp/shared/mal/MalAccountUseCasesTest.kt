@@ -35,7 +35,13 @@ class MalAccountUseCasesTest {
 
     private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start)
 
-    private fun disconnect() = DisconnectMalUseCase(harness.auth, harness.accountStore, harness.repository)
+    private fun disconnect() =
+        DisconnectMalUseCase(
+            harness.auth,
+            harness.accountStore,
+            harness.repository,
+            importHarness.store,
+        )
 
     @Test
     fun observeCombinesLoginUsernameAndConsent() =
@@ -164,5 +170,15 @@ class MalAccountUseCasesTest {
             disconnect()()
 
             assertTrue(importHarness.api.calls.isEmpty())
+        }
+
+    @Test
+    fun disconnectingClearsTheSavedImportOffset() =
+        runTest {
+            importHarness.store.setOffset(300)
+
+            disconnect()()
+
+            assertEquals(0, importHarness.store.offset())
         }
 }

@@ -1,7 +1,6 @@
 package com.greenzean.animekmp.composeapp.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,9 +17,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
+import com.greenzean.animekmp.composeapp.designsystem.MinTouchTarget
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
@@ -40,7 +38,6 @@ import org.jetbrains.compose.resources.stringResource
 
 private val ProgressSize = 24.dp
 private val ProgressStrokeWidth = 2.dp
-private val MinTouchTarget = 48.dp
 
 @Composable
 fun MalImportRow(

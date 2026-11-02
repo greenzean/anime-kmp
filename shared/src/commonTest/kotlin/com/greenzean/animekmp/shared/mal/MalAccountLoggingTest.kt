@@ -166,7 +166,13 @@ class MalAccountLoggingTest {
             harness.close()
             harness = MalAccountHarness(validMalSession(), consent = true, username = USERNAME, logger = logger)
 
-            DisconnectMalUseCase(harness.auth, harness.accountStore, harness.repository, logger = logger)()
+            DisconnectMalUseCase(
+                harness.auth,
+                harness.accountStore,
+                harness.repository,
+                FakeMalImportProgressStore(),
+                logger = logger,
+            )()
 
             val messages = sink.messages(MAL_AUTH)
             assertTrue("logged out" in messages, messages.toString())

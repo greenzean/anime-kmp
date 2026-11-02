@@ -1,11 +1,17 @@
 package com.greenzean.animekmp.shared.mal
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
+import com.greenzean.animekmp.shared.mal.domain.MalImportCoordinator
 import com.greenzean.animekmp.shared.mal.domain.MalImportStatus
+import com.greenzean.animekmp.shared.mal.domain.MalListApi
+import com.greenzean.animekmp.shared.mal.domain.MalListPage
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.TestScope
@@ -155,5 +161,30 @@ class MalImportCoordinatorTest {
             advanceUntilIdle()
 
             assertEquals(MalImportStatus.Done(1, 0), h.observe().first())
+        }
+
+    @Test
+    fun anUnexpectedFailureEndsInErrorInsteadOfCrashing() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val h = MalImportHarness(scope)
+            val failing =
+                object : MalListApi {
+                    override suspend fun page(
+                        offset: Int,
+                        limit: Int,
+                    ): Result<MalListPage, MalApiError> = error("boom")
+                }
+            val coordinator =
+                MalImportCoordinator(
+                    ImportMalListUseCase(failing, h.throttle, h.merge, h.store, h.scheduler),
+                    scope,
+                )
+
+            coordinator.start()
+            advanceUntilIdle()
+
+            assertEquals(MalImportStatus.Error, coordinator.status.value)
+            scope.cancel()
         }
 }

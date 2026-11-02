@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,8 @@ class MalImportCoordinator(
             if (current is MalImportStatus.Importing) return
             if (mutableStatus.compareAndSet(current, MalImportStatus.Importing(0))) break
         }
-        scope.launch {
+        val failed = CoroutineExceptionHandler { _, _ -> mutableStatus.value = MalImportStatus.Error }
+        scope.launch(failed) {
             try {
                 val result = import { done -> mutableStatus.value = MalImportStatus.Importing(done) }
                 mutableStatus.value =

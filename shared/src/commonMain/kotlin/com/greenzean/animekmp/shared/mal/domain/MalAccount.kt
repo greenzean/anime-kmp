@@ -58,6 +58,7 @@ class DisconnectMalUseCase(
     private val auth: MalAuthManager,
     private val store: MalAccountStore,
     private val repository: MalAnimeRepository,
+    private val importProgress: MalImportProgressStore,
     private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke() {
@@ -65,6 +66,7 @@ class DisconnectMalUseCase(
         store.setUsername(null)
         store.setConsent(false)
         repository.clearCache()
+        importProgress.clear()
         logger.info(TAG, "disconnected, cache cleared")
     }
 }
