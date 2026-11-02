@@ -7,6 +7,8 @@ import com.greenzean.animekmp.shared.auth.presentation.authModule
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
+import com.greenzean.animekmp.shared.export.domain.ExportFileSaver
+import com.greenzean.animekmp.shared.export.presentation.exportPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
@@ -45,6 +47,7 @@ class KoinVerifyTest {
                 suggestionsPresentationModule,
                 malPresentationModule,
                 settingsPresentationModule,
+                exportPresentationModule,
             )
         }.verify(
             extraTypes =
@@ -52,6 +55,7 @@ class KoinVerifyTest {
                     SqlDriver::class,
                     DisplaySettings::class,
                     LibrarySettings::class,
+                    ExportFileSaver::class,
                     SessionStore::class,
                     MalTokenStore::class,
                     MalAccountStore::class,

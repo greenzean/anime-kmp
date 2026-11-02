@@ -24,6 +24,9 @@ import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
 import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.DetailsViewModel
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
+import com.greenzean.animekmp.shared.export.domain.ExportError
+import com.greenzean.animekmp.shared.export.domain.ExportFileSaver
+import com.greenzean.animekmp.shared.export.presentation.exportPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
@@ -101,6 +104,14 @@ class KoinGraphTest {
                     override fun setUsername(name: String?) = Unit
                 }
             }
+            single<ExportFileSaver> {
+                object : ExportFileSaver {
+                    override suspend fun save(
+                        destination: String,
+                        content: String,
+                    ): EmptyResult<ExportError> = Result.Success(Unit)
+                }
+            }
             single<LibrarySettings> {
                 object : LibrarySettings {
                     override val sort = MutableStateFlow(LibrarySort.LAST_UPDATED)
@@ -158,6 +169,7 @@ class KoinGraphTest {
                 suggestionsPresentationModule,
                 malPresentationModule,
                 settingsPresentationModule,
+                exportPresentationModule,
             )
         }
 
