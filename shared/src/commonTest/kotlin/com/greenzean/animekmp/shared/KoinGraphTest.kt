@@ -51,6 +51,8 @@ import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
 import com.greenzean.animekmp.shared.settings.presentation.settingsPresentationModule
+import com.greenzean.animekmp.shared.suggestions.presentation.SuggestionsViewModel
+import com.greenzean.animekmp.shared.suggestions.presentation.suggestionsPresentationModule
 import com.greenzean.animekmp.shared.sync.data.ServerConfig
 import com.greenzean.animekmp.shared.sync.data.syncDataModule
 import com.greenzean.animekmp.shared.sync.domain.SyncEngine
@@ -138,6 +140,7 @@ class KoinGraphTest {
                 libraryPresentationModule,
                 detailsPresentationModule,
                 searchPresentationModule,
+                suggestionsPresentationModule,
                 malPresentationModule,
                 settingsPresentationModule,
             )
@@ -174,6 +177,7 @@ class KoinGraphTest {
         val app = app()
         assertNotNull(app.koin.get<LibraryViewModel>())
         assertNotNull(app.koin.get<SearchViewModel>())
+        assertNotNull(app.koin.get<SuggestionsViewModel>())
         assertNotNull(app.koin.get<DisplaySettingsViewModel>())
         assertNotNull(app.koin.get<AccountViewModel>())
         assertNotNull(app.koin.get<MalAccountViewModel>())

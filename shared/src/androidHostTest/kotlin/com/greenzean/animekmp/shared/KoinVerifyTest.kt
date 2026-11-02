@@ -19,6 +19,7 @@ import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
 import com.greenzean.animekmp.shared.search.presentation.searchPresentationModule
 import com.greenzean.animekmp.shared.settings.domain.DisplaySettings
 import com.greenzean.animekmp.shared.settings.presentation.settingsPresentationModule
+import com.greenzean.animekmp.shared.suggestions.presentation.suggestionsPresentationModule
 import com.greenzean.animekmp.shared.sync.data.ServerConfig
 import com.greenzean.animekmp.shared.sync.data.syncDataModule
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
@@ -39,6 +40,7 @@ class KoinVerifyTest {
                 libraryPresentationModule,
                 detailsPresentationModule,
                 searchPresentationModule,
+                suggestionsPresentationModule,
                 malPresentationModule,
                 settingsPresentationModule,
             )

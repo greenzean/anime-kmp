@@ -1,9 +1,7 @@
-package com.greenzean.animekmp.composeapp.settings
+package com.greenzean.animekmp.composeapp.mal
 
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -19,19 +17,18 @@ import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_connect
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_connected_as
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_connected_no_name
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_connecting
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_consent_accept
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_consent_body
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_disconnect
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_error_cancelled
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_error_denied
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_error_no_browser
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_error_no_internet
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_error_other
-import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_title
+import com.greenzean.animekmp.composeapp.generated.resources.mal_connect
+import com.greenzean.animekmp.composeapp.generated.resources.mal_connected_as
+import com.greenzean.animekmp.composeapp.generated.resources.mal_connected_no_name
+import com.greenzean.animekmp.composeapp.generated.resources.mal_connecting
+import com.greenzean.animekmp.composeapp.generated.resources.mal_consent_accept
+import com.greenzean.animekmp.composeapp.generated.resources.mal_consent_body
+import com.greenzean.animekmp.composeapp.generated.resources.mal_disconnect
+import com.greenzean.animekmp.composeapp.generated.resources.mal_error_cancelled
+import com.greenzean.animekmp.composeapp.generated.resources.mal_error_denied
+import com.greenzean.animekmp.composeapp.generated.resources.mal_error_no_browser
+import com.greenzean.animekmp.composeapp.generated.resources.mal_error_no_internet
+import com.greenzean.animekmp.composeapp.generated.resources.mal_error_other
 import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountError
@@ -44,7 +41,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalTestApi::class)
-private class MalAccountRobot(
+private class MalConnectionRobot(
     private val test: ComposeUiTest,
     status: MalAccountStatus,
 ) {
@@ -53,7 +50,7 @@ private class MalAccountRobot(
     init {
         test.setContent {
             AppTheme {
-                MalAccountSection(
+                MalConnectionContent(
                     state = MalAccountState(status),
                     onAction = { actions += it },
                 )
@@ -67,13 +64,6 @@ private class MalAccountRobot(
 
     fun assertTextMissing(text: String) =
         apply { assertEquals(0, test.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().size) }
-
-    fun assertHeading(text: String) =
-        apply {
-            test
-                .onNode(hasText(text) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading))
-                .assertExists()
-        }
 
     fun assertTagShown(tag: String) = apply { test.onNodeWithTag(tag).assertIsDisplayed() }
 
@@ -106,15 +96,14 @@ private class MalAccountRobot(
 @OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w360dp-h1600dp")
-class MalAccountSectionTest {
+class MalConnectionContentTest {
     @Test
     fun needsConsentShowsTitleBodyAndAcceptOnly() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.NeedsConsent)
-                .assertHeading(str(Res.string.settings_mal_title))
-                .assertTextShown(str(Res.string.settings_mal_consent_body))
+            MalConnectionRobot(this, MalAccountStatus.NeedsConsent)
+                .assertTextShown(str(Res.string.mal_consent_body))
                 .assertTagShown(MalAccountTags.CONSENT_ACCEPT)
-                .assertLabelledButton(str(Res.string.settings_mal_consent_accept))
+                .assertLabelledButton(str(Res.string.mal_consent_accept))
                 .assertTagMissing(MalAccountTags.CONNECT)
                 .assertTagMissing(MalAccountTags.DISCONNECT)
                 .assertTagMissing(MalAccountTags.ERROR)
@@ -123,7 +112,7 @@ class MalAccountSectionTest {
     @Test
     fun acceptingConsentSendsConsentAccepted() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.NeedsConsent)
+            MalConnectionRobot(this, MalAccountStatus.NeedsConsent)
                 .assertTouchTarget(MalAccountTags.CONSENT_ACCEPT)
                 .clickTag(MalAccountTags.CONSENT_ACCEPT)
                 .assertActions(MalAccountAction.OnConsentAccepted)
@@ -132,19 +121,18 @@ class MalAccountSectionTest {
     @Test
     fun notConnectedShowsConnectButton() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.NotConnected)
-                .assertHeading(str(Res.string.settings_mal_title))
+            MalConnectionRobot(this, MalAccountStatus.NotConnected)
                 .assertTagShown(MalAccountTags.CONNECT)
-                .assertLabelledButton(str(Res.string.settings_mal_connect))
+                .assertLabelledButton(str(Res.string.mal_connect))
                 .assertTagMissing(MalAccountTags.CONSENT_ACCEPT)
                 .assertTagMissing(MalAccountTags.DISCONNECT)
-                .assertTextMissing(str(Res.string.settings_mal_consent_body))
+                .assertTextMissing(str(Res.string.mal_consent_body))
         }
 
     @Test
     fun connectButtonSendsConnectClick() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.NotConnected)
+            MalConnectionRobot(this, MalAccountStatus.NotConnected)
                 .assertTouchTarget(MalAccountTags.CONNECT)
                 .clickTag(MalAccountTags.CONNECT)
                 .assertActions(MalAccountAction.OnConnectClick)
@@ -153,9 +141,9 @@ class MalAccountSectionTest {
     @Test
     fun connectingShowsProgressAndTheConnectButtonIsNotUsable() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Connecting)
+            MalConnectionRobot(this, MalAccountStatus.Connecting)
                 .assertTagShown(MalAccountTags.STATUS)
-                .assertStatusText(str(Res.string.settings_mal_connecting))
+                .assertStatusText(str(Res.string.mal_connecting))
                 .assertTagNotClickable(MalAccountTags.CONNECT)
                 .assertTagMissing(MalAccountTags.DISCONNECT)
                 .assertTagMissing(MalAccountTags.CONSENT_ACCEPT)
@@ -164,11 +152,11 @@ class MalAccountSectionTest {
     @Test
     fun connectedShowsUsernameAndDisconnect() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Connected("francisco"))
+            MalConnectionRobot(this, MalAccountStatus.Connected("francisco"))
                 .assertTagShown(MalAccountTags.STATUS)
-                .assertStatusText(str(Res.string.settings_mal_connected_as, "francisco"))
+                .assertStatusText(str(Res.string.mal_connected_as, "francisco"))
                 .assertTagShown(MalAccountTags.DISCONNECT)
-                .assertLabelledButton(str(Res.string.settings_mal_disconnect))
+                .assertLabelledButton(str(Res.string.mal_disconnect))
                 .assertTagMissing(MalAccountTags.CONNECT)
                 .assertTagMissing(MalAccountTags.CONSENT_ACCEPT)
         }
@@ -176,41 +164,39 @@ class MalAccountSectionTest {
     @Test
     fun connectedWithoutUsernameShowsTheFallbackText() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Connected(null))
-                .assertStatusText(str(Res.string.settings_mal_connected_no_name))
+            MalConnectionRobot(this, MalAccountStatus.Connected(null))
+                .assertStatusText(str(Res.string.mal_connected_no_name))
                 .assertTagShown(MalAccountTags.DISCONNECT)
         }
 
     @Test
     fun disconnectButtonSendsDisconnectClick() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Connected("francisco"))
+            MalConnectionRobot(this, MalAccountStatus.Connected("francisco"))
                 .assertTouchTarget(MalAccountTags.DISCONNECT)
                 .clickTag(MalAccountTags.DISCONNECT)
                 .assertActions(MalAccountAction.OnDisconnectClick)
         }
 
     @Test
-    fun cancelledErrorMessage() = assertError(MalAccountError.Cancelled, str(Res.string.settings_mal_error_cancelled))
+    fun cancelledErrorMessage() = assertError(MalAccountError.Cancelled, str(Res.string.mal_error_cancelled))
 
     @Test
-    fun accessDeniedErrorMessage() =
-        assertError(MalAccountError.AccessDenied, str(Res.string.settings_mal_error_denied))
+    fun accessDeniedErrorMessage() = assertError(MalAccountError.AccessDenied, str(Res.string.mal_error_denied))
 
     @Test
-    fun noBrowserErrorMessage() = assertError(MalAccountError.NoBrowser, str(Res.string.settings_mal_error_no_browser))
+    fun noBrowserErrorMessage() = assertError(MalAccountError.NoBrowser, str(Res.string.mal_error_no_browser))
 
     @Test
-    fun noInternetErrorMessage() =
-        assertError(MalAccountError.NoInternet, str(Res.string.settings_mal_error_no_internet))
+    fun noInternetErrorMessage() = assertError(MalAccountError.NoInternet, str(Res.string.mal_error_no_internet))
 
     @Test
-    fun otherErrorMessage() = assertError(MalAccountError.Other, str(Res.string.settings_mal_error_other))
+    fun otherErrorMessage() = assertError(MalAccountError.Other, str(Res.string.mal_error_other))
 
     @Test
     fun errorOffersDismiss() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Error(MalAccountError.Cancelled))
+            MalConnectionRobot(this, MalAccountStatus.Error(MalAccountError.Cancelled))
                 .assertTagShown(MalAccountTags.ERROR)
                 .assertLabelledButton(str(Res.string.action_dismiss))
                 .clickButton(str(Res.string.action_dismiss))
@@ -220,7 +206,7 @@ class MalAccountSectionTest {
     @Test
     fun errorRetrySendsConnectClick() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.Error(MalAccountError.NoInternet))
+            MalConnectionRobot(this, MalAccountStatus.Error(MalAccountError.NoInternet))
                 .assertTouchTarget(MalAccountTags.RETRY)
                 .clickTag(MalAccountTags.RETRY)
                 .assertActions(MalAccountAction.OnConnectClick)
@@ -230,16 +216,16 @@ class MalAccountSectionTest {
     @Test
     fun noErrorOutsideTheErrorStatus() =
         runComposeUiTest {
-            MalAccountRobot(this, MalAccountStatus.NotConnected)
+            MalConnectionRobot(this, MalAccountStatus.NotConnected)
                 .assertTagMissing(MalAccountTags.ERROR)
-                .assertTextMissing(str(Res.string.settings_mal_error_other))
+                .assertTextMissing(str(Res.string.mal_error_other))
         }
 
     private fun assertError(
         reason: MalAccountError,
         message: String,
     ) = runComposeUiTest {
-        MalAccountRobot(this, MalAccountStatus.Error(reason))
+        MalConnectionRobot(this, MalAccountStatus.Error(reason))
             .assertTagShown(MalAccountTags.ERROR)
             .assertErrorText(message)
     }

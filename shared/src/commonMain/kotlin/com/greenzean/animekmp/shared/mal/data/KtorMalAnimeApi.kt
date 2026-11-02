@@ -22,9 +22,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-private const val BASE_URL = "https://api.myanimelist.net/v2"
+internal const val BASE_URL = "https://api.myanimelist.net/v2"
 private const val CLIENT_ID_HEADER = "X-MAL-CLIENT-ID"
-private const val SEARCH_FIELDS = "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status"
+internal const val SEARCH_FIELDS = "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status"
 private const val DETAILS_FIELDS =
     "id,title,alternative_titles,main_picture,mean,media_type,num_episodes,status,synopsis,genres,start_date,rank," +
         "recommendations"
@@ -38,35 +38,35 @@ private const val SERVER_ERROR_FROM = 500
 private val json = Json { ignoreUnknownKeys = true }
 
 @Serializable
-private data class PictureDto(
+internal data class PictureDto(
     val medium: String? = null,
     val large: String? = null,
 )
 
 @Serializable
-private data class AlternativeTitlesDto(
+internal data class AlternativeTitlesDto(
     val en: String? = null,
 )
 
 @Serializable
-private data class GenreDto(
+internal data class GenreDto(
     val name: String,
 )
 
 @Serializable
-private data class RecommendationNodeDto(
+internal data class RecommendationNodeDto(
     val id: Int,
     val title: String,
     @SerialName("main_picture") val mainPicture: PictureDto? = null,
 )
 
 @Serializable
-private data class RecommendationDto(
+internal data class RecommendationDto(
     val node: RecommendationNodeDto,
 )
 
 @Serializable
-private data class AnimeDto(
+internal data class AnimeDto(
     val id: Int,
     val title: String,
     @SerialName("alternative_titles") val alternativeTitles: AlternativeTitlesDto? = null,
@@ -83,24 +83,24 @@ private data class AnimeDto(
 )
 
 @Serializable
-private data class SearchItemDto(
+internal data class SearchItemDto(
     val node: AnimeDto,
 )
 
 @Serializable
-private data class PagingDto(
+internal data class PagingDto(
     val next: String? = null,
 )
 
 @Serializable
-private data class SearchResponse(
+internal data class SearchResponse(
     val data: List<SearchItemDto> = emptyList(),
     val paging: PagingDto? = null,
 )
 
 private fun PictureDto?.url(): String? = this?.large ?: this?.medium
 
-private fun AnimeDto.toSummary() =
+internal fun AnimeDto.toSummary() =
     MalAnimeSummary(
         malId = id,
         title = title,

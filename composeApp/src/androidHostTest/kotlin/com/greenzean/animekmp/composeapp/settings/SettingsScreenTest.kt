@@ -16,6 +16,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
@@ -39,6 +40,8 @@ import com.greenzean.animekmp.composeapp.generated.resources.display_english_sup
 import com.greenzean.animekmp.composeapp.generated.resources.display_heading
 import com.greenzean.animekmp.composeapp.generated.resources.display_main_title
 import com.greenzean.animekmp.composeapp.generated.resources.display_title_language
+import com.greenzean.animekmp.composeapp.generated.resources.mal_connect
+import com.greenzean.animekmp.composeapp.generated.resources.mal_consent_body
 import com.greenzean.animekmp.composeapp.generated.resources.merge_done_title
 import com.greenzean.animekmp.composeapp.generated.resources.merge_error_offline
 import com.greenzean.animekmp.composeapp.generated.resources.merge_error_server
@@ -50,6 +53,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.merge_sent
 import com.greenzean.animekmp.composeapp.generated.resources.merge_total
 import com.greenzean.animekmp.composeapp.generated.resources.settings_account_heading
 import com.greenzean.animekmp.composeapp.generated.resources.settings_delete_account
+import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_title
 import com.greenzean.animekmp.composeapp.generated.resources.settings_sign_out
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_message
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_title
@@ -68,6 +72,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.sign_out_ready
 import com.greenzean.animekmp.composeapp.generated.resources.sign_out_ready_with_unsynced
 import com.greenzean.animekmp.composeapp.generated.resources.sign_out_signing_out
 import com.greenzean.animekmp.composeapp.generated.resources.sign_out_unsynced
+import com.greenzean.animekmp.composeapp.mal.MalAccountTags
 import com.greenzean.animekmp.composeapp.plural
 import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
@@ -79,6 +84,9 @@ import com.greenzean.animekmp.shared.auth.presentation.DeletePrompt
 import com.greenzean.animekmp.shared.auth.presentation.MergeState
 import com.greenzean.animekmp.shared.auth.presentation.SignOutPrompt
 import com.greenzean.animekmp.shared.core.domain.DataError
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsState
@@ -96,7 +104,9 @@ private class SettingsRobot(
     private val test: ComposeUiTest,
     state: AccountState,
     displayState: DisplaySettingsState = DisplaySettingsState(),
+    malState: MalAccountState = MalAccountState(),
 ) {
+    val malActions = mutableListOf<MalAccountAction>()
     val actions = mutableListOf<AccountAction>()
     val displayActions = mutableListOf<DisplaySettingsAction>()
     var backClicks = 0
@@ -110,6 +120,8 @@ private class SettingsRobot(
                     onNavigateBack = { backClicks++ },
                     displayState = displayState,
                     onDisplayAction = { displayActions += it },
+                    malState = malState,
+                    onMalAction = { malActions += it },
                 )
             }
         }
@@ -166,6 +178,12 @@ private class SettingsRobot(
         apply {
             assertEquals(expected.toList(), displayActions)
         }
+
+    fun assertTagShown(tag: String) = apply { test.onNodeWithTag(tag).assertIsDisplayed() }
+
+    fun clickTag(tag: String) = apply { test.onNodeWithTag(tag).performClick() }
+
+    fun assertMalActions(vararg expected: MalAccountAction) = apply { assertEquals(expected.toList(), malActions) }
 
     fun assertBackClicks(expected: Int) = apply { assertEquals(expected, backClicks) }
 }
@@ -551,5 +569,41 @@ class SettingsScreenTest {
                 .assertTouchHeight(str(Res.string.settings_sign_out))
                 .assertTouchHeight(str(Res.string.settings_delete_account))
                 .assertBackTouchTarget()
+        }
+
+    @Test
+    fun malSectionShowsItsHeadingAndTheConnectFlow() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NotConnected))
+                .assertHeading(str(Res.string.settings_mal_title))
+                .assertTagShown(MalAccountTags.CONNECT)
+                .assertButtonEnabled(str(Res.string.mal_connect))
+        }
+
+    @Test
+    fun malSectionAsksForConsentFirst() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NeedsConsent))
+                .assertTextShown(str(Res.string.mal_consent_body))
+                .assertTagShown(MalAccountTags.CONSENT_ACCEPT)
+                .clickTag(MalAccountTags.CONSENT_ACCEPT)
+                .assertMalActions(MalAccountAction.OnConsentAccepted)
+        }
+
+    @Test
+    fun malConnectSendsConnectClick() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NotConnected))
+                .clickTag(MalAccountTags.CONNECT)
+                .assertMalActions(MalAccountAction.OnConnectClick)
+        }
+
+    @Test
+    fun malSectionShowsDisconnectWhenConnected() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.Connected("francisco")))
+                .assertTagShown(MalAccountTags.DISCONNECT)
+                .clickTag(MalAccountTags.DISCONNECT)
+                .assertMalActions(MalAccountAction.OnDisconnectClick)
         }
 }

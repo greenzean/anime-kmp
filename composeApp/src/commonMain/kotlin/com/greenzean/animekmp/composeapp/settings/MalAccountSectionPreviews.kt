@@ -6,7 +6,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.greenzean.animekmp.composeapp.designsystem.ThemedPreview
-import com.greenzean.animekmp.shared.mal.presentation.MalAccountError
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
 

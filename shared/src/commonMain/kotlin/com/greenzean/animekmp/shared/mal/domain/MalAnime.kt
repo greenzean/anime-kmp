@@ -116,6 +116,14 @@ interface MalAnimeCache {
         fetchedAt: Instant,
     )
 
+    suspend fun suggestions(pageStart: Int): Cached<MalSearchPage>?
+
+    suspend fun saveSuggestions(
+        pageStart: Int,
+        page: MalSearchPage,
+        fetchedAt: Instant,
+    )
+
     suspend fun deleteFetchedBefore(threshold: Instant)
 
     suspend fun clear()

@@ -68,7 +68,7 @@ fun App(
                     )
                     searchGraph(onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) })
                     detailsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
-                    forYouGraph()
+                    forYouGraph(onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) })
                     settingsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
                 }
             }

@@ -67,11 +67,34 @@ class SqlDelightMalCache(
         }
     }
 
+    override suspend fun suggestions(pageStart: Int): Cached<MalSearchPage>? =
+        withContext(dispatcher) {
+            db.malCacheQueries
+                .selectSuggestions(pageStart.toLong())
+                .executeAsOneOrNull()
+                ?.let { decode<MalSearchPage>(it.payload, it.fetched_at) }
+        }
+
+    override suspend fun saveSuggestions(
+        pageStart: Int,
+        page: MalSearchPage,
+        fetchedAt: Instant,
+    ) {
+        withContext(dispatcher) {
+            db.malCacheQueries.saveSuggestions(
+                pageStart.toLong(),
+                json.encodeToString(page),
+                fetchedAt.toEpochMilliseconds(),
+            )
+        }
+    }
+
     override suspend fun deleteFetchedBefore(threshold: Instant) =
         withContext(dispatcher) {
             db.transaction {
                 db.malCacheQueries.deleteDetailsFetchedBefore(threshold.toEpochMilliseconds())
                 db.malCacheQueries.deleteSearchFetchedBefore(threshold.toEpochMilliseconds())
+                db.malCacheQueries.deleteSuggestionsFetchedBefore(threshold.toEpochMilliseconds())
             }
         }
 
@@ -80,6 +103,7 @@ class SqlDelightMalCache(
             db.transaction {
                 db.malCacheQueries.deleteAllDetails()
                 db.malCacheQueries.deleteAllSearch()
+                db.malCacheQueries.deleteAllSuggestions()
             }
         }
 
