@@ -58,6 +58,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
+import com.greenzean.animekmp.shared.mal.presentation.MalImportViewModel
 import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
 import com.greenzean.animekmp.shared.search.presentation.SearchViewModel
 import com.greenzean.animekmp.shared.search.presentation.searchPresentationModule
@@ -236,6 +237,7 @@ class KoinGraphTest {
         assertNotNull(app.koin.get<DisplaySettingsViewModel>())
         assertNotNull(app.koin.get<AccountViewModel>())
         assertNotNull(app.koin.get<MalAccountViewModel>())
+        assertNotNull(app.koin.get<MalImportViewModel>())
         assertNotNull(app.koin.get<ConflictsViewModel>())
         assertNotNull(app.koin.get<DetailsViewModel> { parametersOf(MAL_ID) })
         app.close()

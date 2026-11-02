@@ -60,6 +60,9 @@ import com.greenzean.animekmp.shared.importer.presentation.ImportFileViewModel
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
+import com.greenzean.animekmp.shared.mal.presentation.MalImportAction
+import com.greenzean.animekmp.shared.mal.presentation.MalImportState
+import com.greenzean.animekmp.shared.mal.presentation.MalImportViewModel
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsAction
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsState
 import com.greenzean.animekmp.shared.settings.presentation.DisplaySettingsViewModel
@@ -77,7 +80,9 @@ fun SettingsRoot(
     malViewModel: MalAccountViewModel = koinViewModel(),
     exportViewModel: ExportViewModel = koinViewModel(),
     importViewModel: ImportFileViewModel = koinViewModel(),
+    malImportViewModel: MalImportViewModel = koinViewModel(),
 ) {
+    val malImportState by malImportViewModel.state.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val displayState by displayViewModel.state.collectAsStateWithLifecycle()
     val malState by malViewModel.state.collectAsStateWithLifecycle()
@@ -116,6 +121,8 @@ fun SettingsRoot(
         onExportAction = exportViewModel::onAction,
         importState = importState,
         onImportAction = importViewModel::onAction,
+        malImportState = malImportState,
+        onMalImportAction = malImportViewModel::onAction,
     )
 }
 
@@ -133,6 +140,8 @@ fun SettingsScreen(
     onExportAction: (ExportAction) -> Unit = {},
     importState: ImportFileState = ImportFileState(),
     onImportAction: (ImportFileAction) -> Unit = {},
+    malImportState: MalImportState = MalImportState(),
+    onMalImportAction: (MalImportAction) -> Unit = {},
 ) {
     state.signOutPrompt?.let { prompt ->
         SignOutDialog(
@@ -175,7 +184,12 @@ fun SettingsScreen(
                 onRetry = { onAction(AccountAction.OnRetryMerge) },
                 onDismiss = { onAction(AccountAction.OnDismissMerge) },
             )
-            MalAccountSection(state = malState, onAction = onMalAction)
+            MalAccountSection(
+                state = malState,
+                onAction = onMalAction,
+                importState = malImportState,
+                onImportAction = onMalImportAction,
+            )
             LibrarySection(
                 state = exportState,
                 onAction = onExportAction,

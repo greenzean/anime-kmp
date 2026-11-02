@@ -8,8 +8,12 @@ import com.greenzean.animekmp.shared.mal.domain.MalAccount
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalError
+import com.greenzean.animekmp.shared.mal.domain.MalImportStatus
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -20,13 +24,24 @@ import kotlin.test.assertTrue
 
 class MalAccountUseCasesTest {
     private var harness = MalAccountHarness()
+    private val importScope = CoroutineScope(UnconfinedTestDispatcher())
+    private val importHarness = MalImportHarness(importScope)
 
     @AfterTest
-    fun tearDown() = harness.close()
+    fun tearDown() {
+        importScope.cancel()
+        harness.close()
+    }
 
-    private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore)
+    private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start)
 
-    private fun disconnect() = DisconnectMalUseCase(harness.auth, harness.accountStore, harness.repository)
+    private fun disconnect() =
+        DisconnectMalUseCase(
+            harness.auth,
+            harness.accountStore,
+            harness.repository,
+            importHarness.store,
+        )
 
     @Test
     fun observeCombinesLoginUsernameAndConsent() =
@@ -113,5 +128,57 @@ class MalAccountUseCasesTest {
             disconnect()()
 
             assertEquals(Result.Error(MalError.NoConnection), harness.repository.details(1))
+        }
+
+    @Test
+    fun connectStartsTheImportAfterALogin() =
+        runTest {
+            importHarness.api.results[0] = listPage(0, 2, hasNext = false)
+
+            connect()()
+
+            assertEquals(listOf(0), importHarness.api.offsets)
+            assertEquals(MalImportStatus.Done(2, 0), importHarness.coordinator.status.value)
+        }
+
+    @Test
+    fun connectStartsTheImportEvenWhenTheUserCallFails() =
+        runTest {
+            harness = MalAccountHarness(userResult = Result.Error(MalApiError.NO_CONNECTION))
+
+            connect()()
+
+            assertEquals(listOf(0), importHarness.api.offsets)
+        }
+
+    @Test
+    fun connectDoesNotStartTheImportWhenTheLoginFails() =
+        runTest {
+            harness.authorizer.error = MalAuthError.CANCELLED
+
+            connect()()
+
+            assertTrue(importHarness.api.calls.isEmpty())
+            assertEquals(MalImportStatus.Idle, importHarness.coordinator.status.value)
+        }
+
+    @Test
+    fun disconnectDoesNotStartAnImport() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+
+            disconnect()()
+
+            assertTrue(importHarness.api.calls.isEmpty())
+        }
+
+    @Test
+    fun disconnectingClearsTheSavedImportOffset() =
+        runTest {
+            importHarness.store.setOffset(300)
+
+            disconnect()()
+
+            assertEquals(0, importHarness.store.offset())
         }
 }

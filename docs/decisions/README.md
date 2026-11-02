@@ -37,3 +37,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0016 | [App logging through a small AppLogger interface](0016-app-logging.md) | Accepted | M2-32 |
 | 0017 | [Reading MAL export files with xmlutil and okio, and filling imported anime images](0017-mal-export-reading-with-xmlutil-and-okio.md) | Accepted | M2-18 |
 | 0018 | [Import conflicts are stored locally and the user picks the version](0018-conflicts-stored-locally-user-picks-version.md) | Accepted | M2-19 |
+| 0019 | [MAL list import reads the account's list page by page and resumes after a failure](0019-mal-list-import.md) | Accepted | M2-20 |

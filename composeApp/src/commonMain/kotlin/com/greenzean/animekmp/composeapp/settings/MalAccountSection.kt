@@ -15,6 +15,9 @@ import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_title
 import com.greenzean.animekmp.composeapp.mal.MalConnectionContent
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
+import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
+import com.greenzean.animekmp.shared.mal.presentation.MalImportAction
+import com.greenzean.animekmp.shared.mal.presentation.MalImportState
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -22,6 +25,8 @@ fun MalAccountSection(
     state: MalAccountState,
     onAction: (MalAccountAction) -> Unit,
     modifier: Modifier = Modifier,
+    importState: MalImportState = MalImportState(),
+    onImportAction: (MalImportAction) -> Unit = {},
 ) {
     Column(modifier = modifier) {
         Text(
@@ -32,6 +37,9 @@ fun MalAccountSection(
         )
         AppCard(modifier = Modifier.padding(top = MaterialTheme.spacing.md)) {
             MalConnectionContent(state = state, onAction = onAction)
+            if (state.status is MalAccountStatus.Connected) {
+                MalImportRow(state = importState, onAction = onImportAction)
+            }
         }
     }
 }

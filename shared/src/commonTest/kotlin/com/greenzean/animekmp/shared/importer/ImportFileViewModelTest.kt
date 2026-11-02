@@ -11,6 +11,7 @@ import com.greenzean.animekmp.shared.importer.domain.ImportError
 import com.greenzean.animekmp.shared.importer.domain.ImportFileReader
 import com.greenzean.animekmp.shared.importer.domain.ImportMalFileUseCase
 import com.greenzean.animekmp.shared.importer.domain.MalXmlParser
+import com.greenzean.animekmp.shared.importer.domain.MergeMalEntryUseCase
 import com.greenzean.animekmp.shared.importer.domain.ReadImportFileUseCase
 import com.greenzean.animekmp.shared.importer.presentation.ImportFileAction
 import com.greenzean.animekmp.shared.importer.presentation.ImportFileEvent
@@ -73,7 +74,7 @@ class ImportFileViewModelTest {
     private fun viewModel() =
         ImportFileViewModel(
             ReadImportFileUseCase(reader, MalXmlParser()),
-            ImportMalFileUseCase(local, conflicts, scheduler),
+            ImportMalFileUseCase(MergeMalEntryUseCase(local, conflicts, FakeOnMalLocalDataSource()), scheduler),
             FillImportedImagesUseCase(resolver),
             ObserveConflictCountUseCase(conflicts),
         )
