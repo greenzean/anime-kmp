@@ -10,7 +10,7 @@ enum class ImportError : Error {
 
 data class ImportSummary(
     val added: Int,
-    val keptYours: Int,
+    val conflicts: Int,
     val invalid: Int,
 )
 

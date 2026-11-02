@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared.importer
 
 import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
+import com.greenzean.animekmp.shared.conflict.FakeConflictLocalDataSource
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.export.domain.MalXmlWriter
 import com.greenzean.animekmp.shared.export.exportEntry
@@ -37,9 +38,9 @@ class MalRoundTripTest {
             val local = FakeLibraryLocalDataSource()
 
             val file = (MalXmlParser().parse(xml.encodeToByteArray()) as Result.Success).data
-            val summary = ImportMalFileUseCase(local, FakeSyncScheduler())(file) {}
+            val summary = ImportMalFileUseCase(local, FakeConflictLocalDataSource(), FakeSyncScheduler())(file) {}
 
-            assertEquals(ImportSummary(added = 5, keptYours = 0, invalid = 0), summary)
+            assertEquals(ImportSummary(added = 5, conflicts = 0, invalid = 0), summary)
             assertEquals(entries.map { it.anime.malId }, local.savedEntries.map { it.malId })
             assertEquals(entries.map { it.anime.title }, local.savedAnime.map { it.title })
             assertEquals(entries.map { it.anime.episodes }, local.savedAnime.map { it.episodes })

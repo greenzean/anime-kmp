@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.library.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.greenzean.animekmp.shared.conflict.domain.ObserveConflictCountUseCase
 import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.EntryEdit
 import com.greenzean.animekmp.shared.library.domain.LibrarySort
@@ -34,6 +35,7 @@ class LibraryViewModel(
     private val setLibrarySort: SetLibrarySortUseCase,
     observeTitleLanguage: ObserveTitleLanguageUseCase,
     private val editEntry: EditEntryUseCase,
+    observeConflictCount: ObserveConflictCountUseCase,
 ) : ViewModel() {
     private val query = MutableStateFlow("")
     private val statusFilter = MutableStateFlow<WatchStatus?>(null)
@@ -50,13 +52,14 @@ class LibraryViewModel(
                 observeLibrary(request.query.trim(), request.status, request.sort, request.language)
                     .map { list -> request to list.map { it.toEntryUi(request.language) } }
             }
-        combine(entries, observeLibraryIsEmpty()) { (request, list), isEmpty ->
+        combine(entries, observeLibraryIsEmpty(), observeConflictCount()) { (request, list), isEmpty, conflictCount ->
             LibraryState(
                 entries = list,
                 query = request.query,
                 statusFilter = request.status,
                 sort = request.sort,
                 isLibraryEmpty = isEmpty,
+                conflictCount = conflictCount,
             )
         }.onEach { next -> _state.update { next } }
             .launchIn(viewModelScope)
@@ -86,6 +89,10 @@ class LibraryViewModel(
 
             is LibraryAction.OnSortChange -> {
                 setLibrarySort(action.sort)
+            }
+
+            LibraryAction.OnConflictsClick -> {
+                viewModelScope.launch { _events.send(LibraryEvent.NavigateToConflicts) }
             }
 
             LibraryAction.OnSettingsClick -> {

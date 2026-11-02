@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.auth.presentation.authModule
+import com.greenzean.animekmp.shared.conflict.presentation.conflictModule
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
@@ -51,6 +52,7 @@ class KoinVerifyTest {
                 settingsPresentationModule,
                 exportPresentationModule,
                 importPresentationModule,
+                conflictModule,
             )
         }.verify(
             extraTypes =

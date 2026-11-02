@@ -13,6 +13,8 @@ import com.greenzean.animekmp.shared.auth.domain.SignInWithGoogleUseCase
 import com.greenzean.animekmp.shared.auth.domain.SignOutUseCase
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
 import com.greenzean.animekmp.shared.auth.presentation.authModule
+import com.greenzean.animekmp.shared.conflict.presentation.ConflictsViewModel
+import com.greenzean.animekmp.shared.conflict.presentation.conflictModule
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.domain.EmptyResult
@@ -180,6 +182,7 @@ class KoinGraphTest {
                 settingsPresentationModule,
                 exportPresentationModule,
                 importPresentationModule,
+                conflictModule,
             )
         }
 
@@ -233,6 +236,7 @@ class KoinGraphTest {
         assertNotNull(app.koin.get<DisplaySettingsViewModel>())
         assertNotNull(app.koin.get<AccountViewModel>())
         assertNotNull(app.koin.get<MalAccountViewModel>())
+        assertNotNull(app.koin.get<ConflictsViewModel>())
         assertNotNull(app.koin.get<DetailsViewModel> { parametersOf(MAL_ID) })
         app.close()
     }

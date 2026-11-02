@@ -2,6 +2,9 @@ package com.greenzean.animekmp.shared.importer
 
 import app.cash.turbine.test
 import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
+import com.greenzean.animekmp.shared.conflict.FakeConflictLocalDataSource
+import com.greenzean.animekmp.shared.conflict.conflict
+import com.greenzean.animekmp.shared.conflict.domain.ObserveConflictCountUseCase
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.importer.domain.FillImportedImagesUseCase
 import com.greenzean.animekmp.shared.importer.domain.ImportError
@@ -21,6 +24,7 @@ import com.greenzean.animekmp.shared.sync.domain.ParkedAnimeResolver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -55,6 +59,7 @@ class CountingParkedAnimeResolver : ParkedAnimeResolver {
 @OptIn(ExperimentalCoroutinesApi::class)
 class ImportFileViewModelTest {
     private val local = FakeLibraryLocalDataSource()
+    private val conflicts = FakeConflictLocalDataSource()
     private val reader = FakeImportFileReader()
     private val scheduler = FakeSyncScheduler()
     private val resolver = CountingParkedAnimeResolver()
@@ -68,8 +73,9 @@ class ImportFileViewModelTest {
     private fun viewModel() =
         ImportFileViewModel(
             ReadImportFileUseCase(reader, MalXmlParser()),
-            ImportMalFileUseCase(local, scheduler),
+            ImportMalFileUseCase(local, conflicts, scheduler),
             FillImportedImagesUseCase(resolver),
+            ObserveConflictCountUseCase(conflicts),
         )
 
     private fun serve(xml: String) {
@@ -148,7 +154,7 @@ class ImportFileViewModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf("content://file"), reader.sources)
-            assertEquals(ImportStatus.Done(added = 1, keptYours = 1, invalid = 1), viewModel.state.value.status)
+            assertEquals(ImportStatus.Done(added = 1, conflicts = 1, invalid = 1), viewModel.state.value.status)
             assertEquals(1, scheduler.requests)
         }
 
@@ -226,6 +232,52 @@ class ImportFileViewModelTest {
                 advanceUntilIdle()
 
                 assertEquals(ImportFileEvent.LaunchOpenDialog, awaitItem())
+            }
+        }
+
+    @Test
+    fun conflictCountStartsAtZero() {
+        assertEquals(0, viewModel().state.value.conflictCount)
+    }
+
+    @Test
+    fun conflictCountFollowsTheStoredConflicts() {
+        val viewModel = viewModel()
+
+        conflicts.put(conflict(malId = 1))
+        conflicts.put(conflict(malId = 2))
+
+        assertEquals(2, viewModel.state.value.conflictCount)
+
+        runBlocking { conflicts.deleteConflict(1) }
+
+        assertEquals(1, viewModel.state.value.conflictCount)
+    }
+
+    @Test
+    fun importingADifferingEntryReportsTheConflictAndRaisesTheCount() =
+        runTest {
+            local.put(Anime(1, "Cowboy Bebop"), SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            serve(malXml(malAnimeXml(id = "1")))
+            val viewModel = viewModel()
+
+            viewModel.onAction(ImportFileAction.OnFileChosen("content://file"))
+            advanceUntilIdle()
+
+            assertEquals(ImportStatus.Done(added = 0, conflicts = 1, invalid = 0), viewModel.state.value.status)
+            assertEquals(1, viewModel.state.value.conflictCount)
+        }
+
+    @Test
+    fun conflictsClickEmitsNavigateToConflicts() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.events.test {
+                viewModel.onAction(ImportFileAction.OnConflictsClick)
+                advanceUntilIdle()
+
+                assertEquals(ImportFileEvent.NavigateToConflicts, awaitItem())
             }
         }
 }
