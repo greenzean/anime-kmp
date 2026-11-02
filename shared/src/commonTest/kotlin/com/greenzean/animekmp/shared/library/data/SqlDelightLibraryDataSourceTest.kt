@@ -330,6 +330,51 @@ class SqlDelightLibraryDataSourceTest {
         }
 
     @Test
+    fun getEntryIncludingRemovedStillReturnsTheEntryAfterRemove() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)
+
+            repository.remove(bebop)
+
+            assertNull(repository.getEntry(bebop))
+            val entry = repository.getEntryIncludingRemoved(bebop)!!
+            assertEquals(WatchStatus.WATCHING, entry.status)
+            assertEquals(3, entry.progress)
+            assertEquals(6, entry.score)
+        }
+
+    @Test
+    fun getEntryIncludingRemovedReturnsAnActiveEntryAndNullForAnUnknownOne() =
+        runTest {
+            repository.saveEntry(bebop, WatchStatus.COMPLETED, 26, 9)
+
+            assertEquals(WatchStatus.COMPLETED, repository.getEntryIncludingRemoved(bebop)!!.status)
+            assertNull(repository.getEntryIncludingRemoved(steinsGate))
+        }
+
+    @Test
+    fun animeMissingImageListsOnlyAnimeWithoutAnImage() =
+        runTest {
+            repository.saveAnime(Anime(777, "Imageless"))
+            repository.saveAnime(Anime(778, "Pictured", imageUrl = "https://img/778.jpg"))
+
+            val missing = repository.animeMissingImage()
+
+            assertTrue(777 in missing)
+            assertTrue(778 !in missing)
+        }
+
+    @Test
+    fun animeMissingImageDropsAnAnimeOnceItsImageIsSaved() =
+        runTest {
+            repository.saveAnime(Anime(777, "Imageless"))
+
+            repository.saveAnime(Anime(777, "Imageless", imageUrl = "https://img/777.jpg"))
+
+            assertTrue(777 !in repository.animeMissingImage())
+        }
+
+    @Test
     fun restoreWithSaveEntryRevivesTheTombstoneWithItsValues() =
         runTest {
             repository.saveEntry(bebop, WatchStatus.WATCHING, 3, 6)

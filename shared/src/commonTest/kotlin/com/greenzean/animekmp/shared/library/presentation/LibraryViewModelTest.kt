@@ -441,6 +441,7 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
     val savedEntries = mutableListOf<SavedEntry>()
     val removedMalIds = mutableListOf<Int>()
     private val known = mutableMapOf<Int, Anime>()
+    private val removed = mutableMapOf<Int, LibraryEntry>()
     private val library = MutableStateFlow<List<LibraryEntry>>(emptyList())
 
     override fun observeLibrary(
@@ -475,6 +476,10 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
 
     override suspend fun getEntry(malId: Int): LibraryEntry? = library.value.firstOrNull { it.anime.malId == malId }
 
+    override suspend fun getEntryIncludingRemoved(malId: Int): LibraryEntry? = getEntry(malId) ?: removed[malId]
+
+    override suspend fun animeMissingImage(): List<Int> = known.values.filter { it.imageUrl == null }.map { it.malId }
+
     override suspend fun saveAnime(anime: Anime) {
         savedAnime += anime
         known[anime.malId] = anime
@@ -492,6 +497,7 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
 
     override suspend fun remove(malId: Int) {
         removedMalIds += malId
+        library.value.firstOrNull { it.anime.malId == malId }?.let { removed[malId] = it }
         library.update { entries -> entries.filterNot { it.anime.malId == malId } }
     }
 
@@ -504,6 +510,7 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
         updatedAtMillis: Long = 0,
     ) {
         known[anime.malId] = anime
+        removed.remove(anime.malId)
         library.update { entries ->
             entries.filterNot { it.anime.malId == anime.malId } +
                 LibraryEntry(

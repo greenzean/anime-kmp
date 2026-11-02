@@ -55,6 +55,21 @@ class SqlDelightLibraryDataSource(
             if (entry == null || anime == null || entry.deleted_at != null) null else entry.toLibraryEntry(anime)
         }
 
+    override suspend fun getEntryIncludingRemoved(malId: Int): LibraryEntry? =
+        withContext(dispatcher) {
+            val entry = db.listEntryQueries.selectByMalId(malId.toLong()).executeAsOneOrNull()
+            val anime = db.animeQueries.selectByMalId(malId.toLong()).executeAsOneOrNull()
+            if (entry == null || anime == null) null else entry.toLibraryEntry(anime)
+        }
+
+    override suspend fun animeMissingImage(): List<Int> =
+        withContext(dispatcher) {
+            db.animeQueries
+                .selectMissingImage()
+                .executeAsList()
+                .map { it.toInt() }
+        }
+
     override suspend fun saveAnime(anime: Anime) {
         withContext(dispatcher) {
             val malId = anime.malId.toLong()

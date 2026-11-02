@@ -12,6 +12,9 @@ SELECT * FROM anime ORDER BY title;
 selectByMalId:
 SELECT * FROM anime WHERE mal_id = ?;
 
+selectMissingImage:
+SELECT mal_id FROM anime WHERE image_url IS NULL;
+
 insertOrIgnore:
 INSERT OR IGNORE INTO anime (mal_id, title, title_en, image_url, episodes) VALUES (?, ?, ?, ?, ?);
 

@@ -20,16 +20,28 @@ import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
 import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.cd_export_mal
+import com.greenzean.animekmp.composeapp.generated.resources.cd_import_mal
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_done
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_error_empty
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_error_write
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_exporting
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_mal
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_added
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_error_not_mal
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_error_unreadable
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_importing
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_invalid
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_kept_yours
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_mal
 import com.greenzean.animekmp.composeapp.generated.resources.settings_library_title
 import com.greenzean.animekmp.shared.export.domain.ExportError
 import com.greenzean.animekmp.shared.export.presentation.ExportAction
 import com.greenzean.animekmp.shared.export.presentation.ExportState
 import com.greenzean.animekmp.shared.export.presentation.ExportStatus
+import com.greenzean.animekmp.shared.importer.domain.ImportError
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileAction
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileState
+import com.greenzean.animekmp.shared.importer.presentation.ImportStatus
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -40,8 +52,12 @@ private val ProgressStrokeWidth = 2.dp
 fun LibrarySection(
     state: ExportState,
     onAction: (ExportAction) -> Unit,
+    importState: ImportFileState,
+    onImportAction: (ImportFileAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val importing = importState.status is ImportStatus.Importing
+    val importDescription = stringResource(Res.string.cd_import_mal)
     val exporting = state.status is ExportStatus.Exporting
     val exportDescription = stringResource(Res.string.cd_export_mal)
     Column(modifier = modifier) {
@@ -67,6 +83,19 @@ fun LibrarySection(
                     },
             )
             ExportStatusMessage(status = state.status)
+            AppListRow(
+                title = stringResource(Res.string.settings_import_mal),
+                onClick = if (importing) null else ({ onImportAction(ImportFileAction.OnImportClick) }),
+                modifier =
+                    Modifier
+                        .testTag(ImportTags.ROW)
+                        .semantics { contentDescription = importDescription },
+                trailing =
+                    (importState.status as? ImportStatus.Importing)?.let { status ->
+                        { ImportProgress(progress = status.progress) }
+                    },
+            )
+            ImportStatusMessage(status = importState.status)
         }
     }
 }
@@ -82,6 +111,74 @@ private fun ExportProgress() {
                 .semantics { contentDescription = description },
         strokeWidth = ProgressStrokeWidth,
     )
+}
+
+@Composable
+private fun ImportProgress(progress: Float) {
+    val description = stringResource(Res.string.settings_import_importing)
+    CircularProgressIndicator(
+        progress = { progress },
+        modifier =
+            Modifier
+                .size(ProgressSize)
+                .testTag(ImportTags.PROGRESS)
+                .semantics { contentDescription = description },
+        strokeWidth = ProgressStrokeWidth,
+    )
+}
+
+@Composable
+private fun ImportStatusMessage(status: ImportStatus) {
+    when (status) {
+        is ImportStatus.Done -> {
+            val lines =
+                listOfNotNull(
+                    pluralStringResource(Res.plurals.settings_import_added, status.added, status.added),
+                    if (status.keptYours > 0) {
+                        pluralStringResource(Res.plurals.settings_import_kept_yours, status.keptYours, status.keptYours)
+                    } else {
+                        null
+                    },
+                    if (status.invalid > 0) {
+                        pluralStringResource(Res.plurals.settings_import_invalid, status.invalid, status.invalid)
+                    } else {
+                        null
+                    },
+                )
+            Text(
+                lines.joinToString("\n"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier =
+                    Modifier
+                        .padding(horizontal = MaterialTheme.spacing.lg, vertical = MaterialTheme.spacing.sm)
+                        .testTag(ImportTags.DONE)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+
+        is ImportStatus.Error -> {
+            Text(
+                stringResource(
+                    when (status.reason) {
+                        ImportError.Unreadable -> Res.string.settings_import_error_unreadable
+                        ImportError.NotMalExport -> Res.string.settings_import_error_not_mal
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier =
+                    Modifier
+                        .padding(horizontal = MaterialTheme.spacing.lg, vertical = MaterialTheme.spacing.sm)
+                        .testTag(ImportTags.ERROR)
+                        .semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+
+        ImportStatus.Idle, is ImportStatus.Importing -> {
+            Unit
+        }
+    }
 }
 
 @Composable

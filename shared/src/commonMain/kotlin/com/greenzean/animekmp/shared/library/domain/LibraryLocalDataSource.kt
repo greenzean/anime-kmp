@@ -15,6 +15,10 @@ interface LibraryLocalDataSource {
 
     suspend fun getEntry(malId: Int): LibraryEntry?
 
+    suspend fun getEntryIncludingRemoved(malId: Int): LibraryEntry?
+
+    suspend fun animeMissingImage(): List<Int>
+
     suspend fun saveAnime(anime: Anime)
 
     suspend fun saveEntry(
