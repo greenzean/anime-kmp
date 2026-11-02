@@ -146,9 +146,9 @@
         <item quantity="one">Added %1$d entry</item>
         <item quantity="other">Added %1$d entries</item>
     </plurals>
-    <plurals name="settings_import_kept_yours">
-        <item quantity="one">Kept your version of %1$d entry</item>
-        <item quantity="other">Kept your version of %1$d entries</item>
+    <plurals name="settings_import_conflicts">
+        <item quantity="one">%1$d entry needs your choice</item>
+        <item quantity="other">%1$d entries need your choice</item>
     </plurals>
     <plurals name="settings_import_invalid">
         <item quantity="one">Skipped %1$d invalid entry</item>
@@ -245,4 +245,31 @@
     <string name="preview_field_error">Enter a title</string>
     <string name="preview_row_supporting">12 of 28 episodes</string>
     <string name="preview_row_pending">Pending sync</string>
+    <string name="conflicts_title">Choose which version to keep</string>
+    <string name="conflicts_app_label">In the app</string>
+    <string name="conflicts_mal_label">On MyAnimeList</string>
+    <string name="conflicts_keep_app">Keep app</string>
+    <string name="conflicts_keep_mal">Keep MAL</string>
+    <string name="conflicts_keep_all_app">Keep all app</string>
+    <string name="conflicts_keep_all_mal">Keep all MAL</string>
+    <string name="conflicts_removed">Removed</string>
+    <string name="conflicts_progress">Episodes watched: %1$d</string>
+    <string name="conflicts_score">Score: %1$d</string>
+    <string name="conflicts_empty_title">Nothing to resolve</string>
+    <string name="conflicts_empty_message">Versions that differ after an import show up here.</string>
+    <string name="conflicts_keep_all_mal_dialog_title">Keep all MyAnimeList versions?</string>
+    <string name="conflicts_keep_all_mal_dialog_message">This replaces your version of every anime listed here with the one from MyAnimeList.</string>
+    <string name="conflicts_keep_all_mal_dialog_confirm">Keep all MAL</string>
+    <string name="cd_conflicts_keep_app">Keep the app version of %1$s</string>
+    <string name="cd_conflicts_keep_mal">Keep the MyAnimeList version of %1$s</string>
+    <plurals name="library_conflicts_banner">
+        <item quantity="one">%1$d anime needs your choice</item>
+        <item quantity="other">%1$d anime need your choice</item>
+    </plurals>
+    <string name="library_conflicts_review">Review</string>
+    <string name="settings_conflicts_row">Choose which version to keep</string>
+    <plurals name="settings_conflicts_supporting">
+        <item quantity="one">%1$d anime needs your choice</item>
+        <item quantity="other">%1$d anime need your choice</item>
+    </plurals>
 </resources>

@@ -15,13 +15,21 @@ data object DeleteAccountRoute
 
 private const val DELETE_ACCOUNT_URI = "animekmp://delete-account"
 
-fun NavGraphBuilder.settingsGraph(onNavigateBack: () -> Unit) {
+fun NavGraphBuilder.settingsGraph(
+    onNavigateBack: () -> Unit,
+    onNavigateToConflicts: () -> Unit,
+) {
     composable<SettingsRoute> {
-        SettingsRoot(onNavigateBack = onNavigateBack, modifier = Modifier.safeDrawingPadding())
+        SettingsRoot(
+            onNavigateBack = onNavigateBack,
+            onNavigateToConflicts = onNavigateToConflicts,
+            modifier = Modifier.safeDrawingPadding(),
+        )
     }
     composable<DeleteAccountRoute>(deepLinks = listOf(navDeepLink<DeleteAccountRoute>(basePath = DELETE_ACCOUNT_URI))) {
         SettingsRoot(
             onNavigateBack = onNavigateBack,
+            onNavigateToConflicts = onNavigateToConflicts,
             modifier = Modifier.safeDrawingPadding(),
             openDeleteAccount = true,
         )

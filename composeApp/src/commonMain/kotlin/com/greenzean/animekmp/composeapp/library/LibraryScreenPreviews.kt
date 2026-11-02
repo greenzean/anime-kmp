@@ -78,7 +78,7 @@ private fun LibrarySortMenuPreview(darkTheme: Boolean) {
 private val previewNoResults =
     LibraryState(query = "Naruto", statusFilter = WatchStatus.DROPPED, isLibraryEmpty = false)
 
-private val previewFiltered =
+internal val previewFiltered =
     LibraryState(
         statusFilter = WatchStatus.WATCHING,
         isLibraryEmpty = false,

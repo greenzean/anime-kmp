@@ -16,14 +16,19 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import com.greenzean.animekmp.composeapp.conflicts.ConflictsTags
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.cd_export_mal
+import com.greenzean.animekmp.composeapp.generated.resources.settings_conflicts_row
+import com.greenzean.animekmp.composeapp.generated.resources.settings_conflicts_supporting
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_done
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_error_empty
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_error_write
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_exporting
 import com.greenzean.animekmp.composeapp.generated.resources.settings_export_mal
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_added
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_conflicts
 import com.greenzean.animekmp.composeapp.generated.resources.settings_library_title
 import com.greenzean.animekmp.composeapp.plural
 import com.greenzean.animekmp.composeapp.str
@@ -31,7 +36,9 @@ import com.greenzean.animekmp.shared.export.domain.ExportError
 import com.greenzean.animekmp.shared.export.presentation.ExportAction
 import com.greenzean.animekmp.shared.export.presentation.ExportState
 import com.greenzean.animekmp.shared.export.presentation.ExportStatus
+import com.greenzean.animekmp.shared.importer.presentation.ImportFileAction
 import com.greenzean.animekmp.shared.importer.presentation.ImportFileState
+import com.greenzean.animekmp.shared.importer.presentation.ImportStatus
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -93,9 +100,100 @@ private class LibrarySectionRobot(
 }
 
 @OptIn(ExperimentalTestApi::class)
+private class ConflictsRowRobot(
+    private val test: ComposeUiTest,
+    importState: ImportFileState,
+) {
+    val actions = mutableListOf<ImportFileAction>()
+
+    init {
+        test.setContent {
+            AppTheme {
+                LibrarySection(
+                    state = ExportState(),
+                    onAction = {},
+                    importState = importState,
+                    onImportAction = { actions += it },
+                )
+            }
+        }
+    }
+
+    private fun row() = test.onNodeWithTag(ConflictsTags.SETTINGS_ROW)
+
+    fun assertRowShown() = apply { row().assertIsDisplayed() }
+
+    fun assertRowTitleShown() =
+        apply { test.onNodeWithText(str(Res.string.settings_conflicts_row)).assertIsDisplayed() }
+
+    fun assertSupportingCount(count: Int) =
+        apply {
+            test
+                .onNodeWithText(plural(Res.plurals.settings_conflicts_supporting, count, count))
+                .assertIsDisplayed()
+        }
+
+    fun assertRowTouchHeight() = apply { row().assertHeightIsAtLeast(48.dp) }
+
+    fun clickRow() = apply { row().performClick() }
+
+    fun assertTextShown(text: String) = apply { test.onNodeWithText(text).assertIsDisplayed() }
+
+    fun assertActions(vararg expected: ImportFileAction) = apply { assertEquals(expected.toList(), actions) }
+}
+
+@OptIn(ExperimentalTestApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w360dp-h1600dp")
 class LibrarySectionTest {
+    @Test
+    fun conflictsRowIsShownBelowImportWithItsTitle() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState())
+                .assertRowShown()
+                .assertRowTitleShown()
+        }
+
+    @Test
+    fun conflictsRowShowsThePluralisedCount() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState(conflictCount = 3))
+                .assertSupportingCount(3)
+        }
+
+    @Test
+    fun conflictsRowWithOneConflictUsesTheSingularText() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState(conflictCount = 1))
+                .assertSupportingCount(1)
+        }
+
+    @Test
+    fun clickingTheConflictsRowSendsOnConflictsClick() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState(conflictCount = 2))
+                .clickRow()
+                .assertActions(ImportFileAction.OnConflictsClick)
+        }
+
+    @Test
+    fun conflictsRowMeetsTheMinimumTouchHeight() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState(conflictCount = 2)).assertRowTouchHeight()
+        }
+
+    @Test
+    fun importSummaryShowsTheConflictsLine() =
+        runComposeUiTest {
+            ConflictsRowRobot(this, ImportFileState(ImportStatus.Done(added = 4, conflicts = 2, invalid = 0)))
+                .assertTextShown(
+                    listOf(
+                        plural(Res.plurals.settings_import_added, 4, 4),
+                        plural(Res.plurals.settings_import_conflicts, 2, 2),
+                    ).joinToString("\n"),
+                )
+        }
+
     @Test
     fun idleShowsHeadingAndEnabledRowWithoutStatus() =
         runComposeUiTest {

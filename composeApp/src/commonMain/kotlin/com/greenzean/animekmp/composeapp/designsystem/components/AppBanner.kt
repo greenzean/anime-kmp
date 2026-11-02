@@ -27,14 +27,25 @@ import org.jetbrains.compose.resources.stringResource
 fun AppBanner(
     message: String,
     modifier: Modifier = Modifier,
+    tone: AppBannerTone = AppBannerTone.Error,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val spacing = MaterialTheme.spacing
+    val containerColor =
+        when (tone) {
+            AppBannerTone.Error -> MaterialTheme.colorScheme.errorContainer
+            AppBannerTone.Info -> MaterialTheme.colorScheme.secondaryContainer
+        }
+    val contentColor =
+        when (tone) {
+            AppBannerTone.Error -> MaterialTheme.colorScheme.onErrorContainer
+            AppBannerTone.Info -> MaterialTheme.colorScheme.onSecondaryContainer
+        }
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.errorContainer, MaterialTheme.shapes.medium)
+                .background(containerColor, MaterialTheme.shapes.medium)
                 .padding(start = spacing.lg, top = spacing.md, end = spacing.sm)
                 .semantics { liveRegion = LiveRegionMode.Polite },
         horizontalAlignment = Alignment.End,
@@ -42,7 +53,7 @@ fun AppBanner(
         Text(
             message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
+            color = contentColor,
             modifier = Modifier.fillMaxWidth(),
         )
         Row(content = actions)

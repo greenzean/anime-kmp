@@ -16,9 +16,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import com.greenzean.animekmp.composeapp.conflicts.ConflictsTags
 import com.greenzean.animekmp.composeapp.core.label
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
 import com.greenzean.animekmp.composeapp.generated.resources.cd_library_increment
 import com.greenzean.animekmp.composeapp.generated.resources.cd_library_search_clear
 import com.greenzean.animekmp.composeapp.generated.resources.cd_library_sort
@@ -27,6 +29,8 @@ import com.greenzean.animekmp.composeapp.generated.resources.cd_settings
 import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value
 import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value_unknown
 import com.greenzean.animekmp.composeapp.generated.resources.library_clear_filters
+import com.greenzean.animekmp.composeapp.generated.resources.library_conflicts_banner
+import com.greenzean.animekmp.composeapp.generated.resources.library_conflicts_review
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_message
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_title
 import com.greenzean.animekmp.composeapp.generated.resources.library_filter_all
@@ -40,6 +44,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.library_sort_title
 import com.greenzean.animekmp.composeapp.generated.resources.watch_status_completed
 import com.greenzean.animekmp.composeapp.generated.resources.watch_status_plan_to_watch
 import com.greenzean.animekmp.composeapp.generated.resources.watch_status_watching
+import com.greenzean.animekmp.composeapp.plural
 import com.greenzean.animekmp.composeapp.str
 import com.greenzean.animekmp.shared.library.domain.LibrarySort
 import com.greenzean.animekmp.shared.library.domain.SyncState
@@ -405,5 +410,58 @@ class LibraryScreenTest {
     fun settingsButtonMeetsTheMinimumTouchTarget() =
         runComposeUiTest {
             LibraryRobot(this, library).assertSettingsIsTouchTarget()
+        }
+
+    @Test
+    fun noBannerWhenThereAreNoConflicts() =
+        runComposeUiTest {
+            LibraryRobot(this, library)
+                .assertTagHidden(ConflictsTags.LIBRARY_BANNER)
+                .assertTextHidden(str(Res.string.library_conflicts_review))
+        }
+
+    @Test
+    fun bannerShowsTheCountAndAReviewButton() =
+        runComposeUiTest {
+            LibraryRobot(this, library.copy(conflictCount = 3))
+                .assertTagShown(ConflictsTags.LIBRARY_BANNER)
+                .assertTextShown(plural(Res.plurals.library_conflicts_banner, 3, 3))
+                .assertTextShown(str(Res.string.library_conflicts_review))
+        }
+
+    @Test
+    fun bannerWithOneConflictUsesTheSingularText() =
+        runComposeUiTest {
+            LibraryRobot(this, library.copy(conflictCount = 1))
+                .assertTextShown(plural(Res.plurals.library_conflicts_banner, 1, 1))
+        }
+
+    @Test
+    fun bannerHasNoDismissButton() =
+        runComposeUiTest {
+            LibraryRobot(this, library.copy(conflictCount = 2))
+                .assertTextHidden(str(Res.string.action_dismiss))
+        }
+
+    @Test
+    fun reviewButtonSendsConflictsClick() =
+        runComposeUiTest {
+            LibraryRobot(this, library.copy(conflictCount = 2))
+                .clickText(str(Res.string.library_conflicts_review))
+                .assertActions(LibraryAction.OnConflictsClick)
+        }
+
+    @Test
+    fun bannerIsShownEvenWhenTheLibraryIsEmpty() =
+        runComposeUiTest {
+            LibraryRobot(this, LibraryState(conflictCount = 2))
+                .assertTagShown(ConflictsTags.LIBRARY_BANNER)
+        }
+
+    @Test
+    fun bannerDoesNotHideTheEntries() =
+        runComposeUiTest {
+            LibraryRobot(this, library.copy(conflictCount = 2))
+                .assertTextShown("Steins;Gate")
         }
 }

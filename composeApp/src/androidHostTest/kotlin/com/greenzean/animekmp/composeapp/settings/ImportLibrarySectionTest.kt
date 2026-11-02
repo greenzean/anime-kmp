@@ -22,11 +22,11 @@ import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.cd_import_mal
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_added
+import com.greenzean.animekmp.composeapp.generated.resources.settings_import_conflicts
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_error_not_mal
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_error_unreadable
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_importing
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_invalid
-import com.greenzean.animekmp.composeapp.generated.resources.settings_import_kept_yours
 import com.greenzean.animekmp.composeapp.generated.resources.settings_import_mal
 import com.greenzean.animekmp.composeapp.plural
 import com.greenzean.animekmp.composeapp.str
@@ -143,16 +143,16 @@ class ImportLibrarySectionTest {
         }
 
     @Test
-    fun doneShowsAddedKeptAndInvalidLines() =
+    fun doneShowsAddedConflictsAndInvalidLines() =
         runComposeUiTest {
             val expected =
                 listOf(
                     plural(Res.plurals.settings_import_added, 12, 12),
-                    plural(Res.plurals.settings_import_kept_yours, 3, 3),
+                    plural(Res.plurals.settings_import_conflicts, 3, 3),
                     plural(Res.plurals.settings_import_invalid, 2, 2),
                 ).joinToString("\n")
 
-            ImportSectionRobot(this, ImportStatus.Done(added = 12, keptYours = 3, invalid = 2))
+            ImportSectionRobot(this, ImportStatus.Done(added = 12, conflicts = 3, invalid = 2))
                 .assertTagShown(ImportTags.DONE)
                 .assertTagText(ImportTags.DONE, expected)
                 .assertTagMissing(ImportTags.PROGRESS)
@@ -161,16 +161,16 @@ class ImportLibrarySectionTest {
         }
 
     @Test
-    fun doneWithOnlyAddedHidesKeptAndInvalidLines() =
+    fun doneWithOnlyAddedHidesConflictsAndInvalidLines() =
         runComposeUiTest {
-            ImportSectionRobot(this, ImportStatus.Done(added = 1, keptYours = 0, invalid = 0))
+            ImportSectionRobot(this, ImportStatus.Done(added = 1, conflicts = 0, invalid = 0))
                 .assertTagText(ImportTags.DONE, plural(Res.plurals.settings_import_added, 1, 1))
         }
 
     @Test
     fun doneWithZeroAddedStillShowsSummary() =
         runComposeUiTest {
-            ImportSectionRobot(this, ImportStatus.Done(added = 0, keptYours = 4, invalid = 0))
+            ImportSectionRobot(this, ImportStatus.Done(added = 0, conflicts = 4, invalid = 0))
                 .assertTagShown(ImportTags.DONE)
         }
 

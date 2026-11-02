@@ -16,6 +16,8 @@ import androidx.navigation.NavUri
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.greenzean.animekmp.composeapp.conflicts.ConflictsRoute
+import com.greenzean.animekmp.composeapp.conflicts.conflictsGraph
 import com.greenzean.animekmp.composeapp.designsystem.AppTheme
 import com.greenzean.animekmp.composeapp.details.DetailsRoute
 import com.greenzean.animekmp.composeapp.details.detailsGraph
@@ -65,11 +67,16 @@ fun App(
                     libraryGraph(
                         onNavigateToSettings = { navController.navigate(SettingsRoute) },
                         onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) },
+                        onNavigateToConflicts = { navController.navigateIfResumed(ConflictsRoute) },
                     )
                     searchGraph(onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) })
                     detailsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
                     forYouGraph(onNavigateToDetails = { navController.navigateIfResumed(DetailsRoute(it)) })
-                    settingsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
+                    settingsGraph(
+                        onNavigateBack = { navController.popBackStackIfResumed() },
+                        onNavigateToConflicts = { navController.navigateIfResumed(ConflictsRoute) },
+                    )
+                    conflictsGraph(onNavigateBack = { navController.popBackStackIfResumed() })
                 }
             }
         }

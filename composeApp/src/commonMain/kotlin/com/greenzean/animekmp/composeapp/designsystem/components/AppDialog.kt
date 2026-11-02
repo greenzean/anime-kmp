@@ -32,6 +32,7 @@ fun AppDialog(
     dismissText: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    confirmModifier: Modifier = Modifier,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -39,7 +40,9 @@ fun AppDialog(
         shape = MaterialTheme.shapes.extraLarge,
         title = { Text(title) },
         text = { Text(text) },
-        confirmButton = { AppButton(text = confirmText, onClick = onConfirm, style = AppButtonStyle.Text) },
+        confirmButton = {
+            AppButton(text = confirmText, onClick = onConfirm, modifier = confirmModifier, style = AppButtonStyle.Text)
+        },
         dismissButton = { AppButton(text = dismissText, onClick = onDismiss, style = AppButtonStyle.Text) },
     )
 }
