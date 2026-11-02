@@ -12,11 +12,13 @@ data object LibraryRoute
 fun NavGraphBuilder.libraryGraph(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetails: (Int) -> Unit,
+    onNavigateToConflicts: () -> Unit,
 ) {
     composable<LibraryRoute> {
         LibraryRoot(
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToDetails = onNavigateToDetails,
+            onNavigateToConflicts = onNavigateToConflicts,
             modifier = Modifier.safeDrawingPadding(),
         )
     }

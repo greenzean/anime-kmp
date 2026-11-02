@@ -69,6 +69,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun SettingsRoot(
     onNavigateBack: () -> Unit,
+    onNavigateToConflicts: () -> Unit,
     modifier: Modifier = Modifier,
     openDeleteAccount: Boolean = false,
     viewModel: AccountViewModel = koinViewModel(),
@@ -92,6 +93,7 @@ fun SettingsRoot(
     ObserveAsEvents(importViewModel.events) { event ->
         when (event) {
             ImportFileEvent.LaunchOpenDialog -> launchOpenDialog()
+            ImportFileEvent.NavigateToConflicts -> onNavigateToConflicts()
         }
     }
     var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }

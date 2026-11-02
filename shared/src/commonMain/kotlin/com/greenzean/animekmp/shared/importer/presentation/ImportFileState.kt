@@ -11,7 +11,7 @@ sealed interface ImportStatus {
 
     data class Done(
         val added: Int,
-        val keptYours: Int,
+        val conflicts: Int,
         val invalid: Int,
     ) : ImportStatus
 
@@ -22,6 +22,7 @@ sealed interface ImportStatus {
 
 data class ImportFileState(
     val status: ImportStatus = ImportStatus.Idle,
+    val conflictCount: Int = 0,
 )
 
 sealed interface ImportFileAction {
@@ -30,8 +31,12 @@ sealed interface ImportFileAction {
     data class OnFileChosen(
         val source: String?,
     ) : ImportFileAction
+
+    data object OnConflictsClick : ImportFileAction
 }
 
 sealed interface ImportFileEvent {
     data object LaunchOpenDialog : ImportFileEvent
+
+    data object NavigateToConflicts : ImportFileEvent
 }

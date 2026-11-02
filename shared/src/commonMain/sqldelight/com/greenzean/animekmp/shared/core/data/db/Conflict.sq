@@ -1,0 +1,28 @@
+CREATE TABLE conflict (
+    mal_id     INTEGER NOT NULL PRIMARY KEY REFERENCES anime(mal_id),
+    status     TEXT    NOT NULL,
+    progress   INTEGER NOT NULL DEFAULT 0,
+    score      INTEGER,
+    removed    INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+insertOrReplace:
+INSERT OR REPLACE INTO conflict (mal_id, status, progress, score, removed, created_at)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteByMalId:
+DELETE FROM conflict WHERE mal_id = ?;
+
+deleteAll:
+DELETE FROM conflict;
+
+selectAllWithEntry:
+SELECT conflict.mal_id, conflict.status, conflict.progress, conflict.score, conflict.removed,
+       anime.title, anime.episodes, anime.image_url,
+       list_entry.status AS app_status, list_entry.progress AS app_progress, list_entry.score AS app_score,
+       list_entry.id AS app_entry_id, list_entry.deleted_at AS app_deleted_at
+FROM conflict
+JOIN anime ON anime.mal_id = conflict.mal_id
+LEFT JOIN list_entry ON list_entry.mal_id = conflict.mal_id
+ORDER BY conflict.created_at ASC, LOWER(anime.title) ASC, conflict.mal_id ASC;

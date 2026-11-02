@@ -9,6 +9,7 @@ data class LibraryState(
     val statusFilter: WatchStatus? = null,
     val sort: LibrarySort = LibrarySort.LAST_UPDATED,
     val isLibraryEmpty: Boolean = true,
+    val conflictCount: Int = 0,
 )
 
 sealed interface LibraryAction {
@@ -21,6 +22,8 @@ sealed interface LibraryAction {
     ) : LibraryAction
 
     data object OnSettingsClick : LibraryAction
+
+    data object OnConflictsClick : LibraryAction
 
     data class OnQueryChange(
         val query: String,
@@ -41,4 +44,6 @@ sealed interface LibraryEvent {
     ) : LibraryEvent
 
     data object NavigateToSettings : LibraryEvent
+
+    data object NavigateToConflicts : LibraryEvent
 }

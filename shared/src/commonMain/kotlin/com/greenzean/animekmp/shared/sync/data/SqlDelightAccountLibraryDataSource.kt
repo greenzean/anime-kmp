@@ -21,6 +21,7 @@ class SqlDelightAccountLibraryDataSource(
     override suspend fun clearLibrary() {
         withContext(dispatcher) {
             db.transaction {
+                db.conflictQueries.deleteAll()
                 listEntries.deleteAll()
                 db.parkedChangeQueries.deleteAll()
                 db.syncCursorQueries.clearCursor()

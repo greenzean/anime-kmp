@@ -2,6 +2,9 @@ package com.greenzean.animekmp.shared.library.presentation
 
 import app.cash.turbine.test
 import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
+import com.greenzean.animekmp.shared.conflict.FakeConflictLocalDataSource
+import com.greenzean.animekmp.shared.conflict.conflict
+import com.greenzean.animekmp.shared.conflict.domain.ObserveConflictCountUseCase
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.LibraryEntry
@@ -44,6 +47,7 @@ class LibraryViewModelTest {
     private val settings = FakeDisplaySettings()
     private val librarySettings = FakeLibrarySettings()
     private val scheduler = FakeSyncScheduler()
+    private val conflicts = FakeConflictLocalDataSource()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -59,6 +63,7 @@ class LibraryViewModelTest {
             SetLibrarySortUseCase(librarySettings),
             ObserveTitleLanguageUseCase(settings),
             EditEntryUseCase(local, scheduler),
+            ObserveConflictCountUseCase(conflicts),
         )
 
     @Test
@@ -86,6 +91,56 @@ class LibraryViewModelTest {
                 assertEquals(LibraryEvent.NavigateToSettings, awaitItem())
             }
         }
+
+    @Test
+    fun conflictsClickEmitsNavigateToConflicts() =
+        runTest {
+            val viewModel = viewModel()
+
+            viewModel.events.test {
+                viewModel.onAction(LibraryAction.OnConflictsClick)
+                advanceUntilIdle()
+
+                assertEquals(LibraryEvent.NavigateToConflicts, awaitItem())
+            }
+        }
+
+    @Test
+    fun conflictCountStartsAtZero() {
+        assertEquals(0, viewModel().state.value.conflictCount)
+    }
+
+    @Test
+    fun conflictCountFollowsTheStoredConflicts() {
+        val viewModel = viewModel()
+
+        conflicts.put(conflict(malId = 1))
+        conflicts.put(conflict(malId = 2))
+
+        assertEquals(2, viewModel.state.value.conflictCount)
+    }
+
+    @Test
+    fun conflictCountDropsWhenAConflictIsResolved() =
+        runTest {
+            conflicts.put(conflict(malId = 1))
+            conflicts.put(conflict(malId = 2))
+            val viewModel = viewModel()
+
+            conflicts.deleteConflict(1)
+
+            assertEquals(1, viewModel.state.value.conflictCount)
+        }
+
+    @Test
+    fun conflictCountDoesNotDependOnTheLibraryFilters() {
+        conflicts.put(conflict(malId = 1))
+        val viewModel = viewModel()
+
+        viewModel.onAction(LibraryAction.OnQueryChange("nothing matches"))
+
+        assertEquals(1, viewModel.state.value.conflictCount)
+    }
 
     @Test
     fun startsEmpty() {

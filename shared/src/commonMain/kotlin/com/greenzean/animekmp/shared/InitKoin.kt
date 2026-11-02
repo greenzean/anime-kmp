@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared
 
 import com.greenzean.animekmp.shared.auth.presentation.authModule
+import com.greenzean.animekmp.shared.conflict.presentation.conflictModule
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.data.platformModule
 import com.greenzean.animekmp.shared.core.logging.loggingModule
@@ -38,5 +39,6 @@ fun initKoin(config: KoinAppDeclaration? = null): KoinApplication =
             settingsPresentationModule,
             exportPresentationModule,
             importPresentationModule,
+            conflictModule,
         )
     }

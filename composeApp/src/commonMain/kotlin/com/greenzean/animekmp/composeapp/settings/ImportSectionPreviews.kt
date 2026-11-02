@@ -32,12 +32,12 @@ private fun LibrarySectionImportingDarkPreview() =
 @Preview
 @Composable
 private fun LibrarySectionImportDoneLightPreview() =
-    ImportPreview(ImportStatus.Done(added = PREVIEW_COUNT, keptYours = 3, invalid = 1), darkTheme = false)
+    ImportPreview(ImportStatus.Done(added = PREVIEW_COUNT, conflicts = 3, invalid = 1), darkTheme = false)
 
 @Preview
 @Composable
 private fun LibrarySectionImportDoneDarkPreview() =
-    ImportPreview(ImportStatus.Done(added = PREVIEW_COUNT, keptYours = 3, invalid = 1), darkTheme = true)
+    ImportPreview(ImportStatus.Done(added = PREVIEW_COUNT, conflicts = 3, invalid = 1), darkTheme = true)
 
 @Preview
 @Composable

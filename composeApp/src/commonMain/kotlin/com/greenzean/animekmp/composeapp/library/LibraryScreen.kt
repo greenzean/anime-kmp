@@ -17,10 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.greenzean.animekmp.composeapp.conflicts.ConflictsTags
 import com.greenzean.animekmp.composeapp.core.ObserveAsEvents
 import com.greenzean.animekmp.composeapp.core.label
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.components.AnimeCover
+import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
+import com.greenzean.animekmp.composeapp.designsystem.components.AppBannerTone
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppFilterChip
 import com.greenzean.animekmp.composeapp.designsystem.components.AppListRow
 import com.greenzean.animekmp.composeapp.designsystem.components.AppScoreStar
@@ -37,6 +42,8 @@ import com.greenzean.animekmp.composeapp.generated.resources.cd_settings
 import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value
 import com.greenzean.animekmp.composeapp.generated.resources.entry_progress_value_unknown
 import com.greenzean.animekmp.composeapp.generated.resources.library_clear_filters
+import com.greenzean.animekmp.composeapp.generated.resources.library_conflicts_banner
+import com.greenzean.animekmp.composeapp.generated.resources.library_conflicts_review
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_message
 import com.greenzean.animekmp.composeapp.generated.resources.library_empty_title
 import com.greenzean.animekmp.composeapp.generated.resources.library_filter_all
@@ -57,6 +64,7 @@ import com.greenzean.animekmp.shared.library.presentation.LibraryEvent
 import com.greenzean.animekmp.shared.library.presentation.LibraryState
 import com.greenzean.animekmp.shared.library.presentation.LibraryViewModel
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -64,6 +72,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun LibraryRoot(
     onNavigateToSettings: () -> Unit,
     onNavigateToDetails: (Int) -> Unit,
+    onNavigateToConflicts: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = koinViewModel(),
 ) {
@@ -72,6 +81,7 @@ fun LibraryRoot(
         when (event) {
             is LibraryEvent.NavigateToDetails -> onNavigateToDetails(event.malId)
             LibraryEvent.NavigateToSettings -> onNavigateToSettings()
+            LibraryEvent.NavigateToConflicts -> onNavigateToConflicts()
         }
     }
     LibraryScreen(state = state, onAction = viewModel::onAction, modifier = modifier)
@@ -93,6 +103,9 @@ fun LibraryScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
+            if (state.conflictCount > 0) {
+                ConflictsBanner(count = state.conflictCount, onReview = { onAction(LibraryAction.OnConflictsClick) })
+            }
             if (!state.isLibraryEmpty) {
                 LibraryControls(state = state, onAction = onAction)
             }
@@ -128,6 +141,28 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+internal fun ConflictsBanner(
+    count: Int,
+    onReview: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppBanner(
+        message = pluralStringResource(Res.plurals.library_conflicts_banner, count, count),
+        modifier =
+            modifier
+                .padding(horizontal = MaterialTheme.spacing.lg, vertical = MaterialTheme.spacing.sm)
+                .testTag(ConflictsTags.LIBRARY_BANNER),
+        tone = AppBannerTone.Info,
+    ) {
+        AppButton(
+            text = stringResource(Res.string.library_conflicts_review),
+            onClick = onReview,
+            style = AppButtonStyle.Text,
+        )
     }
 }
 
