@@ -67,6 +67,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0015: Parts are built in parallel against a Contract](docs/decisions/0015-parallel-parts-against-a-contract.md)
 - [0016: App logging through a small AppLogger interface](docs/decisions/0016-app-logging.md)
 - [0017: Reading MAL export files with xmlutil and okio, and filling imported anime images](docs/decisions/0017-mal-export-reading-with-xmlutil-and-okio.md)
+- [0018: Import conflicts are stored locally and the user picks the version](docs/decisions/0018-conflicts-stored-locally-user-picks-version.md)
 
 ## Build
 
