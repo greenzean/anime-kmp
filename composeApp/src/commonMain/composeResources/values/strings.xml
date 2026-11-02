@@ -156,6 +156,10 @@
     </plurals>
     <string name="settings_import_error_unreadable">Could not read the file. Try again.</string>
     <string name="settings_import_error_not_mal">This is not a MyAnimeList export file.</string>
+    <string name="settings_mal_import">Import my MAL list</string>
+    <string name="settings_mal_import_progress">Imported %1$d so far</string>
+    <string name="settings_mal_import_error">Could not import your MAL list. Try again.</string>
+    <string name="settings_mal_import_retry">Retry</string>
     <string name="cd_import_mal">Import a library from a MyAnimeList export file</string>
     <string name="mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
     <string name="mal_consent_accept">I understand</string>
