@@ -4,6 +4,8 @@ import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.EmptyResult
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
 import com.greenzean.animekmp.shared.mal.domain.MalAccountStore
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
@@ -123,6 +125,7 @@ class MalAccountHarness(
     consent: Boolean = false,
     username: String? = null,
     userResult: Result<MalUser, MalApiError> = Result.Success(MalUser("francisco")),
+    val logger: AppLogger = NoOpAppLogger,
 ) {
     val tokenStore = InMemoryMalTokenStore(session)
     val authorizer = ScriptedMalAuthorizer()
@@ -136,6 +139,7 @@ class MalAccountHarness(
             authorizer,
             CountingRandomBytes(),
             AccountFixedClock(),
+            logger = logger,
         )
     val animeApi = CacheProbeMalAnimeApi()
     private val driver = createTestDriver()
@@ -143,8 +147,9 @@ class MalAccountHarness(
         MalAnimeRepository(
             animeApi,
             SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher()),
-            MalThrottle(AccountFixedClock()),
+            MalThrottle(AccountFixedClock(), logger = logger),
             AccountFixedClock(),
+            logger = logger,
         )
 
     suspend fun warmCache() {

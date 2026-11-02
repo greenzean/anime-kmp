@@ -2,6 +2,8 @@ package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.core.domain.map
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import io.ktor.http.URLBuilder
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -12,6 +14,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 private val EXPIRY_MARGIN = 30.seconds
+private const val TAG = "MalAuth"
 private const val AUTHORIZE_URL = "https://myanimelist.net/v1/oauth2/authorize"
 private const val VERIFIER_BYTES = 64
 private const val STATE_BYTES = 16
@@ -23,6 +26,7 @@ class MalAuthManager(
     private val authorizer: MalAuthorizer,
     private val randomBytes: RandomBytes,
     private val clock: Clock = Clock.System,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     private val loginLock = Mutex()
     private val refreshLock = Mutex()
@@ -53,6 +57,7 @@ class MalAuthManager(
         val verifier = encode(randomBytes.next(VERIFIER_BYTES))
         val state = encode(randomBytes.next(STATE_BYTES))
         val startedAt = generation
+        logger.info(TAG, "login started")
         return when (val redirect = authorizer.authorize(authorizeUrl(verifier, state), state)) {
             is Result.Error -> Result.Error(redirect.error)
             is Result.Success -> exchange(redirect.data, state, verifier, startedAt)
@@ -63,6 +68,7 @@ class MalAuthManager(
         refreshLock.withLock {
             generation++
             store.clear()
+            logger.info(TAG, "logged out")
         }
     }
 
@@ -89,6 +95,7 @@ class MalAuthManager(
             }
 
             is Result.Success -> {
+                logger.info(TAG, "token exchanged")
                 refreshLock.withLock {
                     if (generation !=
                         startedAt
@@ -105,11 +112,13 @@ class MalAuthManager(
     private suspend fun renew(session: MalSession): Result<String, MalAuthError> =
         when (val tokens = api.refresh(session.refreshToken)) {
             is Result.Success -> {
+                logger.info(TAG, "token refresh ok")
                 val renewed = tokens.data.toSession()
                 store.save(renewed).map { renewed.accessToken }
             }
 
             is Result.Error -> {
+                logger.warn(TAG, "token refresh failed: ${tokens.error.name}")
                 when {
                     tokens.error == MalAuthError.INVALID_GRANT -> {
                         store.clear()

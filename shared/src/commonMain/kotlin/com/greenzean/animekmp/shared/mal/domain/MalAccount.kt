@@ -1,8 +1,12 @@
 package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+
+private const val TAG = "MalAuth"
 
 data class MalAccount(
     val connected: Boolean,
@@ -30,14 +34,17 @@ class ConnectMalUseCase(
     private val auth: MalAuthManager,
     private val userApi: MalUserApi,
     private val store: MalAccountStore,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke(): Result<Unit, MalAuthError> =
         when (val login = auth.login()) {
             is Result.Error -> {
+                logger.info(TAG, "connect failed: ${login.error.name}")
                 login
             }
 
             is Result.Success -> {
+                logger.info(TAG, "connect ok")
                 val name = (userApi.me() as? Result.Success)?.data?.name
                 store.setUsername(name)
                 login
@@ -49,11 +56,13 @@ class DisconnectMalUseCase(
     private val auth: MalAuthManager,
     private val store: MalAccountStore,
     private val repository: MalAnimeRepository,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke() {
         auth.logout()
         store.setUsername(null)
         store.setConsent(false)
         repository.clearCache()
+        logger.info(TAG, "disconnected, cache cleared")
     }
 }

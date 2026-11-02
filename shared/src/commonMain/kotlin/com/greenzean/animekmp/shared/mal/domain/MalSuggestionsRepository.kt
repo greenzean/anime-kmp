@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 
@@ -13,6 +15,7 @@ class MalSuggestionsRepository(
     private val cache: MalAnimeCache,
     private val throttle: MalThrottle,
     private val clock: Clock = Clock.System,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend fun suggestions(pageStart: Int = 0): Result<MalSearchPage, MalError> =
         loadCached(
@@ -21,6 +24,8 @@ class MalSuggestionsRepository(
             throttle = throttle,
             cached = cache.suggestions(pageStart),
             ttl = MAL_SUGGESTIONS_TTL,
+            logger = logger,
+            label = "suggestions page $pageStart",
             fetch = { api.suggestions(MAL_SUGGESTIONS_PAGE_SIZE, pageStart) },
             save = { page, now -> cache.saveSuggestions(pageStart, page, now) },
         ).capped(pageStart)

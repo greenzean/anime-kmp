@@ -4,6 +4,8 @@ import android.content.Context
 import com.greenzean.animekmp.shared.core.data.KeystoreCipher
 import com.greenzean.animekmp.shared.core.domain.EmptyResult
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
@@ -21,6 +23,7 @@ import kotlin.time.Instant
 
 class KeystoreMalTokenStore(
     context: Context,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalTokenStore {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val cipher = KeystoreCipher(KEY_ALIAS)
@@ -52,12 +55,12 @@ class KeystoreMalTokenStore(
                 .putString(KEY_REFRESH, cipher.encrypt(session.refreshToken))
                 .putLong(KEY_EXPIRES_AT, session.accessTokenExpiresAt.toEpochMilliseconds())
                 .commit()
-        } catch (_: GeneralSecurityException) {
-            false
-        } catch (_: ProviderException) {
-            false
-        } catch (_: IOException) {
-            false
+        } catch (e: GeneralSecurityException) {
+            saveFailed(e)
+        } catch (e: ProviderException) {
+            saveFailed(e)
+        } catch (e: IOException) {
+            saveFailed(e)
         }
 
     override suspend fun clear() {
@@ -86,22 +89,30 @@ class KeystoreMalTokenStore(
                 accessTokenExpiresAt = Instant.fromEpochMilliseconds(prefs.getLong(KEY_EXPIRES_AT, 0)),
                 refreshToken = cipher.decrypt(refresh),
             )
-        } catch (_: GeneralSecurityException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: IllegalArgumentException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: ProviderException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: IOException) {
-            prefs.edit().clear().commit()
-            null
+        } catch (e: GeneralSecurityException) {
+            discard(e)
+        } catch (e: IllegalArgumentException) {
+            discard(e)
+        } catch (e: ProviderException) {
+            discard(e)
+        } catch (e: IOException) {
+            discard(e)
         }
     }
 
+    private fun discard(cause: Throwable): MalSession? {
+        logger.warn(TAG, "stored MAL session unreadable, cleared (${cause::class.simpleName})")
+        prefs.edit().clear().commit()
+        return null
+    }
+
+    private fun saveFailed(cause: Throwable): Boolean {
+        logger.warn(TAG, "saving MAL session failed (${cause::class.simpleName})")
+        return false
+    }
+
     private companion object {
+        const val TAG = "Keystore"
         const val KEY_ALIAS = "animekmp_mal_session"
         const val PREFS_NAME = "mal_session"
         const val KEY_ACCESS = "access_token"

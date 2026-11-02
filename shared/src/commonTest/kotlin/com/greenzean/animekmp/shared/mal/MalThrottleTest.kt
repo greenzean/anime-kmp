@@ -1,6 +1,9 @@
 package com.greenzean.animekmp.shared.mal
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.LogLevel
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalThrottle
@@ -8,6 +11,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -129,5 +133,51 @@ class MalThrottleTest {
             assertEquals(Result.Error(MalError.NoConnection), throttle.run { Result.Error(MalApiError.NO_CONNECTION) })
             assertEquals(Result.Error(MalError.NotFound), throttle.run { Result.Error(MalApiError.NOT_FOUND) })
             assertEquals(Result.Success(1), throttle.run(ok))
+        }
+
+    @Test
+    fun aThrottleLogsTheBackoffAndTheNextOneTheDoubledBackoff() =
+        runTest {
+            val sink = RecordingLogSink()
+            val throttle = MalThrottle(clock(), logger = SinkLogger(listOf(sink)))
+
+            throttle.run { Result.Error(MalApiError.THROTTLED) }
+            testScheduler.advanceTimeBy(30.seconds)
+            testScheduler.runCurrent()
+            throttle.run { Result.Error(MalApiError.THROTTLED) }
+
+            val entries = sink.entries.filter { it.tag == "MalThrottle" && it.level == LogLevel.Warn }
+            assertEquals(2, entries.size)
+            assertTrue(entries[0].message.startsWith("backoff 30 s until "), entries[0].message)
+            assertTrue(entries[1].message.startsWith("backoff 60 s until "), entries[1].message)
+        }
+
+    @Test
+    fun aForbiddenLogsTheBlockAndItsEnd() =
+        runTest {
+            val sink = RecordingLogSink()
+            val throttle = MalThrottle(clock(), logger = SinkLogger(listOf(sink)))
+
+            throttle.run { Result.Error(MalApiError.FORBIDDEN) }
+            testScheduler.advanceTimeBy(2.hours)
+            testScheduler.runCurrent()
+            throttle.run(ok)
+
+            val entries = sink.entries.filter { it.tag == "MalThrottle" }
+            assertEquals(LogLevel.Warn, entries[0].level)
+            assertTrue(entries[0].message.startsWith("blocked until "), entries[0].message)
+            assertEquals(LogLevel.Info, entries[1].level)
+            assertEquals("block ended", entries[1].message)
+        }
+
+    @Test
+    fun successfulCallsLogNothing() =
+        runTest {
+            val sink = RecordingLogSink()
+            val throttle = MalThrottle(clock(), logger = SinkLogger(listOf(sink)))
+
+            throttle.run(ok)
+
+            assertEquals(emptyList(), sink.entries)
         }
 }

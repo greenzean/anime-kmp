@@ -19,11 +19,11 @@ val syncDataModule =
         single<SessionRefresher> { ApolloSessionRefresher(get()) }
         single {
             val library = get<AccountLibraryDataSource>()
-            SessionManager(get(), get(), onSessionEnded = library::detachFromAccount)
+            SessionManager(get(), get(), onSessionEnded = library::detachFromAccount, logger = get())
         }
-        single<SyncApi> { ApolloSyncApi(get(), get()) }
+        single<SyncApi> { ApolloSyncApi(get(), get(), get()) }
         single<SyncLocalDataSource> { SqlDelightSyncLocalDataSource(get()) }
         single<AccountLibraryDataSource> { SqlDelightAccountLibraryDataSource(get()) }
         single<ParkedAnimeResolver> { MalParkedAnimeResolver(get(), get(), get()) }
-        single { SyncEngine(get(), get(), get()) }
+        single { SyncEngine(get(), get(), get(), get()) }
     }

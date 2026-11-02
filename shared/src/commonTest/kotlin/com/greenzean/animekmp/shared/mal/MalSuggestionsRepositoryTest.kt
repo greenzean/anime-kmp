@@ -3,6 +3,8 @@ package com.greenzean.animekmp.shared.mal
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
 import com.greenzean.animekmp.shared.mal.domain.MAL_SUGGESTIONS_MAX
 import com.greenzean.animekmp.shared.mal.domain.MAL_SUGGESTIONS_PAGE_SIZE
@@ -50,7 +52,8 @@ class MalSuggestionsRepositoryTest {
     private val api = FakeSuggestionsApi()
     private val cache = SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher())
     private val throttle = MalThrottle(clock)
-    private val repository = MalSuggestionsRepository(api, cache, throttle, clock)
+    private val sink = RecordingLogSink()
+    private val repository = MalSuggestionsRepository(api, cache, throttle, clock, logger = SinkLogger(listOf(sink)))
 
     private val bebop = MalAnimeSummary(1, "Cowboy Bebop", null, 8.7, "tv", 26, "finished_airing")
     private val page = MalSearchPage(listOf(bebop), hasMore = true)
@@ -205,5 +208,33 @@ class MalSuggestionsRepositoryTest {
             api.result = Result.Error(MalApiError.NO_CONNECTION)
 
             assertEquals(Result.Error(MalError.NoConnection), repository.suggestions(0))
+        }
+
+    @Test
+    fun theCacheLogsMissThenHitWithoutTitles() =
+        runTest {
+            api.result = Result.Success(page)
+
+            repository.suggestions(0)
+            repository.suggestions(0)
+
+            assertEquals(listOf("suggestions page 0 miss", "suggestions page 0 hit"), sink.messages("MalCache"))
+            sink.assertNoneContains("Cowboy Bebop")
+        }
+
+    @Test
+    fun anOfflineRefreshOfAStaleCacheLogsTheFallback() =
+        runTest {
+            api.result = Result.Success(page)
+            repository.suggestions(0)
+            clock.current += MAL_SUGGESTIONS_TTL + 1.hours
+            api.result = Result.Error(MalApiError.NO_CONNECTION)
+
+            repository.suggestions(0)
+
+            assertEquals(
+                listOf("suggestions page 0 miss", "suggestions page 0 stale-fallback"),
+                sink.messages("MalCache"),
+            )
         }
 }

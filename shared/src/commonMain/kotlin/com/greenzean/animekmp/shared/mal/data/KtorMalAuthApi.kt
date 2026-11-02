@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalAuthApi
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
@@ -18,8 +20,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 private const val TOKEN_URL = "https://myanimelist.net/v1/oauth2/token"
+private const val TOKEN_PATH = "/v1/oauth2/token"
 private const val BAD_REQUEST = 400
 private const val UNAUTHORIZED = 401
 private const val FORBIDDEN = 403
@@ -45,6 +49,7 @@ private data class ErrorResponse(
 class KtorMalAuthApi(
     private val client: HttpClient,
     private val config: MalConfig,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalAuthApi {
     override suspend fun exchangeCode(
         code: String,
@@ -74,16 +79,27 @@ class KtorMalAuthApi(
         form: () -> Parameters,
     ): Result<MalTokens, MalAuthError> =
         try {
-            toResult(client.submitForm(TOKEN_URL, form()), rejectionIsDeadSession)
+            val started = TimeSource.Monotonic.markNow()
+            val response = client.submitForm(TOKEN_URL, form())
+            logger.logHttpResponse("POST", TOKEN_PATH, response.status.value, started)
+            toResult(response, rejectionIsDeadSession)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            Result.Error(MalAuthError.NO_INTERNET)
-        } catch (_: SerializationException) {
-            Result.Error(MalAuthError.UNKNOWN)
-        } catch (_: IllegalArgumentException) {
-            Result.Error(MalAuthError.UNKNOWN)
+        } catch (e: IOException) {
+            failure(MalAuthError.NO_INTERNET, e)
+        } catch (e: SerializationException) {
+            failure(MalAuthError.UNKNOWN, e)
+        } catch (e: IllegalArgumentException) {
+            failure(MalAuthError.UNKNOWN, e)
         }
+
+    private fun failure(
+        error: MalAuthError,
+        cause: Throwable,
+    ): Result<Nothing, MalAuthError> {
+        logger.logHttpFailure("POST", TOKEN_PATH, error, cause)
+        return Result.Error(error)
+    }
 
     private suspend fun toResult(
         response: HttpResponse,

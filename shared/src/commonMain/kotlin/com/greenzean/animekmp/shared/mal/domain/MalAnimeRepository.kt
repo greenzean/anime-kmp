@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -11,12 +13,14 @@ val MAL_DETAILS_TTL = 24.hours
 val MAL_SEARCH_TTL = 1.hours
 val MAL_STALE_LIMIT = 30.days
 const val MAL_SEARCH_PAGE_SIZE = 20
+private const val CACHE_TAG = "MalCache"
 
 class MalAnimeRepository(
     private val api: MalAnimeApi,
     private val cache: MalAnimeCache,
     private val throttle: MalThrottle,
     private val clock: Clock = Clock.System,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend fun search(
         query: String,
@@ -30,6 +34,8 @@ class MalAnimeRepository(
             throttle = throttle,
             cached = cache.search(key, pageStart),
             ttl = MAL_SEARCH_TTL,
+            logger = logger,
+            label = "search",
             fetch = { api.search(key, MAL_SEARCH_PAGE_SIZE, pageStart) },
             save = { page, now -> cache.saveSearch(key, pageStart, page, now) },
         )
@@ -42,6 +48,8 @@ class MalAnimeRepository(
             throttle = throttle,
             cached = cache.details(malId),
             ttl = MAL_DETAILS_TTL,
+            logger = logger,
+            label = "details",
             fetch = { api.details(malId) },
             save = { details, now -> cache.saveDetails(malId, details, now) },
         )
@@ -55,12 +63,18 @@ internal suspend fun <T> loadCached(
     throttle: MalThrottle,
     cached: Cached<T>?,
     ttl: Duration,
+    logger: AppLogger,
+    label: String,
     fetch: suspend () -> Result<T, MalApiError>,
     save: suspend (T, Instant) -> Unit,
 ): Result<T, MalError> {
-    if (cached != null && clock.now() - cached.fetchedAt < ttl) return Result.Success(cached.value)
+    if (cached != null && clock.now() - cached.fetchedAt < ttl) {
+        logger.debug(CACHE_TAG, "$label hit")
+        return Result.Success(cached.value)
+    }
     return when (val result = throttle.run(fetch)) {
         is Result.Success -> {
+            logger.debug(CACHE_TAG, "$label miss")
             val now = clock.now()
             save(result.data, now)
             cache.deleteFetchedBefore(now - MAL_STALE_LIMIT)
@@ -69,6 +83,7 @@ internal suspend fun <T> loadCached(
 
         is Result.Error -> {
             if (result.error == MalError.NoConnection && cached != null) {
+                logger.debug(CACHE_TAG, "$label stale-fallback")
                 Result.Success(cached.value)
             } else {
                 result

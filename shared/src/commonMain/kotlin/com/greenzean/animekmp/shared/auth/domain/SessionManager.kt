@@ -2,6 +2,8 @@ package com.greenzean.animekmp.shared.auth.domain
 
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,6 +31,7 @@ fun interface SessionRefresher {
     suspend fun refresh(refreshToken: String): Result<Session, DataError.Network>
 }
 
+private const val TAG = "Sync"
 private val EXPIRY_MARGIN = 30.seconds
 
 class SessionManager(
@@ -36,6 +39,7 @@ class SessionManager(
     private val refresher: SessionRefresher,
     private val clock: Clock = Clock.System,
     private val onSessionEnded: suspend () -> Unit = {},
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     private val mutex = Mutex()
 
@@ -58,6 +62,7 @@ class SessionManager(
     private suspend fun renew(session: Session): Result<String, DataError.Network> =
         when (val result = refresher.refresh(session.refreshToken)) {
             is Result.Success -> {
+                logger.warn(TAG, "session renewed")
                 store.save(result.data)
                 Result.Success(result.data.accessToken)
             }
@@ -69,6 +74,7 @@ class SessionManager(
         }
 
     private suspend fun endSession() {
+        logger.warn(TAG, "session ended")
         store.clear()
         onSessionEnded()
     }

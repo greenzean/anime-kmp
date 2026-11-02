@@ -10,6 +10,8 @@ import com.apollographql.apollo.exception.ApolloNetworkException
 import com.greenzean.animekmp.shared.auth.domain.SessionManager
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.graphql.ChangesSinceQuery
 import com.greenzean.animekmp.shared.graphql.PushChangesMutation
 import com.greenzean.animekmp.shared.graphql.type.ListEntryChangeInput
@@ -25,6 +27,7 @@ import com.greenzean.animekmp.shared.graphql.type.PushOutcome as GqlPushOutcome
 class ApolloSyncApi(
     private val client: ApolloClient,
     private val sessions: SessionManager,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : SyncApi {
     override suspend fun push(changes: List<SyncChange>): Result<List<PushResult>, DataError.Network> =
         authorized { token ->
@@ -36,7 +39,7 @@ class ApolloSyncApi(
             response.toResult { data ->
                 data.pushChanges.results.map { PushResult(it.id, it.outcome.toDomain(), it.entryId) }
             }
-        }
+        }.also { logFailure("push", it) }
 
     override suspend fun pull(
         cursor: String?,
@@ -67,7 +70,14 @@ class ApolloSyncApi(
                         },
                 )
             }
-        }
+        }.also { logFailure("pull", it) }
+
+    private fun logFailure(
+        step: String,
+        result: Result<*, DataError.Network>,
+    ) {
+        if (result is Result.Error) logger.warn(TAG, "$step request failed: ${result.error}")
+    }
 
     private suspend fun <D : Operation.Data> authorized(
         call: suspend (token: String) -> ApolloResponse<D>,
@@ -75,6 +85,7 @@ class ApolloSyncApi(
         sessions.accessToken().flatMap { token ->
             val response = call(token)
             if (response.isUnauthenticated()) {
+                logger.warn(TAG, "request unauthenticated, renewing session")
                 sessions.renewAfterRejection(token).flatMap { renewed -> Result.Success(call(renewed)) }
             } else {
                 Result.Success(response)
@@ -82,6 +93,7 @@ class ApolloSyncApi(
         }
 }
 
+private const val TAG = "Sync"
 private const val AUTHORIZATION = "Authorization"
 private const val UNAUTHENTICATED = "UNAUTHENTICATED"
 

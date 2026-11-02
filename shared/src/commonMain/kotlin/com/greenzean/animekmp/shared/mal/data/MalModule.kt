@@ -15,14 +15,14 @@ import org.koin.dsl.module
 
 val malModule =
     module {
-        single<MalAuthApi> { KtorMalAuthApi(HttpClient { followRedirects = false }, get()) }
-        single { MalAuthManager(get(), get(), get(), get(), get()) }
+        single<MalAuthApi> { KtorMalAuthApi(HttpClient { followRedirects = false }, get(), get()) }
+        single { MalAuthManager(get(), get(), get(), get(), get(), logger = get()) }
         single { MalRedirectHandler(get()) }
-        single<MalAnimeApi> { KtorMalAnimeApi(HttpClient { followRedirects = false }, get()) }
-        single<MalSuggestionsApi> { KtorMalSuggestionsApi(HttpClient { followRedirects = false }, get()) }
-        single<MalUserApi> { KtorMalUserApi(HttpClient { followRedirects = false }, get()) }
+        single<MalAnimeApi> { KtorMalAnimeApi(HttpClient { followRedirects = false }, get(), get()) }
+        single<MalSuggestionsApi> { KtorMalSuggestionsApi(HttpClient { followRedirects = false }, get(), get()) }
+        single<MalUserApi> { KtorMalUserApi(HttpClient { followRedirects = false }, get(), get()) }
         single<MalAnimeCache> { SqlDelightMalCache(get()) }
-        single { MalThrottle() }
-        single { MalAnimeRepository(get(), get(), get()) }
-        single { MalSuggestionsRepository(get(), get(), get()) }
+        single { MalThrottle(logger = get()) }
+        single { MalAnimeRepository(get(), get(), get(), logger = get()) }
+        single { MalSuggestionsRepository(get(), get(), get(), logger = get()) }
     }

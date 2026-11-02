@@ -3,6 +3,8 @@ package com.greenzean.animekmp.shared.mal
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeDetails
@@ -56,7 +58,9 @@ class MalAnimeRepositoryTest {
     private val clock = MutableClock(Instant.fromEpochMilliseconds(1_000_000_000))
     private val api = FakeMalAnimeApi()
     private val cache = SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher())
-    private val repository = MalAnimeRepository(api, cache, MalThrottle(clock), clock)
+    private val sink = RecordingLogSink()
+    private val repository =
+        MalAnimeRepository(api, cache, MalThrottle(clock), clock, logger = SinkLogger(listOf(sink)))
 
     private val bebop = MalAnimeSummary(1, "Cowboy Bebop", null, 8.7, "tv", 26, "finished_airing")
     private val page = MalSearchPage(listOf(bebop), hasMore = false)
@@ -202,5 +206,41 @@ class MalAnimeRepositoryTest {
             api.detailsResult = Result.Error(MalApiError.NO_CONNECTION)
 
             assertEquals(Result.Error(MalError.NoConnection), repository.details(1))
+        }
+
+    @Test
+    fun searchLogsMissThenHitWithoutTheQuery() =
+        runTest {
+            api.searchResult = Result.Success(page)
+
+            repository.search("SENTINEL-QUERY")
+            repository.search("SENTINEL-QUERY")
+
+            assertEquals(listOf("search miss", "search hit"), sink.messages("MalCache"))
+            sink.assertNoneContains("SENTINEL-QUERY", "sentinel-query", "Cowboy Bebop")
+        }
+
+    @Test
+    fun detailsLogMissThenHit() =
+        runTest {
+            api.detailsResult = Result.Success(details)
+
+            repository.details(1)
+            repository.details(1)
+
+            assertEquals(listOf("details miss", "details hit"), sink.messages("MalCache"))
+        }
+
+    @Test
+    fun anOfflineRefreshOfStaleDetailsLogsTheFallback() =
+        runTest {
+            api.detailsResult = Result.Success(details)
+            repository.details(1)
+            clock.current += 2.days
+            api.detailsResult = Result.Error(MalApiError.NO_CONNECTION)
+
+            repository.details(1)
+
+            assertEquals(listOf("details miss", "details stale-fallback"), sink.messages("MalCache"))
         }
 }

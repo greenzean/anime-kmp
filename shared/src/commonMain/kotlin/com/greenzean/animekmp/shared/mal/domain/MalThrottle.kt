@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,6 +13,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
+private const val TAG = "MalThrottle"
 private val MIN_INTERVAL = 500.milliseconds
 private val FIRST_BACKOFF = 30.seconds
 private val MAX_BACKOFF = 1.hours
@@ -18,6 +21,7 @@ private val FORBIDDEN_BLOCK = 1.hours
 
 class MalThrottle(
     private val clock: Clock = Clock.System,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     private val mutex = Mutex()
     private var nextCallAt = Instant.DISTANT_PAST
@@ -46,7 +50,10 @@ class MalThrottle(
         }
 
     private fun activeBlock(): MalError? {
-        if (clock.now() >= blockedUntil) block = null
+        if (block != null && clock.now() >= blockedUntil) {
+            block = null
+            logger.info(TAG, "block ended")
+        }
         return block
     }
 
@@ -54,12 +61,14 @@ class MalThrottle(
         when (error) {
             MalApiError.THROTTLED -> {
                 val retryAt = clock.now() + backoff
+                logger.warn(TAG, "backoff ${backoff.inWholeSeconds} s until $retryAt")
                 backoff = minOf(backoff * 2, MAX_BACKOFF)
                 MalError.Throttled(retryAt).also { setBlock(it, retryAt) }
             }
 
             MalApiError.FORBIDDEN -> {
                 val until = clock.now() + FORBIDDEN_BLOCK
+                logger.warn(TAG, "blocked until $until")
                 MalError.Blocked(until).also { setBlock(it, until) }
             }
 

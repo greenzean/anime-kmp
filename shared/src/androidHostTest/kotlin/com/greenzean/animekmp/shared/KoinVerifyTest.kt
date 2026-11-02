@@ -5,6 +5,7 @@ import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.auth.presentation.authModule
 import com.greenzean.animekmp.shared.core.data.coreDataModule
+import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
@@ -32,6 +33,7 @@ class KoinVerifyTest {
     fun everyConstructorDependencyOfTheFullModuleListHasADefinition() {
         module {
             includes(
+                loggingModule,
                 coreDataModule,
                 libraryDataModule,
                 syncDataModule,
