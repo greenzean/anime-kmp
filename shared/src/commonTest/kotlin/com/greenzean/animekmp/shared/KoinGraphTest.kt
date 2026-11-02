@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared
 
 import app.cash.sqldelight.db.SqlDriver
+import com.apollographql.apollo.ApolloClient
 import com.greenzean.animekmp.shared.auth.domain.DeleteAccountUseCase
 import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
@@ -16,6 +17,11 @@ import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.domain.EmptyResult
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.LogLevel
+import com.greenzean.animekmp.shared.core.logging.LogSink
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.DetailsViewModel
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
@@ -61,14 +67,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
 import org.koin.core.parameter.parametersOf
+import org.koin.core.qualifier.named
+import org.koin.dsl.bind
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class KoinGraphTest {
+    private val firstSink = RecordingLogSink()
+    private val secondSink = RecordingLogSink(minLevel = LogLevel.Info)
+
     private val hostProvided: Module =
         module {
+            single(named("first")) { firstSink } bind LogSink::class
+            single(named("second")) { secondSink } bind LogSink::class
             single<SqlDriver> { createTestDriver() }
             single<DisplaySettings> {
                 object : DisplaySettings {
@@ -132,6 +146,7 @@ class KoinGraphTest {
         koinApplication {
             modules(
                 hostProvided,
+                loggingModule,
                 coreDataModule,
                 libraryDataModule,
                 syncDataModule,
@@ -168,7 +183,22 @@ class KoinGraphTest {
             MalAnimeRepository::class,
             MalAuthManager::class,
             MalRedirectHandler::class,
+            ApolloClient::class,
         ).forEach { assertNotNull(app.koin.get(it), it.simpleName) }
+        app.close()
+    }
+
+    @Test
+    fun theLoggerResolvesWithEveryBoundSink() {
+        val app = app()
+
+        assertEquals(2, app.koin.getAll<LogSink>().size)
+        val logger = app.koin.get<AppLogger>()
+        logger.debug("T", "debug")
+        logger.warn("T", "warn")
+
+        assertEquals(listOf("debug", "warn"), firstSink.entries.map { it.message })
+        assertEquals(listOf("warn"), secondSink.entries.map { it.message })
         app.close()
     }
 

@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeDetails
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeSummary
@@ -13,7 +15,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
@@ -21,6 +22,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 internal const val BASE_URL = "https://api.myanimelist.net/v2"
 private const val CLIENT_ID_HEADER = "X-MAL-CLIENT-ID"
@@ -128,6 +130,7 @@ private fun AnimeDto.toDetails() =
 class KtorMalAnimeApi(
     private val client: HttpClient,
     private val config: MalConfig,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalAnimeApi {
     override suspend fun search(
         query: String,
@@ -135,7 +138,8 @@ class KtorMalAnimeApi(
         offset: Int,
     ): Result<MalSearchPage, MalApiError> =
         call(
-            request = {
+            path = "/v2/anime",
+            request = { trace ->
                 client.get("$BASE_URL/anime") {
                     header(CLIENT_ID_HEADER, config.clientId)
                     parameter("q", query)
@@ -143,6 +147,7 @@ class KtorMalAnimeApi(
                     parameter("offset", offset)
                     parameter("fields", SEARCH_FIELDS)
                     parameter("nsfw", "false")
+                    trace.request(this)
                 }
             },
             parse = { body ->
@@ -153,25 +158,32 @@ class KtorMalAnimeApi(
 
     override suspend fun details(malId: Int): Result<MalAnimeDetails, MalApiError> =
         call(
-            request = {
+            path = "/v2/anime/$malId",
+            request = { trace ->
                 client.get("$BASE_URL/anime/$malId") {
                     header(CLIENT_ID_HEADER, config.clientId)
                     parameter("fields", DETAILS_FIELDS)
+                    trace.request(this)
                 }
             },
             parse = { body -> json.decodeFromString<AnimeDto>(body).toDetails() },
         )
 
     private suspend fun <T> call(
-        request: suspend () -> HttpResponse,
+        path: String,
+        request: suspend (MalCallTrace) -> HttpResponse,
         parse: (String) -> T,
-    ): Result<T, MalApiError> =
-        try {
-            val response = request()
+    ): Result<T, MalApiError> {
+        val trace = MalCallTrace(logger, "GET", path)
+        return try {
+            val started = TimeSource.Monotonic.markNow()
+            val response = request(trace)
             val status = response.status.value
+            logger.logHttpResponse("GET", path, status, started)
+            val body = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    Result.Success(parse(response.bodyAsText()))
+                    Result.Success(parse(body))
                 }
 
                 status == TOO_MANY_REQUESTS || status in REDIRECT_FROM..REDIRECT_UNTIL -> {
@@ -198,11 +210,23 @@ class KtorMalAnimeApi(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            Result.Error(MalApiError.NO_CONNECTION)
-        } catch (_: SerializationException) {
-            Result.Error(MalApiError.SERIALIZATION)
-        } catch (_: IllegalArgumentException) {
-            Result.Error(MalApiError.SERIALIZATION)
+        } catch (e: IOException) {
+            failure(path, MalApiError.NO_CONNECTION, e, trace)
+        } catch (e: SerializationException) {
+            failure(path, MalApiError.SERIALIZATION, e, trace)
+        } catch (e: IllegalArgumentException) {
+            failure(path, MalApiError.SERIALIZATION, e, trace)
         }
+    }
+
+    private fun failure(
+        path: String,
+        error: MalApiError,
+        cause: Throwable,
+        trace: MalCallTrace,
+    ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
+        logger.logHttpFailure("GET", path, error, cause)
+        return Result.Error(error)
+    }
 }

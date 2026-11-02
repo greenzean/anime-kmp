@@ -4,6 +4,8 @@ import android.content.Context
 import com.greenzean.animekmp.shared.auth.domain.Session
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.core.data.KeystoreCipher
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +19,7 @@ import kotlin.time.Instant
 
 class KeystoreSessionStore(
     context: Context,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : SessionStore {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val cipher = KeystoreCipher(KEY_ALIAS)
@@ -69,22 +72,25 @@ class KeystoreSessionStore(
                 accessTokenExpiresAt = Instant.fromEpochMilliseconds(prefs.getLong(KEY_EXPIRES_AT, 0)),
                 refreshToken = cipher.decrypt(refresh),
             )
-        } catch (_: GeneralSecurityException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: IllegalArgumentException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: ProviderException) {
-            prefs.edit().clear().commit()
-            null
-        } catch (_: IOException) {
-            prefs.edit().clear().commit()
-            null
+        } catch (e: GeneralSecurityException) {
+            discard(e)
+        } catch (e: IllegalArgumentException) {
+            discard(e)
+        } catch (e: ProviderException) {
+            discard(e)
+        } catch (e: IOException) {
+            discard(e)
         }
     }
 
+    private fun discard(cause: Throwable): Session? {
+        logger.warn(TAG, "stored session unreadable, cleared (${cause::class.simpleName})")
+        prefs.edit().clear().commit()
+        return null
+    }
+
     private companion object {
+        const val TAG = "Keystore"
         const val KEY_ALIAS = "animekmp_session"
         const val PREFS_NAME = "session"
         const val KEY_ACCESS = "access_token"

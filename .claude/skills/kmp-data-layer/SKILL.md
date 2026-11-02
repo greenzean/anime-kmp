@@ -126,11 +126,12 @@ Configure the client once. Accept the engine externally so tests can swap in a m
 object HttpClientFactory {
     fun create(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
         install(ContentNegotiation) { json() }
-        install(Logging) { logger = Logger.DEFAULT; level = LogLevel.INFO }
         defaultRequest { contentType(ContentType.Application.Json) }
     }
 }
 ```
+
+Do not install the Ktor Logging plugin: it logs headers and bodies unless filtered. Log through `AppLogger` instead (ADR 0016).
 
 Inject `HttpClient` via Koin. Keep `HttpClientFactory`, `safeCall`, and `responseToResult` in `commonMain` — they are pure Kotlin. The `HttpClientEngine` is the only per-platform piece: provide it from each platform's Koin module (`OkHttp` on Android via `ktor-client-okhttp`, `Darwin` on iOS via `ktor-client-darwin`).
 
@@ -151,6 +152,15 @@ interface TokenStorage {
 ```
 
 Never store tokens in plain preferences, logs, or the SQLDelight database. Never commit keystores or `.env` files. Token refresh (401) is handled in the Apollo/Ktor auth layer that reads and writes `TokenStorage`.
+
+## Logging
+
+Log through `AppLogger` (ADR 0016). Two tiers:
+
+- **Debug, Info, Warn, Error (strict):** counts, error codes, paths without the query string, status codes and durations. Never tokens, headers, bodies, query strings, search text, usernames or library content. On HTTP, auth, IO and serialization paths, log the exception class name only and do not attach the throwable.
+- **Trace (debuggable builds only, below Debug):** full detail: the full URL, headers, bodies truncated at 8 KB, Apollo variables and responses, and every SQL statement with its values. Trace reaches only sinks whose `minLevel` is Trace. Remote sinks use Debug or higher.
+
+`LogRedactor` masks secrets in both tiers. A new secret-carrying field goes into its deny-list and its tests.
 
 ---
 

@@ -2,6 +2,8 @@ package com.greenzean.animekmp.shared.sync.domain
 
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -9,6 +11,7 @@ class SyncEngine(
     private val api: SyncApi,
     private val local: SyncLocalDataSource,
     private val parkedAnime: ParkedAnimeResolver = NoParkedAnimeResolver,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     private val mutex = Mutex()
 
@@ -17,14 +20,34 @@ class SyncEngine(
             val rejected = mutableListOf<Rejection>()
             var pushed = 0
             when (val push = pushPending(rejected)) {
-                is Result.Error -> return@withLock SyncResult.Failure(push.error)
+                is Result.Error -> return@withLock failure("push", push.error)
                 is Result.Success -> pushed = push.data
             }
             when (val pull = pullAll()) {
-                is Result.Error -> SyncResult.Failure(pull.error)
+                is Result.Error -> failure("pull", pull.error)
                 is Result.Success -> SyncResult.Success(pushed, pull.data, rejected)
             }
         }
+
+    private fun failure(
+        step: String,
+        error: DataError,
+    ): SyncResult.Failure {
+        logger.warn(TAG, "$step failed: $error")
+        return SyncResult.Failure(error)
+    }
+
+    private fun logPush(
+        batch: List<SyncChange>,
+        results: Map<String, PushResult>,
+    ) {
+        val outcomes = batch.mapNotNull { results[it.id]?.outcome }
+        val accepted = outcomes.count { it == PushOutcome.APPLIED }
+        val conflict = outcomes.count { it == PushOutcome.IGNORED_STALE }
+        logger.info(TAG, "push ${batch.size} pending -> accepted=$accepted conflict=$conflict")
+        val rejected = outcomes.count { it == PushOutcome.REJECTED_INVALID }
+        if (rejected > 0) logger.warn(TAG, "push rejected $rejected")
+    }
 
     suspend fun <T> exclusive(block: suspend () -> T): T = mutex.withLock { block() }
 
@@ -43,6 +66,7 @@ class SyncEngine(
                     is Result.Error -> return response
                     is Result.Success -> response.data.associateBy { it.id }
                 }
+            logPush(batch, results)
             for (change in batch) {
                 seen += change.id
                 val result = results[change.id]
@@ -80,10 +104,12 @@ class SyncEngine(
 
         parkedAnime.resolve()
         pulled += local.retryParked()
+        logger.info(TAG, "pull $pulled rows")
         return Result.Success(pulled)
     }
 
     private companion object {
+        const val TAG = "Sync"
         const val PUSH_BATCH_SIZE = 1000
         const val PULL_LIMIT = 500
     }

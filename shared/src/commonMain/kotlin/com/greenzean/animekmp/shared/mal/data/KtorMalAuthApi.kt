@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalAuthApi
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
@@ -8,8 +10,8 @@ import com.greenzean.animekmp.shared.mal.domain.MalTokens
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
+import io.ktor.http.formUrlEncode
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
 import kotlinx.coroutines.CancellationException
@@ -18,8 +20,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 private const val TOKEN_URL = "https://myanimelist.net/v1/oauth2/token"
+private const val TOKEN_PATH = "/v1/oauth2/token"
 private const val BAD_REQUEST = 400
 private const val UNAUTHORIZED = 401
 private const val FORBIDDEN = 403
@@ -45,6 +49,7 @@ private data class ErrorResponse(
 class KtorMalAuthApi(
     private val client: HttpClient,
     private val config: MalConfig,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalAuthApi {
     override suspend fun exchangeCode(
         code: String,
@@ -73,23 +78,45 @@ class KtorMalAuthApi(
         rejectionIsDeadSession: Boolean,
         form: () -> Parameters,
     ): Result<MalTokens, MalAuthError> =
+        MalCallTrace(logger, "POST", TOKEN_PATH).let { trace -> tokenCall(trace, rejectionIsDeadSession, form) }
+
+    private suspend fun tokenCall(
+        trace: MalCallTrace,
+        rejectionIsDeadSession: Boolean,
+        form: () -> Parameters,
+    ): Result<MalTokens, MalAuthError> =
         try {
-            toResult(client.submitForm(TOKEN_URL, form()), rejectionIsDeadSession)
+            val started = TimeSource.Monotonic.markNow()
+            val parameters = form()
+            val response = client.submitForm(TOKEN_URL, parameters) { trace.request(this, parameters.formUrlEncode()) }
+            logger.logHttpResponse("POST", TOKEN_PATH, response.status.value, started)
+            toResult(response, rejectionIsDeadSession, trace)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            Result.Error(MalAuthError.NO_INTERNET)
-        } catch (_: SerializationException) {
-            Result.Error(MalAuthError.UNKNOWN)
-        } catch (_: IllegalArgumentException) {
-            Result.Error(MalAuthError.UNKNOWN)
+        } catch (e: IOException) {
+            failure(MalAuthError.NO_INTERNET, e, trace)
+        } catch (e: SerializationException) {
+            failure(MalAuthError.UNKNOWN, e, trace)
+        } catch (e: IllegalArgumentException) {
+            failure(MalAuthError.UNKNOWN, e, trace)
         }
+
+    private fun failure(
+        error: MalAuthError,
+        cause: Throwable,
+        trace: MalCallTrace,
+    ): Result<Nothing, MalAuthError> {
+        trace.failed(cause)
+        logger.logHttpFailure("POST", TOKEN_PATH, error, cause)
+        return Result.Error(error)
+    }
 
     private suspend fun toResult(
         response: HttpResponse,
         rejectionIsDeadSession: Boolean,
+        trace: MalCallTrace,
     ): Result<MalTokens, MalAuthError> {
-        val body = response.bodyAsText()
+        val body = trace.complete(response)
         return when {
             response.status.isSuccess() -> {
                 val tokens = json.decodeFromString<TokenResponse>(body)

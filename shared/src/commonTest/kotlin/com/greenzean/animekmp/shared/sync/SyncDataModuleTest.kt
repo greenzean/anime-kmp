@@ -5,6 +5,7 @@ import com.greenzean.animekmp.shared.auth.data.InMemorySessionStore
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.core.data.coreDataModule
 import com.greenzean.animekmp.shared.core.data.createTestDriver
+import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.mal.data.malModule
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
@@ -28,6 +29,7 @@ class SyncDataModuleTest {
                         single { MalConfig("client-1", "https://app.example.test/mal-callback") }
                         single<SessionStore> { InMemorySessionStore() }
                     },
+                    loggingModule,
                     coreDataModule,
                     libraryDataModule,
                     malModule,

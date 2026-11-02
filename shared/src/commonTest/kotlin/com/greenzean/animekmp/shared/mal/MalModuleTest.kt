@@ -5,6 +5,10 @@ import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.EmptyResult
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.LogSink
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.mal.data.KtorMalAnimeApi
 import com.greenzean.animekmp.shared.mal.data.KtorMalAuthApi
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
@@ -22,6 +26,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.koin.dsl.bind
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.Test
@@ -50,9 +55,12 @@ class MalModuleTest {
                         single<RandomBytes> { RandomBytes { ByteArray(it) } }
                     },
                     malModule,
+                    loggingModule,
+                    module { single { RecordingLogSink() } bind LogSink::class },
                 )
             }
 
+        assertIs<AppLogger>(app.koin.get<AppLogger>())
         assertIs<KtorMalAuthApi>(app.koin.get<MalAuthApi>())
         assertIs<MalAuthManager>(app.koin.get<MalAuthManager>())
         assertIs<MalRedirectHandler>(app.koin.get<MalRedirectHandler>())
@@ -71,6 +79,8 @@ class MalModuleTest {
                         single { AnimeDatabase(get()) }
                     },
                     malModule,
+                    loggingModule,
+                    module { single { RecordingLogSink() } bind LogSink::class },
                 )
             }
 

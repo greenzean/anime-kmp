@@ -244,14 +244,14 @@ suspend inline fun <reified T> safeCall(
     val response = try {
         execute()
     } catch (e: UnresolvedAddressException) {
-        Logger.e(throwable = e) { "No internet connection" }
+        logger.error(tag = TAG, message = "No internet connection: ${e::class.simpleName}")
         return Result.Error(DataError.Network.NO_INTERNET)
     } catch (e: SerializationException) {
-        Logger.e(throwable = e) { "Serialization failed" }
+        logger.error(tag = TAG, message = "Serialization failed: ${e::class.simpleName}")
         return Result.Error(DataError.Network.SERIALIZATION)
     } catch (e: Exception) {
         if (e is CancellationException) throw e
-        Logger.e(throwable = e) { "Unknown network error" }
+        logger.error(tag = TAG, message = "Unknown network error: ${e::class.simpleName}")
         return Result.Error(DataError.Network.UNKNOWN)
     }
 
@@ -289,7 +289,7 @@ suspend fun getStatus(): Result<StatusDto, DataError.Network> {
 }
 ```
 
-`BASE_URL` comes from configuration injected per build type, not a committed secret. `Logger` is Kermit; if the project has not adopted it yet, use a small logging interface in `shared.core`.
+`BASE_URL` comes from configuration injected per build type, not a committed secret. Log through `AppLogger` (`shared.core.logging`); the HTTP paths log only the exception class name and never attach the throwable, because its message can contain the URL with its query (ADR 0016).
 
 ---
 

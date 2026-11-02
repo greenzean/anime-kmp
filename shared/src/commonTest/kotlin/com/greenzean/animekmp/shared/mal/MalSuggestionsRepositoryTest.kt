@@ -3,6 +3,9 @@ package com.greenzean.animekmp.shared.mal
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.LogLevel
+import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
+import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
 import com.greenzean.animekmp.shared.mal.domain.MAL_SUGGESTIONS_MAX
 import com.greenzean.animekmp.shared.mal.domain.MAL_SUGGESTIONS_PAGE_SIZE
@@ -19,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -50,7 +54,8 @@ class MalSuggestionsRepositoryTest {
     private val api = FakeSuggestionsApi()
     private val cache = SqlDelightMalCache(AnimeDatabase(driver), UnconfinedTestDispatcher())
     private val throttle = MalThrottle(clock)
-    private val repository = MalSuggestionsRepository(api, cache, throttle, clock)
+    private val sink = RecordingLogSink()
+    private val repository = MalSuggestionsRepository(api, cache, throttle, clock, logger = SinkLogger(listOf(sink)))
 
     private val bebop = MalAnimeSummary(1, "Cowboy Bebop", null, 8.7, "tv", 26, "finished_airing")
     private val page = MalSearchPage(listOf(bebop), hasMore = true)
@@ -205,5 +210,63 @@ class MalSuggestionsRepositoryTest {
             api.result = Result.Error(MalApiError.NO_CONNECTION)
 
             assertEquals(Result.Error(MalError.NoConnection), repository.suggestions(0))
+        }
+
+    @Test
+    fun theCacheLogsMissThenHitWithoutTitles() =
+        runTest {
+            api.result = Result.Success(page)
+
+            repository.suggestions(0)
+            repository.suggestions(0)
+
+            assertEquals(listOf("suggestions page 0 miss", "suggestions page 0 hit"), sink.messages("MalCache"))
+            sink.assertNoneContains("Cowboy Bebop")
+        }
+
+    @Test
+    fun anOfflineRefreshOfAStaleCacheLogsTheFallback() =
+        runTest {
+            api.result = Result.Success(page)
+            repository.suggestions(0)
+            clock.current += MAL_SUGGESTIONS_TTL + 1.hours
+            api.result = Result.Error(MalApiError.NO_CONNECTION)
+
+            repository.suggestions(0)
+
+            assertEquals(
+                listOf("suggestions page 0 miss", "suggestions page 0 stale-fallback"),
+                sink.messages("MalCache"),
+            )
+        }
+
+    @Test
+    fun theApiStreamShowsMissHitAndExpiredForSuggestions() =
+        runTest {
+            val traceSink = RecordingLogSink(minLevel = LogLevel.Trace)
+            val traced = MalSuggestionsRepository(api, cache, throttle, clock, logger = SinkLogger(listOf(traceSink)))
+            api.result = Result.Success(page)
+
+            traced.suggestions(0)
+            traced.suggestions(0)
+            clock.current += MAL_SUGGESTIONS_TTL + 1.hours
+            traced.suggestions(0)
+
+            val lines = traceSink.messages("API")
+            assertEquals(3, lines.size, lines.toString())
+            assertTrue(lines[0].startsWith("API  CACHE miss  suggestions page 0  -> calling MAL"), lines[0])
+            assertTrue(lines[1].startsWith("API  CACHE hit  suggestions page 0  (age "), lines[1])
+            assertTrue(lines[2].startsWith("API  CACHE expired  suggestions page 0  (age "), lines[2])
+        }
+
+    @Test
+    fun aDebugSinkSeesNoApiStreamLines() =
+        runTest {
+            api.result = Result.Success(page)
+
+            repository.suggestions(0)
+            repository.suggestions(0)
+
+            assertTrue(sink.entries.none { it.tag == "API" })
         }
 }

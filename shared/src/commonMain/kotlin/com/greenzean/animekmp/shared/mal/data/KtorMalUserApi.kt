@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
@@ -9,15 +11,16 @@ import com.greenzean.animekmp.shared.mal.domain.MalUserApi
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 private const val USER_URL = "https://api.myanimelist.net/v2/users/@me"
+private const val USER_PATH = "/v2/users/@me"
 private const val USER_NOT_FOUND = 404
 private const val USER_FORBIDDEN = 403
 private const val USER_TOO_MANY_REQUESTS = 429
@@ -35,6 +38,7 @@ private data class UserDto(
 class KtorMalUserApi(
     private val client: HttpClient,
     private val auth: MalAuthManager,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalUserApi {
     override suspend fun me(): Result<MalUser, MalApiError> {
         val token =
@@ -42,12 +46,20 @@ class KtorMalUserApi(
                 is Result.Success -> result.data
                 is Result.Error -> return Result.Error(result.error.toApiError())
             }
+        val trace = MalCallTrace(logger, "GET", USER_PATH)
         return try {
-            val response = client.get(USER_URL) { bearerAuth(token) }
+            val started = TimeSource.Monotonic.markNow()
+            val response =
+                client.get(USER_URL) {
+                    bearerAuth(token)
+                    trace.request(this)
+                }
             val status = response.status.value
+            logger.logHttpResponse("GET", USER_PATH, status, started)
+            val body = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    Result.Success(MalUser(userJson.decodeFromString<UserDto>(response.bodyAsText()).name))
+                    Result.Success(MalUser(userJson.decodeFromString<UserDto>(body).name))
                 }
 
                 status == USER_TOO_MANY_REQUESTS || status in USER_REDIRECT_FROM..USER_REDIRECT_UNTIL -> {
@@ -72,13 +84,23 @@ class KtorMalUserApi(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            Result.Error(MalApiError.NO_CONNECTION)
-        } catch (_: SerializationException) {
-            Result.Error(MalApiError.SERIALIZATION)
-        } catch (_: IllegalArgumentException) {
-            Result.Error(MalApiError.SERIALIZATION)
+        } catch (e: IOException) {
+            failure(MalApiError.NO_CONNECTION, e, trace)
+        } catch (e: SerializationException) {
+            failure(MalApiError.SERIALIZATION, e, trace)
+        } catch (e: IllegalArgumentException) {
+            failure(MalApiError.SERIALIZATION, e, trace)
         }
+    }
+
+    private fun failure(
+        error: MalApiError,
+        cause: Throwable,
+        trace: MalCallTrace,
+    ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
+        logger.logHttpFailure("GET", USER_PATH, error, cause)
+        return Result.Error(error)
     }
 }
 

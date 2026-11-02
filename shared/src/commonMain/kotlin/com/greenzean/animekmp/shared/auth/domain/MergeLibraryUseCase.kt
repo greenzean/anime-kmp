@@ -2,6 +2,8 @@ package com.greenzean.animekmp.shared.auth.domain
 
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.sync.domain.AccountLibraryDataSource
 import com.greenzean.animekmp.shared.sync.domain.SyncEngine
 import com.greenzean.animekmp.shared.sync.domain.SyncResult
@@ -18,6 +20,7 @@ class MergeLibraryUseCase(
     private val engine: SyncEngine,
     private val library: AccountLibraryDataSource,
     private val syncScheduler: SyncScheduler,
+    private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke(): Result<MergeSummary, DataError> =
         when (val result = syncOrQueue()) {
@@ -26,6 +29,7 @@ class MergeLibraryUseCase(
             }
 
             is SyncResult.Failure -> {
+                logger.warn("Sync", "merge failed: ${result.error}")
                 syncScheduler.requestSync()
                 Result.Error(result.error)
             }

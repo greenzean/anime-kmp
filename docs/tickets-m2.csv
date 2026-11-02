@@ -576,3 +576,44 @@ Acceptance: `docker` and `docker compose` cannot run on the Mac from Claude Code
 Out of scope: production Dockerfile and hosting choice (M2-23, M2-24), a CI deploy job, exposing the server to the internet.
 Covers: working rules in CLAUDE.md. Skill: ktor-server-conventions, postgres-migrations.
 Order: settings and script first, then docs."
+M2-32,Debug logs in the app,chore,M2,"chore,phase-1",sonnet,"shared, composeApp, androidApp, build-ci, docs","**Goal:** the developer can see what the app does and why a call failed, with full API and database detail in debuggable builds, and can send the logs to any destination (Logcat today, a service like Datadog later). Secrets are masked everywhere. User data appears only at the Trace level, which release builds and remote sinks never receive.
+
+**Where in the app:** nowhere (Logcat only for now).
+
+**Contract:**
+- `AppLogger` in `shared/commonMain`: `trace`, `debug`, `info`, `warn`, `error(tag, message, throwable?)`, and `isLoggable(level)`, which is true when some sink accepts the level. This is the only thing app code depends on.
+- `inline fun AppLogger.trace(tag: String, message: () -> String)`: builds the string only when `isLoggable(Trace)` is true.
+- `LogLevel` in `shared/commonMain`: `Trace`, `Debug`, `Info`, `Warn`, `Error`. Trace is the lowest level.
+- `LogSink` in `shared/commonMain`: `log(level, tag, message, throwable?)`, plus a `minLevel`. This is where a destination plugs in. A remote sink sets `minLevel` to Debug or higher.
+- The `AppLogger` implementation sends each entry to every `LogSink` registered in Koin (a list of sinks), skipping a sink when the level is below its `minLevel`. A sink that throws never breaks the app or the other sinks.
+- `LogRedactor` in `shared/commonMain`: `redactText`, `redactUrl`, `redactHeader` and `truncate` (8 KB). Masks secret keys and Bearer tokens.
+- `LoggingSqlDriver` in `shared/commonMain`: a `SqlDriver` wrapper that logs every statement at Trace with the tag `SQL`; calls to MAL and our server log one block each under the tag `API`.
+- `LogcatSink` in `androidMain` is the only sink in this ticket: Trace and up in debuggable builds (as `Log.v`), Warn and up in release builds. Messages longer than Logcat's line limit are split by `chunkForLogcat`.
+- A new destination is one class plus one line in a Koin module. Nothing else changes.
+
+**Acceptance:**
+- An ADR (0016) records the design: our own interface and sink model, not tied to a logging library, and the two-tier rule. A library such as Kermit may sit behind a sink; the ADR checks versions and KMP support with a search, dated, and says whether one is worth using at all.
+- Strict tier (Debug, Info, Warn, Error): MAL requests (method, path, status, duration), `MalThrottle` backoff and block events with their end time, token refresh outcome, the MAL connect flow steps and errors, sync push and pull outcomes and errors, and exceptions caught in the data layer (where they become `MalApiError`, `DataError` and similar). Never tokens, headers, bodies, query strings, search text, auth codes, usernames, emails, library contents or titles. On HTTP, auth, IO and serialization paths, the exception class name only, with no throwable attached.
+- Trace tier (debuggable Logcat only): the full URL with its query string, request headers, the useful response headers, request and response bodies truncated at 8 KB, Apollo variables and responses including GraphQL error messages, and every SQL statement with bound values, rows read or changed, duration, transactions and notified tables.
+- Secrets are masked in both tiers by `LogRedactor`: access_token, refresh_token, id_token, accessToken, refreshToken, idToken, code, code_verifier, code_challenge, state, client_secret, the Authorization and Cookie headers, and Bearer tokens. A new secret-carrying field is added to the list and to the tests.
+- Trace strings are built only when `isLoggable(Trace)` is true.
+- No Ktor `Logging` plugin. The Ktor and Apollo code log through `LogRedactor`.
+- Tests: `LogRedactorTest` covers every secret key in JSON, form, query and header form, Bearer tokens, truncation and non-secret text.
+- Tests: `LoggingSqlDriverTest` with a recording sink at Trace: an insert logs the SQL, bound values and changed rows; a select logs rows read; a transaction logs begin and commit, and rollback on an exception; a listener notification logs the tables; failures are rethrown unchanged; with a Debug sink nothing is built.
+- Tests: a MockEngine call shows the full URL, headers and body at Trace with secrets masked (`Authorization: Bearer ****`); an Apollo call masks `idToken`, `refreshToken` and `accessToken` and shows error messages; with a Debug sink, no token, header or query string appears.
+- Tests: two fake sinks both receive the same entry, a sink under its `minLevel` receives nothing, and a throwing sink does not stop the other one. `chunkForLogcat` splits long messages and loses nothing. Logcat's minimum level is Trace when debuggable and Warn otherwise.
+- The Koin graph tests still pass.
+
+**Depends on:** M2-16.
+**Out of scope:** an actual remote sink (Datadog or any other; a later ticket), crash reporting or analytics, an in-app log viewer, server logging (already logback), iOS and web sinks (`OSLogSink` and `ConsoleLogSink`, each its own later ticket when its target exists).
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Our own interface comes first so the destination stays swappable; no library is chosen by this ticket. Whether a library is used behind a sink is the ADR's call (from memory Kermit has a similar writer model; not verified).
+- Two tiers: Debug and above keep the strict rules. Trace, the new lowest level, carries full detail for the developer.
+- Trace reaches only sinks whose `minLevel` allows it. Logcat: Trace and up in debuggable builds, Warn and up in release builds. A remote sink sets `minLevel` to Debug or higher and never receives Trace.
+- Secrets are masked by a key deny-list in `LogRedactor`. It can miss a new secret field, so every new secret-carrying field is added to the list and to the tests.
+- Every SQL statement goes through `LoggingSqlDriver` (common code, wrapping the platform driver). No repository-level SQL lines.
+- Platforms: all logic is in `commonMain`. Only the last-mile writer is per platform: `LogcatSink` now, `OSLogSink` (iOS) and `ConsoleLogSink` (web) later, as separate small sinks. Kermit's ready OSLog and console writers can sit behind them.
+- The logs are for the developer to read on the device. Logs stay on the device in this ticket, so the privacy policy (M2-26) needs no new entry. A future remote sink sends data off the device: that ticket must update the privacy policy, make the sink opt-in, and re-check what may be logged.
+
+**Parts and skills:** docs (ADR), build-ci (only if the ADR picks a library), shared, tests. Skills: adr, kmp-data-layer, kmp-di-koin, kmp-testing."

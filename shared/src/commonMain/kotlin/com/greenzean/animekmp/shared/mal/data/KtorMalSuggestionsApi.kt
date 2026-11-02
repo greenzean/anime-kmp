@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.AppLogger
+import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
 import com.greenzean.animekmp.shared.mal.domain.MalSearchPage
@@ -9,12 +11,12 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 private const val SUGGESTIONS_NOT_FOUND = 404
 private const val SUGGESTIONS_FORBIDDEN = 403
@@ -23,11 +25,14 @@ private const val SUGGESTIONS_REDIRECT_FROM = 300
 private const val SUGGESTIONS_REDIRECT_UNTIL = 399
 private const val SUGGESTIONS_SERVER_ERROR_FROM = 500
 
+private const val SUGGESTIONS_PATH = "/v2/anime/suggestions"
+
 private val suggestionsJson = Json { ignoreUnknownKeys = true }
 
 class KtorMalSuggestionsApi(
     private val client: HttpClient,
     private val auth: MalAuthManager,
+    private val logger: AppLogger = NoOpAppLogger,
 ) : MalSuggestionsApi {
     override suspend fun suggestions(
         limit: Int,
@@ -38,7 +43,9 @@ class KtorMalSuggestionsApi(
                 is Result.Success -> result.data
                 is Result.Error -> return Result.Error(result.error.toApiError())
             }
+        val trace = MalCallTrace(logger, "GET", SUGGESTIONS_PATH)
         return try {
+            val started = TimeSource.Monotonic.markNow()
             val response =
                 client.get("$BASE_URL/anime/suggestions") {
                     bearerAuth(token)
@@ -46,11 +53,14 @@ class KtorMalSuggestionsApi(
                     parameter("offset", offset)
                     parameter("fields", SEARCH_FIELDS)
                     parameter("nsfw", "false")
+                    trace.request(this)
                 }
             val status = response.status.value
+            logger.logHttpResponse("GET", SUGGESTIONS_PATH, status, started)
+            val text = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    val body = suggestionsJson.decodeFromString<SearchResponse>(response.bodyAsText())
+                    val body = suggestionsJson.decodeFromString<SearchResponse>(text)
                     Result.Success(MalSearchPage(body.data.map { it.node.toSummary() }, body.paging?.next != null))
                 }
 
@@ -77,12 +87,22 @@ class KtorMalSuggestionsApi(
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            Result.Error(MalApiError.NO_CONNECTION)
-        } catch (_: SerializationException) {
-            Result.Error(MalApiError.SERIALIZATION)
-        } catch (_: IllegalArgumentException) {
-            Result.Error(MalApiError.SERIALIZATION)
+        } catch (e: IOException) {
+            failure(MalApiError.NO_CONNECTION, e, trace)
+        } catch (e: SerializationException) {
+            failure(MalApiError.SERIALIZATION, e, trace)
+        } catch (e: IllegalArgumentException) {
+            failure(MalApiError.SERIALIZATION, e, trace)
         }
+    }
+
+    private fun failure(
+        error: MalApiError,
+        cause: Throwable,
+        trace: MalCallTrace,
+    ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
+        logger.logHttpFailure("GET", SUGGESTIONS_PATH, error, cause)
+        return Result.Error(error)
     }
 }

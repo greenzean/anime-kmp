@@ -14,16 +14,22 @@ import org.koin.dsl.module
 
 val syncDataModule =
     module {
-        single { ApolloClient.Builder().serverUrl(get<ServerConfig>().graphqlUrl).build() }
+        single {
+            ApolloClient
+                .Builder()
+                .serverUrl(get<ServerConfig>().graphqlUrl)
+                .addInterceptor(GraphQlLoggingInterceptor(get()))
+                .build()
+        }
 
         single<SessionRefresher> { ApolloSessionRefresher(get()) }
         single {
             val library = get<AccountLibraryDataSource>()
-            SessionManager(get(), get(), onSessionEnded = library::detachFromAccount)
+            SessionManager(get(), get(), onSessionEnded = library::detachFromAccount, logger = get())
         }
-        single<SyncApi> { ApolloSyncApi(get(), get()) }
+        single<SyncApi> { ApolloSyncApi(get(), get(), get()) }
         single<SyncLocalDataSource> { SqlDelightSyncLocalDataSource(get()) }
         single<AccountLibraryDataSource> { SqlDelightAccountLibraryDataSource(get()) }
         single<ParkedAnimeResolver> { MalParkedAnimeResolver(get(), get(), get()) }
-        single { SyncEngine(get(), get(), get()) }
+        single { SyncEngine(get(), get(), get(), get()) }
     }

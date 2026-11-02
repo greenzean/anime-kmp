@@ -10,6 +10,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.greenzean.animekmp.shared.core.domain.DataError
+import com.greenzean.animekmp.shared.core.logging.AppLogger
 import com.greenzean.animekmp.shared.sync.domain.SyncEngine
 import com.greenzean.animekmp.shared.sync.domain.SyncResult
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
@@ -19,12 +20,8 @@ import java.util.concurrent.TimeUnit
 
 private const val UNIQUE_WORK_NAME = "sync"
 private const val BACKOFF_SECONDS = 30L
+private const val TAG = "SyncWorker"
 
-/**
- * Queues a sync that WorkManager runs once the network is connected, so it also fires after a reconnect.
- * A request made while a sync is queued or running is chained after it, so no change waits for the next trigger.
- * Failures retry with a short linear backoff so a reconnect is not stuck behind a long exponential delay.
- */
 class WorkManagerSyncScheduler(
     private val context: Context,
 ) : SyncScheduler {
@@ -46,20 +43,18 @@ class SyncWorker(
 ) : CoroutineWorker(context, params),
     KoinComponent {
     private val engine: SyncEngine by inject()
+    private val logger: AppLogger by inject()
 
     override suspend fun doWork(): Result =
         when (val result = engine.sync()) {
             is SyncResult.Success -> {
+                logger.info(TAG, "sync ok: pushed=${result.pushed} pulled=${result.pulled}")
                 Result.success()
             }
 
-            // Signed out or session ended: retrying cannot help. Signing in requests a new sync.
             is SyncResult.Failure -> {
-                if (result.error == DataError.Network.UNAUTHORIZED) {
-                    Result.failure()
-                } else {
-                    Result.retry() // linear backoff set in requestSync
-                }
+                logger.warn(TAG, "sync failed: ${result.error}")
+                if (result.error == DataError.Network.UNAUTHORIZED) Result.failure() else Result.retry()
             }
         }
 }
