@@ -126,11 +126,12 @@ Configure the client once. Accept the engine externally so tests can swap in a m
 object HttpClientFactory {
     fun create(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
         install(ContentNegotiation) { json() }
-        install(Logging) { logger = Logger.DEFAULT; level = LogLevel.INFO }
         defaultRequest { contentType(ContentType.Application.Json) }
     }
 }
 ```
+
+Do not install the Ktor Logging plugin: it logs headers and bodies unless filtered. Log through `AppLogger` instead (ADR 0016).
 
 Inject `HttpClient` via Koin. Keep `HttpClientFactory`, `safeCall`, and `responseToResult` in `commonMain` — they are pure Kotlin. The `HttpClientEngine` is the only per-platform piece: provide it from each platform's Koin module (`OkHttp` on Android via `ktor-client-okhttp`, `Darwin` on iOS via `ktor-client-darwin`).
 
@@ -151,6 +152,16 @@ interface TokenStorage {
 ```
 
 Never store tokens in plain preferences, logs, or the SQLDelight database. Never commit keystores or `.env` files. Token refresh (401) is handled in the Apollo/Ktor auth layer that reads and writes `TokenStorage`.
+
+## Logging
+
+Log through `AppLogger` (ADR 0016). Never log:
+
+- tokens, the `Authorization` header or any other header;
+- request or response bodies, query strings and search text, auth codes;
+- usernames, emails, library contents or titles.
+
+On HTTP, auth, IO and serialization paths, log the exception class name only and do not attach the throwable.
 
 ---
 

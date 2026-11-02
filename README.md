@@ -65,6 +65,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0012: Sign-out revokes the refresh token](docs/decisions/0012-sign-out-revokes-refresh-token.md)
 - [0014: The mini PC runs the server and deploys after passing tests](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)
 - [0015: Parts are built in parallel against a Contract](docs/decisions/0015-parallel-parts-against-a-contract.md)
+- [0016: App logging through a small AppLogger interface](docs/decisions/0016-app-logging.md)
 
 ## Build
 
