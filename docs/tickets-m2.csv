@@ -576,3 +576,31 @@ Acceptance: `docker` and `docker compose` cannot run on the Mac from Claude Code
 Out of scope: production Dockerfile and hosting choice (M2-23, M2-24), a CI deploy job, exposing the server to the internet.
 Covers: working rules in CLAUDE.md. Skill: ktor-server-conventions, postgres-migrations.
 Order: settings and script first, then docs."
+M2-32,Debug logs in the app,chore,M2,"chore,phase-1",sonnet,"shared, composeApp, androidApp, build-ci, docs","**Goal:** the developer can see what the app does and why a call failed, and can send the logs to any destination (Logcat today, a service like Datadog later), without user data or secrets ever reaching them.
+
+**Where in the app:** nowhere (Logcat only for now).
+
+**Contract:**
+- `AppLogger` in `shared/commonMain`: `debug`, `info`, `warn`, `error(tag, message, throwable?)`. This is the only thing app code depends on.
+- `LogSink` in `shared/commonMain`: `log(level, tag, message, throwable?)`, plus a `minLevel`. This is where a destination plugs in.
+- The `AppLogger` implementation sends each entry to every `LogSink` registered in Koin (a list of sinks), skipping a sink when the level is below its `minLevel`. A sink that throws never breaks the app or the other sinks.
+- `LogcatSink` in `androidMain` is the only sink in this ticket: Debug and up in debug builds, Warn and up in release builds.
+- A new destination is one class plus one line in a Koin module. Nothing else changes.
+
+**Acceptance:**
+- An ADR records the design: our own interface and sink model, not tied to a logging library. A library such as Kermit may sit behind a sink; the ADR checks versions and KMP support with a search, dated, and says whether one is worth using at all.
+- Logged: MAL requests (method, path, status, duration), `MalThrottle` backoff and block events with their end time, token refresh outcome, the MAL connect flow steps and errors, sync push and pull outcomes and errors, and exceptions caught in the data layer (where they become `MalApiError`, `DataError` and similar).
+- Never logged: access or refresh tokens, `Authorization` or any header, query strings (search text), request or response bodies, emails, MAL usernames, library contents.
+- No Ktor `Logging` plugin (it logs headers and bodies unless filtered); logging is written in our own API classes.
+- Tests: with a fake sink, a MockEngine call with a Bearer token produces entries with no token, no header and no query string. Two fake sinks both receive the same entry, a sink under its `minLevel` receives nothing, and a throwing sink does not stop the other one.
+- The Koin graph tests still pass.
+
+**Depends on:** M2-16.
+**Out of scope:** an actual remote sink (Datadog or any other; a later ticket), crash reporting or analytics, an in-app log viewer, server logging (already logback), iOS and web sinks.
+
+**Decisions** (made when the ticket was written; ask only if the code contradicts them):
+- Our own interface comes first so the destination stays swappable; no library is chosen by this ticket. Whether a library is used behind a sink is the ADR's call (from memory Kermit has a similar writer model; not verified).
+- Logs stay on the device in this ticket, so the privacy policy (M2-26) needs no new entry. A future remote sink sends data off the device: that ticket must update the privacy policy, make the sink opt-in, and re-check what may be logged.
+- Release builds keep Warn and Error only for Logcat; each sink sets its own level.
+
+**Parts and skills:** docs (ADR), build-ci (only if the ADR picks a library), shared, tests. Skills: adr, kmp-data-layer, kmp-di-koin, kmp-testing."
