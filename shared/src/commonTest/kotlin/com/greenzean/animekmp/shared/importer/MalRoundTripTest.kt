@@ -8,6 +8,7 @@ import com.greenzean.animekmp.shared.export.exportEntry
 import com.greenzean.animekmp.shared.importer.domain.ImportMalFileUseCase
 import com.greenzean.animekmp.shared.importer.domain.ImportSummary
 import com.greenzean.animekmp.shared.importer.domain.MalXmlParser
+import com.greenzean.animekmp.shared.importer.domain.MergeMalEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.presentation.SavedEntry
@@ -38,7 +39,11 @@ class MalRoundTripTest {
             val local = FakeLibraryLocalDataSource()
 
             val file = (MalXmlParser().parse(xml.encodeToByteArray()) as Result.Success).data
-            val summary = ImportMalFileUseCase(local, FakeConflictLocalDataSource(), FakeSyncScheduler())(file) {}
+            val summary =
+                ImportMalFileUseCase(
+                    MergeMalEntryUseCase(local, FakeConflictLocalDataSource(), FakeOnMalLocalDataSource()),
+                    FakeSyncScheduler(),
+                )(file) {}
 
             assertEquals(ImportSummary(added = 5, conflicts = 0, invalid = 0), summary)
             assertEquals(entries.map { it.anime.malId }, local.savedEntries.map { it.malId })

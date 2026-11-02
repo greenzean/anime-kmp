@@ -13,8 +13,10 @@ import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -31,6 +33,8 @@ import kotlin.test.assertNull
 @OptIn(ExperimentalCoroutinesApi::class)
 class MalAccountViewModelTest {
     private var harness = MalAccountHarness()
+    private val importScope = CoroutineScope(UnconfinedTestDispatcher())
+    private val importHarness = MalImportHarness(importScope)
 
     @BeforeTest
     fun setUp() {
@@ -40,6 +44,7 @@ class MalAccountViewModelTest {
     @AfterTest
     fun tearDown() {
         Dispatchers.resetMain()
+        importScope.cancel()
         harness.close()
     }
 
@@ -48,7 +53,7 @@ class MalAccountViewModelTest {
             MalAccountViewModel(
                 ObserveMalAccountUseCase(harness.auth, harness.accountStore),
                 AcceptMalConsentUseCase(harness.accountStore),
-                ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore),
+                ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start),
                 DisconnectMalUseCase(harness.auth, harness.accountStore, harness.repository),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { } }

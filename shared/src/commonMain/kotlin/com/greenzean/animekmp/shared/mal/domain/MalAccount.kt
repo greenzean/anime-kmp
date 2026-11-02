@@ -34,6 +34,7 @@ class ConnectMalUseCase(
     private val auth: MalAuthManager,
     private val userApi: MalUserApi,
     private val store: MalAccountStore,
+    private val startImport: StartMalImportUseCase,
     private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke(): Result<Unit, MalAuthError> =
@@ -47,6 +48,7 @@ class ConnectMalUseCase(
                 logger.info(TAG, "connect ok")
                 val name = (userApi.me() as? Result.Success)?.data?.name
                 store.setUsername(name)
+                startImport()
                 login
             }
         }

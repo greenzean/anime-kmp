@@ -8,6 +8,7 @@ import com.greenzean.animekmp.shared.importer.domain.ImportMalFileUseCase
 import com.greenzean.animekmp.shared.importer.domain.ImportSummary
 import com.greenzean.animekmp.shared.importer.domain.MalExportEntry
 import com.greenzean.animekmp.shared.importer.domain.MalExportFile
+import com.greenzean.animekmp.shared.importer.domain.MergeMalEntryUseCase
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
@@ -31,7 +32,8 @@ class ImportMalFileUseCaseTest {
     private val local = FakeLibraryLocalDataSource()
     private val conflicts = FakeConflictLocalDataSource()
     private val scheduler = FakeSyncScheduler()
-    private val useCase = ImportMalFileUseCase(local, conflicts, scheduler)
+    private val onMal = FakeOnMalLocalDataSource()
+    private val useCase = ImportMalFileUseCase(MergeMalEntryUseCase(local, conflicts, onMal), scheduler)
 
     @Test
     fun newEntryIsAddedWithAnimeAndEntry() =
@@ -211,5 +213,15 @@ class ImportMalFileUseCaseTest {
 
             assertEquals(0, scheduler.requests)
             assertEquals(1, conflicts.current.size)
+        }
+
+    @Test
+    fun fileImportDoesNotMarkEntriesAsOnMal() =
+        runTest {
+            local.put(Anime(2, "Trigun"), SyncState.SYNCED, WatchStatus.DROPPED, 1)
+
+            useCase(MalExportFile(listOf(malEntry(1), malEntry(2)), invalid = 0)) {}
+
+            assertTrue(onMal.marked.isEmpty())
         }
 }

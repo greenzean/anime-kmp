@@ -18,6 +18,8 @@ import com.greenzean.animekmp.shared.mal.domain.MalTokens
 import com.greenzean.animekmp.shared.mal.domain.MalUser
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
 import io.ktor.http.Url
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -45,6 +47,8 @@ private class ScriptedAuthApi(
 
     override suspend fun refresh(refreshToken: String): Result<MalTokens, MalAuthError> = refreshResult
 }
+
+private fun importStarter() = MalImportHarness(CoroutineScope(UnconfinedTestDispatcher())).start
 
 class MalAccountLoggingTest {
     private val sink = RecordingLogSink()
@@ -134,7 +138,7 @@ class MalAccountLoggingTest {
     @Test
     fun connectLogsOkWithoutTheUsername() =
         runTest {
-            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, logger = logger)()
+            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importStarter(), logger = logger)()
 
             val messages = sink.messages(MAL_AUTH)
             assertTrue("login started" in messages, messages.toString())
@@ -148,7 +152,7 @@ class MalAccountLoggingTest {
         runTest {
             harness.authorizer.error = MalAuthError.CANCELLED
 
-            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, logger = logger)()
+            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importStarter(), logger = logger)()
 
             val entry = sink.entries.single { it.message.startsWith("connect failed") }
             assertEquals("connect failed: CANCELLED", entry.message)

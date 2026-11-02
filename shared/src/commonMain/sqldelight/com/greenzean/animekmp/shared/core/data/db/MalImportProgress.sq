@@ -1,0 +1,13 @@
+CREATE TABLE mal_import_progress (
+    id     INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    offset INTEGER NOT NULL
+);
+
+selectOffset:
+SELECT offset FROM mal_import_progress WHERE id = 1;
+
+saveOffset:
+INSERT OR REPLACE INTO mal_import_progress (id, offset) VALUES (1, ?);
+
+clearOffset:
+DELETE FROM mal_import_progress;

@@ -29,6 +29,7 @@ import com.greenzean.animekmp.shared.suggestions.presentation.suggestionsPresent
 import com.greenzean.animekmp.shared.sync.data.ServerConfig
 import com.greenzean.animekmp.shared.sync.data.syncDataModule
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
+import kotlinx.coroutines.CoroutineScope
 import org.koin.dsl.module
 import org.koin.test.verify.verify
 import kotlin.test.Test
@@ -71,6 +72,7 @@ class KoinVerifyTest {
                     MalAuthorizer::class,
                     GoogleIdTokenProvider::class,
                     SyncScheduler::class,
+                    CoroutineScope::class,
                 ),
         )
     }
