@@ -9,6 +9,8 @@ import com.greenzean.animekmp.shared.core.logging.loggingModule
 import com.greenzean.animekmp.shared.details.presentation.detailsPresentationModule
 import com.greenzean.animekmp.shared.export.domain.ExportFileSaver
 import com.greenzean.animekmp.shared.export.presentation.exportPresentationModule
+import com.greenzean.animekmp.shared.importer.domain.ImportFileReader
+import com.greenzean.animekmp.shared.importer.presentation.importPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.library.presentation.libraryPresentationModule
@@ -48,6 +50,7 @@ class KoinVerifyTest {
                 malPresentationModule,
                 settingsPresentationModule,
                 exportPresentationModule,
+                importPresentationModule,
             )
         }.verify(
             extraTypes =
@@ -56,6 +59,7 @@ class KoinVerifyTest {
                     DisplaySettings::class,
                     LibrarySettings::class,
                     ExportFileSaver::class,
+                    ImportFileReader::class,
                     SessionStore::class,
                     MalTokenStore::class,
                     MalAccountStore::class,

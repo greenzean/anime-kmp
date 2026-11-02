@@ -4,6 +4,7 @@ import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.library.data.SqlDelightLibraryDataSource
+import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
@@ -105,6 +106,19 @@ class ParkedAnimeResolverTest {
                     .executeAsOne()
                     .id,
             )
+        }
+
+    @Test
+    fun importedAnimeWithoutImageGetsItsImageFromMal() =
+        runTest {
+            library.saveAnime(Anime(52991, "Frieren"))
+            api.details[52991] = details(52991, "Frieren")
+
+            resolver.resolve()
+
+            val row = db.animeQueries.selectByMalId(52991).executeAsOne()
+            assertEquals("https://img/52991.jpg", row.image_url)
+            assertEquals("Frieren", row.title)
         }
 
     @Test

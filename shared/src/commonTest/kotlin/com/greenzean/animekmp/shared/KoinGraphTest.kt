@@ -27,6 +27,9 @@ import com.greenzean.animekmp.shared.details.presentation.detailsPresentationMod
 import com.greenzean.animekmp.shared.export.domain.ExportError
 import com.greenzean.animekmp.shared.export.domain.ExportFileSaver
 import com.greenzean.animekmp.shared.export.presentation.exportPresentationModule
+import com.greenzean.animekmp.shared.importer.domain.ImportError
+import com.greenzean.animekmp.shared.importer.domain.ImportFileReader
+import com.greenzean.animekmp.shared.importer.presentation.importPresentationModule
 import com.greenzean.animekmp.shared.library.data.libraryDataModule
 import com.greenzean.animekmp.shared.library.domain.AddToLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.EditEntryUseCase
@@ -112,6 +115,12 @@ class KoinGraphTest {
                     ): EmptyResult<ExportError> = Result.Success(Unit)
                 }
             }
+            single<ImportFileReader> {
+                object : ImportFileReader {
+                    override suspend fun read(source: String): Result<ByteArray, ImportError> =
+                        Result.Success(ByteArray(0))
+                }
+            }
             single<LibrarySettings> {
                 object : LibrarySettings {
                     override val sort = MutableStateFlow(LibrarySort.LAST_UPDATED)
@@ -170,6 +179,7 @@ class KoinGraphTest {
                 malPresentationModule,
                 settingsPresentationModule,
                 exportPresentationModule,
+                importPresentationModule,
             )
         }
 

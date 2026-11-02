@@ -31,6 +31,8 @@ kotlin {
             implementation(libs.apollo.runtime)
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.xmlutil.core)
+            implementation(libs.okio)
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
             api(libs.kotlinx.coroutines.core)

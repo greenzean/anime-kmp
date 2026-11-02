@@ -20,7 +20,7 @@ class MalParkedAnimeResolver(
     private val mal: MalAnimeRepository,
 ) : ParkedAnimeResolver {
     override suspend fun resolve() {
-        for (malId in sync.parkedMissingAnime()) {
+        for (malId in (sync.parkedMissingAnime() + library.animeMissingImage()).distinct()) {
             when (val result = mal.details(malId)) {
                 is Result.Success -> library.saveAnime(result.data.summary.toAnime())
                 is Result.Error -> if (result.error.stopsResolving()) return
