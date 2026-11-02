@@ -155,13 +155,12 @@ Never store tokens in plain preferences, logs, or the SQLDelight database. Never
 
 ## Logging
 
-Log through `AppLogger` (ADR 0016). Never log:
+Log through `AppLogger` (ADR 0016). Two tiers:
 
-- tokens, the `Authorization` header or any other header;
-- request or response bodies, query strings and search text, auth codes;
-- usernames, emails, library contents or titles.
+- **Debug, Info, Warn, Error (strict):** counts, error codes, paths without the query string, status codes and durations. Never tokens, headers, bodies, query strings, search text, usernames or library content. On HTTP, auth, IO and serialization paths, log the exception class name only and do not attach the throwable.
+- **Trace (debuggable builds only, below Debug):** full detail: the full URL, headers, bodies truncated at 8 KB, Apollo variables and responses, and every SQL statement with its values. Trace reaches only sinks whose `minLevel` is Trace. Remote sinks use Debug or higher.
 
-On HTTP, auth, IO and serialization paths, log the exception class name only and do not attach the throwable.
+`LogRedactor` masks secrets in both tiers. A new secret-carrying field goes into its deny-list and its tests.
 
 ---
 
