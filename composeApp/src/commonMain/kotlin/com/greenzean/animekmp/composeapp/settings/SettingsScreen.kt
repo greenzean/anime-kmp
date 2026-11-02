@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.greenzean.animekmp.composeapp.core.ObserveAsEvents
 import com.greenzean.animekmp.composeapp.designsystem.AppScaffold
 import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
 import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
@@ -48,6 +49,10 @@ import com.greenzean.animekmp.composeapp.generated.resources.settings_title
 import com.greenzean.animekmp.shared.auth.presentation.AccountAction
 import com.greenzean.animekmp.shared.auth.presentation.AccountState
 import com.greenzean.animekmp.shared.auth.presentation.AccountViewModel
+import com.greenzean.animekmp.shared.export.presentation.ExportAction
+import com.greenzean.animekmp.shared.export.presentation.ExportEvent
+import com.greenzean.animekmp.shared.export.presentation.ExportState
+import com.greenzean.animekmp.shared.export.presentation.ExportViewModel
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountViewModel
@@ -65,10 +70,18 @@ fun SettingsRoot(
     viewModel: AccountViewModel = koinViewModel(),
     displayViewModel: DisplaySettingsViewModel = koinViewModel(),
     malViewModel: MalAccountViewModel = koinViewModel(),
+    exportViewModel: ExportViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val displayState by displayViewModel.state.collectAsStateWithLifecycle()
     val malState by malViewModel.state.collectAsStateWithLifecycle()
+    val exportState by exportViewModel.state.collectAsStateWithLifecycle()
+    val launchSaveDialog = rememberSaveDialogLauncher { exportViewModel.onAction(ExportAction.OnFileChosen(it)) }
+    ObserveAsEvents(exportViewModel.events) { event ->
+        when (event) {
+            is ExportEvent.LaunchSaveDialog -> launchSaveDialog(event.fileName)
+        }
+    }
     var pendingDeleteAccount by rememberSaveable { mutableStateOf(openDeleteAccount) }
     LaunchedEffect(state.sessionChecked, state.isSignedIn, pendingDeleteAccount) {
         if (pendingDeleteAccount && state.sessionChecked) {
@@ -85,6 +98,8 @@ fun SettingsRoot(
         onDisplayAction = displayViewModel::onAction,
         malState = malState,
         onMalAction = malViewModel::onAction,
+        exportState = exportState,
+        onExportAction = exportViewModel::onAction,
     )
 }
 
@@ -98,6 +113,8 @@ fun SettingsScreen(
     onDisplayAction: (DisplaySettingsAction) -> Unit = {},
     malState: MalAccountState = MalAccountState(),
     onMalAction: (MalAccountAction) -> Unit = {},
+    exportState: ExportState = ExportState(),
+    onExportAction: (ExportAction) -> Unit = {},
 ) {
     state.signOutPrompt?.let { prompt ->
         SignOutDialog(
@@ -150,6 +167,7 @@ fun SettingsScreen(
                 onDismiss = { onAction(AccountAction.OnDismissMerge) },
             )
             MalAccountSection(state = malState, onAction = onMalAction)
+            LibrarySection(state = exportState, onAction = onExportAction)
             DisplaySection(state = displayState, onAction = onDisplayAction)
         }
     }

@@ -130,6 +130,16 @@
     <string name="settings_sign_out">Sign out</string>
     <string name="settings_delete_account">Delete account</string>
     <string name="settings_mal_title">MyAnimeList</string>
+    <string name="settings_library_title">Library</string>
+    <string name="settings_export_mal">Export to MAL file</string>
+    <string name="settings_export_exporting">Exporting your library</string>
+    <plurals name="settings_export_done">
+        <item quantity="one">Exported %1$d entry</item>
+        <item quantity="other">Exported %1$d entries</item>
+    </plurals>
+    <string name="settings_export_error_empty">Your library is empty, so there is nothing to export.</string>
+    <string name="settings_export_error_write">Could not save the file. Try again.</string>
+    <string name="cd_export_mal">Export your library to a MyAnimeList file</string>
     <string name="mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
     <string name="mal_consent_accept">I understand</string>
     <string name="mal_connect">Connect MyAnimeList</string>
