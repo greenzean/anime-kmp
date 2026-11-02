@@ -25,7 +25,7 @@ class MalSuggestionsRepository(
             cached = cache.suggestions(pageStart),
             ttl = MAL_SUGGESTIONS_TTL,
             logger = logger,
-            label = "suggestions page $pageStart",
+            labels = CacheLabels("suggestions page $pageStart", "suggestions page $pageStart"),
             fetch = { api.suggestions(MAL_SUGGESTIONS_PAGE_SIZE, pageStart) },
             save = { page, now -> cache.saveSuggestions(pageStart, page, now) },
         ).capped(pageStart)

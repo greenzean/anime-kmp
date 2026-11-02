@@ -1,8 +1,10 @@
 package com.greenzean.animekmp.shared.mal.domain
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.API_TAG
 import com.greenzean.animekmp.shared.core.logging.AppLogger
 import com.greenzean.animekmp.shared.core.logging.NoOpAppLogger
+import com.greenzean.animekmp.shared.core.logging.trace
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -35,7 +37,7 @@ class MalAnimeRepository(
             cached = cache.search(key, pageStart),
             ttl = MAL_SEARCH_TTL,
             logger = logger,
-            label = "search",
+            labels = CacheLabels("search", "search '$key' page $pageStart"),
             fetch = { api.search(key, MAL_SEARCH_PAGE_SIZE, pageStart) },
             save = { page, now -> cache.saveSearch(key, pageStart, page, now) },
         )
@@ -49,7 +51,7 @@ class MalAnimeRepository(
             cached = cache.details(malId),
             ttl = MAL_DETAILS_TTL,
             logger = logger,
-            label = "details",
+            labels = CacheLabels("details", "details $malId"),
             fetch = { api.details(malId) },
             save = { details, now -> cache.saveDetails(malId, details, now) },
         )
@@ -64,17 +66,30 @@ internal suspend fun <T> loadCached(
     cached: Cached<T>?,
     ttl: Duration,
     logger: AppLogger,
-    label: String,
+    labels: CacheLabels,
     fetch: suspend () -> Result<T, MalApiError>,
     save: suspend (T, Instant) -> Unit,
 ): Result<T, MalError> {
-    if (cached != null && clock.now() - cached.fetchedAt < ttl) {
-        logger.debug(CACHE_TAG, "$label hit")
+    val started = clock.now()
+    if (cached != null && started - cached.fetchedAt < ttl) {
+        logger.debug(CACHE_TAG, "${labels.debug} hit")
+        logger.trace(API_TAG) {
+            val age = (started - cached.fetchedAt).shortText()
+            val left = (ttl - (started - cached.fetchedAt)).shortText()
+            "API  CACHE hit  ${labels.trace}  (age $age, fresh for another $left)  no request sent"
+        }
         return Result.Success(cached.value)
+    }
+    logger.trace(API_TAG) {
+        if (cached == null) {
+            "API  CACHE miss  ${labels.trace}  -> calling MAL"
+        } else {
+            "API  CACHE expired  ${labels.trace}  (age ${(started - cached.fetchedAt).shortText()})  -> calling MAL"
+        }
     }
     return when (val result = throttle.run(fetch)) {
         is Result.Success -> {
-            logger.debug(CACHE_TAG, "$label miss")
+            logger.debug(CACHE_TAG, "${labels.debug} miss")
             val now = clock.now()
             save(result.data, now)
             cache.deleteFetchedBefore(now - MAL_STALE_LIMIT)
@@ -83,7 +98,11 @@ internal suspend fun <T> loadCached(
 
         is Result.Error -> {
             if (result.error == MalError.NoConnection && cached != null) {
-                logger.debug(CACHE_TAG, "$label stale-fallback")
+                logger.debug(CACHE_TAG, "${labels.debug} stale-fallback")
+                logger.trace(API_TAG) {
+                    "API  CACHE stale-fallback  ${labels.trace}  " +
+                        "(no connection, age ${(clock.now() - cached.fetchedAt).shortText()})"
+                }
                 Result.Success(cached.value)
             } else {
                 result
@@ -91,3 +110,17 @@ internal suspend fun <T> loadCached(
         }
     }
 }
+
+internal class CacheLabels(
+    val debug: String,
+    val trace: String,
+)
+
+private fun Duration.shortText(): String =
+    toComponents { hours, minutes, seconds, _ ->
+        when {
+            hours > 0 -> "${hours}h ${minutes}m"
+            minutes > 0 -> "${minutes}m ${seconds}s"
+            else -> "${seconds}s"
+        }
+    }

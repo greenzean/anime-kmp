@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared
 
 import app.cash.sqldelight.db.SqlDriver
+import com.apollographql.apollo.ApolloClient
 import com.greenzean.animekmp.shared.auth.domain.DeleteAccountUseCase
 import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
@@ -182,6 +183,7 @@ class KoinGraphTest {
             MalAnimeRepository::class,
             MalAuthManager::class,
             MalRedirectHandler::class,
+            ApolloClient::class,
         ).forEach { assertNotNull(app.koin.get(it), it.simpleName) }
         app.close()
     }

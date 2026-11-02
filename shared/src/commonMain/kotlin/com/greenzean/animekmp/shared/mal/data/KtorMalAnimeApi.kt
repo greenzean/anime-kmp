@@ -15,7 +15,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
@@ -140,7 +139,7 @@ class KtorMalAnimeApi(
     ): Result<MalSearchPage, MalApiError> =
         call(
             path = "/v2/anime",
-            request = {
+            request = { trace ->
                 client.get("$BASE_URL/anime") {
                     header(CLIENT_ID_HEADER, config.clientId)
                     parameter("q", query)
@@ -148,6 +147,7 @@ class KtorMalAnimeApi(
                     parameter("offset", offset)
                     parameter("fields", SEARCH_FIELDS)
                     parameter("nsfw", "false")
+                    trace.request(this)
                 }
             },
             parse = { body ->
@@ -159,10 +159,11 @@ class KtorMalAnimeApi(
     override suspend fun details(malId: Int): Result<MalAnimeDetails, MalApiError> =
         call(
             path = "/v2/anime/$malId",
-            request = {
+            request = { trace ->
                 client.get("$BASE_URL/anime/$malId") {
                     header(CLIENT_ID_HEADER, config.clientId)
                     parameter("fields", DETAILS_FIELDS)
+                    trace.request(this)
                 }
             },
             parse = { body -> json.decodeFromString<AnimeDto>(body).toDetails() },
@@ -170,17 +171,19 @@ class KtorMalAnimeApi(
 
     private suspend fun <T> call(
         path: String,
-        request: suspend () -> HttpResponse,
+        request: suspend (MalCallTrace) -> HttpResponse,
         parse: (String) -> T,
-    ): Result<T, MalApiError> =
-        try {
+    ): Result<T, MalApiError> {
+        val trace = MalCallTrace(logger, "GET", path)
+        return try {
             val started = TimeSource.Monotonic.markNow()
-            val response = request()
+            val response = request(trace)
             val status = response.status.value
             logger.logHttpResponse("GET", path, status, started)
+            val body = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    Result.Success(parse(response.bodyAsText()))
+                    Result.Success(parse(body))
                 }
 
                 status == TOO_MANY_REQUESTS || status in REDIRECT_FROM..REDIRECT_UNTIL -> {
@@ -208,18 +211,21 @@ class KtorMalAnimeApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            failure(path, MalApiError.NO_CONNECTION, e)
+            failure(path, MalApiError.NO_CONNECTION, e, trace)
         } catch (e: SerializationException) {
-            failure(path, MalApiError.SERIALIZATION, e)
+            failure(path, MalApiError.SERIALIZATION, e, trace)
         } catch (e: IllegalArgumentException) {
-            failure(path, MalApiError.SERIALIZATION, e)
+            failure(path, MalApiError.SERIALIZATION, e, trace)
         }
+    }
 
     private fun failure(
         path: String,
         error: MalApiError,
         cause: Throwable,
+        trace: MalCallTrace,
     ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
         logger.logHttpFailure("GET", path, error, cause)
         return Result.Error(error)
     }

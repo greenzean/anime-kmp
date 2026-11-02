@@ -3,6 +3,8 @@ package com.greenzean.animekmp.shared.core.logging
 class SinkLogger(
     private val sinks: List<LogSink>,
 ) : AppLogger {
+    override fun isLoggable(level: LogLevel): Boolean = sinks.any { level.ordinal >= it.minLevel.ordinal }
+
     override fun log(
         level: LogLevel,
         tag: String,

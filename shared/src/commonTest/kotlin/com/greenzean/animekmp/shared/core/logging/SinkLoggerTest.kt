@@ -2,6 +2,7 @@ package com.greenzean.animekmp.shared.core.logging
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -34,6 +35,85 @@ class SinkLoggerTest {
             listOf(LogLevel.Debug, LogLevel.Info, LogLevel.Warn, LogLevel.Error),
             sink.entries.map { it.level },
         )
+    }
+
+    @Test
+    fun traceIsTheLowestLevel() {
+        assertEquals(
+            listOf(LogLevel.Trace, LogLevel.Debug, LogLevel.Info, LogLevel.Warn, LogLevel.Error),
+            LogLevel.entries,
+        )
+        assertTrue(LogLevel.Trace < LogLevel.Debug)
+    }
+
+    @Test
+    fun traceReachesOnlySinksAtTrace() {
+        val trace = RecordingLogSink(minLevel = LogLevel.Trace)
+        val debug = RecordingLogSink(minLevel = LogLevel.Debug)
+        val logger = SinkLogger(listOf(trace, debug))
+
+        logger.trace("T", "t")
+        logger.debug("T", "d")
+
+        assertEquals(listOf(LogLevel.Trace, LogLevel.Debug), trace.entries.map { it.level })
+        assertEquals(listOf(LogLevel.Debug), debug.entries.map { it.level })
+    }
+
+    @Test
+    fun isLoggableIsTrueWhenAnySinkAcceptsTheLevel() {
+        val logger =
+            SinkLogger(listOf(RecordingLogSink(minLevel = LogLevel.Warn), RecordingLogSink(minLevel = LogLevel.Trace)))
+
+        LogLevel.entries.forEach { assertTrue(logger.isLoggable(it), it.name) }
+    }
+
+    @Test
+    fun isLoggableIsFalseBelowEverySinkMinLevel() {
+        val logger =
+            SinkLogger(listOf(RecordingLogSink(minLevel = LogLevel.Warn), RecordingLogSink(minLevel = LogLevel.Debug)))
+
+        assertFalse(logger.isLoggable(LogLevel.Trace))
+        assertTrue(logger.isLoggable(LogLevel.Debug))
+        assertTrue(logger.isLoggable(LogLevel.Error))
+    }
+
+    @Test
+    fun isLoggableIsFalseWithoutSinksAndForTheNoOpLogger() {
+        LogLevel.entries.forEach {
+            assertFalse(SinkLogger(emptyList()).isLoggable(it), it.name)
+            assertFalse(NoOpAppLogger.isLoggable(it), it.name)
+        }
+    }
+
+    @Test
+    fun theTraceLambdaRunsOnlyWhenSomeSinkAcceptsTrace() {
+        var built = 0
+        val trace = RecordingLogSink(minLevel = LogLevel.Trace)
+
+        SinkLogger(listOf(trace)).trace("T") {
+            built++
+            "detail"
+        }
+
+        assertEquals(1, built)
+        assertEquals(listOf(LogEntry(LogLevel.Trace, "T", "detail", null)), trace.entries)
+    }
+
+    @Test
+    fun theTraceLambdaIsNotEvaluatedWhenNothingIsLoggable() {
+        var built = 0
+        val debug = RecordingLogSink(minLevel = LogLevel.Debug)
+        val loggers = listOf(SinkLogger(listOf(debug)), SinkLogger(emptyList()), NoOpAppLogger)
+
+        loggers.forEach {
+            it.trace("T") {
+                built++
+                "detail"
+            }
+        }
+
+        assertEquals(0, built)
+        assertTrue(debug.entries.isEmpty())
     }
 
     @Test

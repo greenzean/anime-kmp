@@ -3,6 +3,7 @@ package com.greenzean.animekmp.shared.mal
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.LogLevel
 import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
 import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -242,5 +244,57 @@ class MalAnimeRepositoryTest {
             repository.details(1)
 
             assertEquals(listOf("details miss", "details stale-fallback"), sink.messages("MalCache"))
+        }
+
+    private fun traceRepository(traceSink: RecordingLogSink) =
+        MalAnimeRepository(api, cache, MalThrottle(clock), clock, logger = SinkLogger(listOf(traceSink)))
+
+    @Test
+    fun theApiStreamShowsMissHitAndExpiredForASearch() =
+        runTest {
+            val traceSink = RecordingLogSink(minLevel = LogLevel.Trace)
+            val traced = traceRepository(traceSink)
+            api.searchResult = Result.Success(page)
+
+            traced.search("Bebop")
+            traced.search("bebop")
+            clock.current += 2.hours
+            traced.search("bebop")
+
+            val lines = traceSink.messages("API")
+            assertEquals(3, lines.size, lines.toString())
+            assertTrue(lines[0].startsWith("API  CACHE miss  search 'bebop' page 0"), lines[0])
+            assertTrue(lines[1].startsWith("API  CACHE hit  search 'bebop' page 0  (age "), lines[1])
+            assertTrue("no request sent" in lines[1], lines[1])
+            assertTrue(lines[2].startsWith("API  CACHE expired  search 'bebop' page 0  (age 2h 0m)"), lines[2])
+            assertEquals(2, api.searchCalls)
+        }
+
+    @Test
+    fun theApiStreamShowsTheFallbackForDetails() =
+        runTest {
+            val traceSink = RecordingLogSink(minLevel = LogLevel.Trace)
+            val traced = traceRepository(traceSink)
+            api.detailsResult = Result.Success(details)
+            traced.details(1)
+            clock.current += 2.days
+            api.detailsResult = Result.Error(MalApiError.NO_CONNECTION)
+
+            traced.details(1)
+
+            val lines = traceSink.messages("API")
+            val last = lines.last()
+            assertTrue(last.startsWith("API  CACHE stale-fallback  details 1  (no connection, age "), lines.toString())
+        }
+
+    @Test
+    fun aDebugSinkSeesNoApiStreamLines() =
+        runTest {
+            api.searchResult = Result.Success(page)
+
+            repository.search("bebop")
+            repository.search("bebop")
+
+            assertTrue(sink.entries.none { it.tag == "API" })
         }
 }

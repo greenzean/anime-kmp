@@ -3,6 +3,7 @@ package com.greenzean.animekmp.shared.mal
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.core.logging.LogLevel
 import com.greenzean.animekmp.shared.core.logging.RecordingLogSink
 import com.greenzean.animekmp.shared.core.logging.SinkLogger
 import com.greenzean.animekmp.shared.mal.data.SqlDelightMalCache
@@ -21,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
@@ -236,5 +238,35 @@ class MalSuggestionsRepositoryTest {
                 listOf("suggestions page 0 miss", "suggestions page 0 stale-fallback"),
                 sink.messages("MalCache"),
             )
+        }
+
+    @Test
+    fun theApiStreamShowsMissHitAndExpiredForSuggestions() =
+        runTest {
+            val traceSink = RecordingLogSink(minLevel = LogLevel.Trace)
+            val traced = MalSuggestionsRepository(api, cache, throttle, clock, logger = SinkLogger(listOf(traceSink)))
+            api.result = Result.Success(page)
+
+            traced.suggestions(0)
+            traced.suggestions(0)
+            clock.current += MAL_SUGGESTIONS_TTL + 1.hours
+            traced.suggestions(0)
+
+            val lines = traceSink.messages("API")
+            assertEquals(3, lines.size, lines.toString())
+            assertTrue(lines[0].startsWith("API  CACHE miss  suggestions page 0  -> calling MAL"), lines[0])
+            assertTrue(lines[1].startsWith("API  CACHE hit  suggestions page 0  (age "), lines[1])
+            assertTrue(lines[2].startsWith("API  CACHE expired  suggestions page 0  (age "), lines[2])
+        }
+
+    @Test
+    fun aDebugSinkSeesNoApiStreamLines() =
+        runTest {
+            api.result = Result.Success(page)
+
+            repository.suggestions(0)
+            repository.suggestions(0)
+
+            assertTrue(sink.entries.none { it.tag == "API" })
         }
 }

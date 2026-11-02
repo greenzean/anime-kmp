@@ -5,8 +5,8 @@ import kotlin.test.assertEquals
 
 class LogcatMinLevelTest {
     @Test
-    fun aDebuggableBuildLogsFromDebug() {
-        assertEquals(LogLevel.Debug, logcatMinLevel(debuggable = true))
+    fun aDebuggableBuildLogsFromTrace() {
+        assertEquals(LogLevel.Trace, logcatMinLevel(debuggable = true))
     }
 
     @Test

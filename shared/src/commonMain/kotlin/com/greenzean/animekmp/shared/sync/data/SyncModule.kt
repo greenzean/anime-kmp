@@ -14,7 +14,13 @@ import org.koin.dsl.module
 
 val syncDataModule =
     module {
-        single { ApolloClient.Builder().serverUrl(get<ServerConfig>().graphqlUrl).build() }
+        single {
+            ApolloClient
+                .Builder()
+                .serverUrl(get<ServerConfig>().graphqlUrl)
+                .addInterceptor(GraphQlLoggingInterceptor(get()))
+                .build()
+        }
 
         single<SessionRefresher> { ApolloSessionRefresher(get()) }
         single {

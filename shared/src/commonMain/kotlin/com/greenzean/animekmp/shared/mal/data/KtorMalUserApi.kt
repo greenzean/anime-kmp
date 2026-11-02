@@ -11,7 +11,6 @@ import com.greenzean.animekmp.shared.mal.domain.MalUserApi
 import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
@@ -47,14 +46,20 @@ class KtorMalUserApi(
                 is Result.Success -> result.data
                 is Result.Error -> return Result.Error(result.error.toApiError())
             }
+        val trace = MalCallTrace(logger, "GET", USER_PATH)
         return try {
             val started = TimeSource.Monotonic.markNow()
-            val response = client.get(USER_URL) { bearerAuth(token) }
+            val response =
+                client.get(USER_URL) {
+                    bearerAuth(token)
+                    trace.request(this)
+                }
             val status = response.status.value
             logger.logHttpResponse("GET", USER_PATH, status, started)
+            val body = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    Result.Success(MalUser(userJson.decodeFromString<UserDto>(response.bodyAsText()).name))
+                    Result.Success(MalUser(userJson.decodeFromString<UserDto>(body).name))
                 }
 
                 status == USER_TOO_MANY_REQUESTS || status in USER_REDIRECT_FROM..USER_REDIRECT_UNTIL -> {
@@ -80,18 +85,20 @@ class KtorMalUserApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            failure(MalApiError.NO_CONNECTION, e)
+            failure(MalApiError.NO_CONNECTION, e, trace)
         } catch (e: SerializationException) {
-            failure(MalApiError.SERIALIZATION, e)
+            failure(MalApiError.SERIALIZATION, e, trace)
         } catch (e: IllegalArgumentException) {
-            failure(MalApiError.SERIALIZATION, e)
+            failure(MalApiError.SERIALIZATION, e, trace)
         }
     }
 
     private fun failure(
         error: MalApiError,
         cause: Throwable,
+        trace: MalCallTrace,
     ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
         logger.logHttpFailure("GET", USER_PATH, error, cause)
         return Result.Error(error)
     }

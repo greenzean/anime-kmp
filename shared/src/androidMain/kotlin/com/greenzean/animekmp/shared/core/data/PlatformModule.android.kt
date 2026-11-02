@@ -5,6 +5,7 @@ import com.greenzean.animekmp.shared.auth.data.KeystoreSessionStore
 import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.core.logging.LogSink
 import com.greenzean.animekmp.shared.core.logging.LogcatSink
+import com.greenzean.animekmp.shared.core.logging.LoggingSqlDriver
 import com.greenzean.animekmp.shared.library.data.SharedPreferencesLibrarySettings
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.mal.data.KeystoreMalTokenStore
@@ -22,7 +23,7 @@ import java.security.SecureRandom
 actual val platformModule =
     module {
         single { LogcatSink(androidContext()) } bind LogSink::class
-        single<SqlDriver> { DatabaseDriverFactory(androidContext()).create() }
+        single<SqlDriver> { LoggingSqlDriver(DatabaseDriverFactory(androidContext()).create(), get()) }
         single<DisplaySettings> { SharedPreferencesDisplaySettings(androidContext()) }
         single<LibrarySettings> { SharedPreferencesLibrarySettings(androidContext()) }
         single<SessionStore> { KeystoreSessionStore(androidContext(), get()) }

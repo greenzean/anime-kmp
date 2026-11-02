@@ -11,7 +11,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CancellationException
 import kotlinx.io.IOException
@@ -44,6 +43,7 @@ class KtorMalSuggestionsApi(
                 is Result.Success -> result.data
                 is Result.Error -> return Result.Error(result.error.toApiError())
             }
+        val trace = MalCallTrace(logger, "GET", SUGGESTIONS_PATH)
         return try {
             val started = TimeSource.Monotonic.markNow()
             val response =
@@ -53,12 +53,14 @@ class KtorMalSuggestionsApi(
                     parameter("offset", offset)
                     parameter("fields", SEARCH_FIELDS)
                     parameter("nsfw", "false")
+                    trace.request(this)
                 }
             val status = response.status.value
             logger.logHttpResponse("GET", SUGGESTIONS_PATH, status, started)
+            val text = trace.complete(response)
             when {
                 response.status.isSuccess() -> {
-                    val body = suggestionsJson.decodeFromString<SearchResponse>(response.bodyAsText())
+                    val body = suggestionsJson.decodeFromString<SearchResponse>(text)
                     Result.Success(MalSearchPage(body.data.map { it.node.toSummary() }, body.paging?.next != null))
                 }
 
@@ -86,18 +88,20 @@ class KtorMalSuggestionsApi(
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            failure(MalApiError.NO_CONNECTION, e)
+            failure(MalApiError.NO_CONNECTION, e, trace)
         } catch (e: SerializationException) {
-            failure(MalApiError.SERIALIZATION, e)
+            failure(MalApiError.SERIALIZATION, e, trace)
         } catch (e: IllegalArgumentException) {
-            failure(MalApiError.SERIALIZATION, e)
+            failure(MalApiError.SERIALIZATION, e, trace)
         }
     }
 
     private fun failure(
         error: MalApiError,
         cause: Throwable,
+        trace: MalCallTrace,
     ): Result<Nothing, MalApiError> {
+        trace.failed(cause)
         logger.logHttpFailure("GET", SUGGESTIONS_PATH, error, cause)
         return Result.Error(error)
     }

@@ -1,3 +1,3 @@
 package com.greenzean.animekmp.shared.core.logging
 
-enum class LogLevel { Debug, Info, Warn, Error }
+enum class LogLevel { Trace, Debug, Info, Warn, Error }

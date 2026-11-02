@@ -10,8 +10,8 @@ import com.greenzean.animekmp.shared.mal.domain.MalTokens
 import io.ktor.client.HttpClient
 import io.ktor.client.request.forms.submitForm
 import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsText
 import io.ktor.http.Parameters
+import io.ktor.http.formUrlEncode
 import io.ktor.http.isSuccess
 import io.ktor.http.parameters
 import kotlinx.coroutines.CancellationException
@@ -78,25 +78,35 @@ class KtorMalAuthApi(
         rejectionIsDeadSession: Boolean,
         form: () -> Parameters,
     ): Result<MalTokens, MalAuthError> =
+        MalCallTrace(logger, "POST", TOKEN_PATH).let { trace -> tokenCall(trace, rejectionIsDeadSession, form) }
+
+    private suspend fun tokenCall(
+        trace: MalCallTrace,
+        rejectionIsDeadSession: Boolean,
+        form: () -> Parameters,
+    ): Result<MalTokens, MalAuthError> =
         try {
             val started = TimeSource.Monotonic.markNow()
-            val response = client.submitForm(TOKEN_URL, form())
+            val parameters = form()
+            val response = client.submitForm(TOKEN_URL, parameters) { trace.request(this, parameters.formUrlEncode()) }
             logger.logHttpResponse("POST", TOKEN_PATH, response.status.value, started)
-            toResult(response, rejectionIsDeadSession)
+            toResult(response, rejectionIsDeadSession, trace)
         } catch (e: CancellationException) {
             throw e
         } catch (e: IOException) {
-            failure(MalAuthError.NO_INTERNET, e)
+            failure(MalAuthError.NO_INTERNET, e, trace)
         } catch (e: SerializationException) {
-            failure(MalAuthError.UNKNOWN, e)
+            failure(MalAuthError.UNKNOWN, e, trace)
         } catch (e: IllegalArgumentException) {
-            failure(MalAuthError.UNKNOWN, e)
+            failure(MalAuthError.UNKNOWN, e, trace)
         }
 
     private fun failure(
         error: MalAuthError,
         cause: Throwable,
+        trace: MalCallTrace,
     ): Result<Nothing, MalAuthError> {
+        trace.failed(cause)
         logger.logHttpFailure("POST", TOKEN_PATH, error, cause)
         return Result.Error(error)
     }
@@ -104,8 +114,9 @@ class KtorMalAuthApi(
     private suspend fun toResult(
         response: HttpResponse,
         rejectionIsDeadSession: Boolean,
+        trace: MalCallTrace,
     ): Result<MalTokens, MalAuthError> {
-        val body = response.bodyAsText()
+        val body = trace.complete(response)
         return when {
             response.status.isSuccess() -> {
                 val tokens = json.decodeFromString<TokenResponse>(body)
