@@ -6,6 +6,8 @@ import com.greenzean.animekmp.shared.auth.domain.SessionStore
 import com.greenzean.animekmp.shared.core.logging.LogSink
 import com.greenzean.animekmp.shared.core.logging.LogcatSink
 import com.greenzean.animekmp.shared.core.logging.LoggingSqlDriver
+import com.greenzean.animekmp.shared.export.data.AndroidExportFileSaver
+import com.greenzean.animekmp.shared.export.domain.ExportFileSaver
 import com.greenzean.animekmp.shared.library.data.SharedPreferencesLibrarySettings
 import com.greenzean.animekmp.shared.library.domain.LibrarySettings
 import com.greenzean.animekmp.shared.mal.data.KeystoreMalTokenStore
@@ -29,6 +31,7 @@ actual val platformModule =
         single<SessionStore> { KeystoreSessionStore(androidContext(), get()) }
         single<MalTokenStore> { KeystoreMalTokenStore(androidContext(), get()) }
         single<MalAccountStore> { SharedPreferencesMalAccountStore(androidContext()) }
+        single<ExportFileSaver> { AndroidExportFileSaver(androidContext()) }
         single<RandomBytes> {
             val random = SecureRandom()
             RandomBytes { size -> ByteArray(size).also(random::nextBytes) }
