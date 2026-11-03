@@ -70,6 +70,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0018: Import conflicts are stored locally and the user picks the version](docs/decisions/0018-conflicts-stored-locally-user-picks-version.md)
 - [0019: MAL list import reads the account's list page by page and resumes after a failure](docs/decisions/0019-mal-list-import.md)
 - [0020: Changes made on this device go to MAL through a local outbox, one row per anime](docs/decisions/0020-send-changes-to-mal.md)
+- [0021: Changes made on MAL are pulled by the app and applied by MAL's update time](docs/decisions/0021-get-changes-from-mal.md)
 
 ## Build
 
