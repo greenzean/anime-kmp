@@ -296,4 +296,40 @@ class ImportMalListUseCaseTest {
                     .imageUrl,
             )
         }
+
+    @Test
+    fun finishingTheImportQueuesTheAppOnlyEntriesAfterAServerSync() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, 2, hasNext = false)
+
+            h.importList {}
+
+            assertEquals(listOf("sync", "enqueueAppOnly", "requestSend"), h.outboxHarness.log)
+        }
+
+    @Test
+    fun aFailedImportQueuesNothing() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = Result.Error(MalApiError.NO_CONNECTION)
+
+            h.importList {}
+
+            assertEquals(0, h.outboxHarness.outbox.appOnlyEnqueues)
+        }
+
+    @Test
+    fun importedEntriesAreNeverQueuedIndividually() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, 3, hasNext = false)
+
+            h.importList {}
+
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+        }
 }

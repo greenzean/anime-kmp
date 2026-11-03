@@ -14,6 +14,7 @@ class ImportMalListUseCase(
     private val merge: MergeMalEntryUseCase,
     private val progress: MalImportProgressStore,
     private val scheduler: SyncScheduler,
+    private val queueAppOnly: QueueAppOnlyEntriesUseCase,
 ) {
     suspend operator fun invoke(onProgress: (done: Int) -> Unit): Result<ImportSummary, MalError> {
         var offset = progress.offset()
@@ -43,6 +44,7 @@ class ImportMalListUseCase(
         }
         progress.clear()
         if (added > 0) scheduler.requestSync()
+        queueAppOnly()
         return Result.Success(ImportSummary(added = added, conflicts = conflicts, invalid = 0))
     }
 }

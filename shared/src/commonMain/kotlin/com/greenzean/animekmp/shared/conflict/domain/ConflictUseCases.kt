@@ -1,6 +1,8 @@
 package com.greenzean.animekmp.shared.conflict.domain
 
 import com.greenzean.animekmp.shared.library.domain.LibraryLocalDataSource
+import com.greenzean.animekmp.shared.mal.domain.MalChange
+import com.greenzean.animekmp.shared.mal.domain.QueueMalChangeUseCase
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -21,6 +23,7 @@ class ResolveConflictUseCase(
     private val conflicts: ConflictLocalDataSource,
     private val library: LibraryLocalDataSource,
     private val scheduler: SyncScheduler,
+    private val queueMalChange: QueueMalChangeUseCase,
 ) {
     suspend operator fun invoke(
         malId: Int,
@@ -28,7 +31,9 @@ class ResolveConflictUseCase(
     ) {
         when (keep) {
             ConflictSide.App -> {
+                val conflict = conflicts.getConflicts().firstOrNull { it.malId == malId }
                 conflicts.deleteConflict(malId)
+                if (conflict != null) queueMalChange(conflict.app.toMalChange(malId))
             }
 
             ConflictSide.Other -> {
@@ -44,12 +49,16 @@ class ResolveAllConflictsUseCase(
     private val conflicts: ConflictLocalDataSource,
     private val library: LibraryLocalDataSource,
     private val scheduler: SyncScheduler,
+    private val queueMalChange: QueueMalChangeUseCase,
 ) {
     suspend operator fun invoke(keep: ConflictSide) {
         val all = conflicts.getConflicts()
         when (keep) {
             ConflictSide.App -> {
-                all.forEach { conflicts.deleteConflict(it.malId) }
+                all.forEach {
+                    conflicts.deleteConflict(it.malId)
+                    queueMalChange(it.app.toMalChange(it.malId))
+                }
             }
 
             ConflictSide.Other -> {
@@ -73,3 +82,6 @@ private suspend fun applyOther(
     }
     conflicts.deleteConflict(conflict.malId)
 }
+
+private fun EntryValues.toMalChange(malId: Int): MalChange =
+    if (removed) MalChange.Remove(malId) else MalChange.Upsert(malId, status, progress, score)

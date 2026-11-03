@@ -7,6 +7,11 @@ import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalImportUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
+import com.greenzean.animekmp.shared.mal.domain.QueueAppOnlyEntriesUseCase
+import com.greenzean.animekmp.shared.mal.domain.QueueMalChangeUseCase
+import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
+import com.greenzean.animekmp.shared.mal.domain.SendMalChangesUseCase
 import com.greenzean.animekmp.shared.mal.domain.StartMalImportUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
@@ -18,6 +23,11 @@ val malPresentationModule =
         factoryOf(::AcceptMalConsentUseCase)
         factoryOf(::ConnectMalUseCase)
         factoryOf(::DisconnectMalUseCase)
+        factoryOf(::QueueMalChangeUseCase)
+        factoryOf(::QueueAppOnlyEntriesUseCase)
+        factoryOf(::SendMalChangesUseCase)
+        factoryOf(::ObserveMalOutboxUseCase)
+        factoryOf(::RetryMalSendUseCase)
         factoryOf(::ObserveMalImportUseCase)
         factoryOf(::StartMalImportUseCase)
         factoryOf(::ImportMalListUseCase)

@@ -13,6 +13,7 @@ import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.presentation.SavedEntry
+import com.greenzean.animekmp.shared.mal.idleQueueMalChange
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,8 +44,8 @@ class ConflictsViewModelTest {
     private fun viewModel() =
         ConflictsViewModel(
             ObserveConflictsUseCase(conflicts),
-            ResolveConflictUseCase(conflicts, library, scheduler),
-            ResolveAllConflictsUseCase(conflicts, library, scheduler),
+            ResolveConflictUseCase(conflicts, library, scheduler, idleQueueMalChange()),
+            ResolveAllConflictsUseCase(conflicts, library, scheduler, idleQueueMalChange()),
         )
 
     private fun seed(vararg ids: Int) {

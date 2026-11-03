@@ -8,8 +8,10 @@ import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.initKoin
 import com.greenzean.animekmp.shared.mal.domain.MalAuthorizer
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
+import com.greenzean.animekmp.shared.mal.domain.MalSendScheduler
 import com.greenzean.animekmp.shared.sync.data.ServerConfig
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
+import com.greenzean.animekmp.sync.WorkManagerMalSendScheduler
 import com.greenzean.animekmp.sync.WorkManagerSyncScheduler
 import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
@@ -26,6 +28,8 @@ class AnimeApplication : Application() {
                 module {
                     single { ServerConfig(BuildConfig.GRAPHQL_URL) }
                     single<SyncScheduler> { WorkManagerSyncScheduler(get()) }
+                    single { WorkManagerMalSendScheduler(get()) }
+                    single<MalSendScheduler> { get<WorkManagerMalSendScheduler>() }
                     single { MalConfig(BuildConfig.MAL_CLIENT_ID, BuildConfig.MAL_REDIRECT_URI) }
                     single<MalAuthorizer> { CustomTabsMalAuthorizer(activities, get()) }
                     single<GoogleIdTokenProvider> {
@@ -35,5 +39,6 @@ class AnimeApplication : Application() {
             )
         }
         get<SyncScheduler>().requestSync()
+        get<WorkManagerMalSendScheduler>().schedulePeriodic()
     }
 }

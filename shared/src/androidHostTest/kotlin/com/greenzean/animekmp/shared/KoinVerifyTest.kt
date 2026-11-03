@@ -19,6 +19,7 @@ import com.greenzean.animekmp.shared.mal.data.malModule
 import com.greenzean.animekmp.shared.mal.domain.MalAccountStore
 import com.greenzean.animekmp.shared.mal.domain.MalAuthorizer
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
+import com.greenzean.animekmp.shared.mal.domain.MalSendScheduler
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
 import com.greenzean.animekmp.shared.mal.presentation.malPresentationModule
@@ -72,6 +73,7 @@ class KoinVerifyTest {
                     MalAuthorizer::class,
                     GoogleIdTokenProvider::class,
                     SyncScheduler::class,
+                    MalSendScheduler::class,
                     CoroutineScope::class,
                 ),
         )

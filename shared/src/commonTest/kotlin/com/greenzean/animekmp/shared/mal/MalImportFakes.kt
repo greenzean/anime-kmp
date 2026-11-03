@@ -6,9 +6,11 @@ import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.importer.FakeOnMalLocalDataSource
 import com.greenzean.animekmp.shared.importer.domain.MergeMalEntryUseCase
 import com.greenzean.animekmp.shared.importer.malEntry
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
 import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
+import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalImportCoordinator
 import com.greenzean.animekmp.shared.mal.domain.MalImportProgressStore
 import com.greenzean.animekmp.shared.mal.domain.MalListApi
@@ -43,6 +45,28 @@ class FakeMalListApi : MalListApi {
     val calls = mutableListOf<Pair<Int, Int>>()
 
     val offsets: List<Int> get() = calls.map { it.first }
+
+    val updates = mutableListOf<MalChange.Upsert>()
+    val deletes = mutableListOf<Int>()
+    val updateResults = mutableMapOf<Int, Result<Unit, MalApiError>>()
+    val deleteResults = mutableMapOf<Int, Result<Unit, MalApiError>>()
+    var onUpdate: suspend (Int) -> Unit = {}
+
+    override suspend fun update(
+        malId: Int,
+        status: WatchStatus,
+        progress: Int,
+        score: Int?,
+    ): Result<Unit, MalApiError> {
+        updates += MalChange.Upsert(malId, status, progress, score)
+        onUpdate(malId)
+        return updateResults[malId] ?: Result.Success(Unit)
+    }
+
+    override suspend fun delete(malId: Int): Result<Unit, MalApiError> {
+        deletes += malId
+        return deleteResults[malId] ?: Result.Success(Unit)
+    }
 
     override suspend fun page(
         offset: Int,
@@ -98,7 +122,8 @@ class MalImportHarness(
     val api = FakeMalListApi()
     val throttle = MalThrottle(clock)
     val merge = MergeMalEntryUseCase(local, conflicts, onMal)
-    val importList = ImportMalListUseCase(api, throttle, merge, store, scheduler)
+    val outboxHarness = MalOutboxHarness()
+    val importList = ImportMalListUseCase(api, throttle, merge, store, scheduler, outboxHarness.queueAppOnly)
     val coordinator = MalImportCoordinator(importList, scope)
     val observe = ObserveMalImportUseCase(coordinator)
     val start = StartMalImportUseCase(coordinator)

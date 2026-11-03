@@ -9,6 +9,8 @@ import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalAccount
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
+import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,12 +26,14 @@ class MalAccountViewModel(
     private val acceptMalConsent: AcceptMalConsentUseCase,
     private val connectMal: ConnectMalUseCase,
     private val disconnectMal: DisconnectMalUseCase,
+    observeMalOutbox: ObserveMalOutboxUseCase,
+    private val retryMalSend: RetryMalSendUseCase,
 ) : ViewModel() {
     private val override = MutableStateFlow<MalAccountStatus?>(null)
 
     val state: StateFlow<MalAccountState> =
-        combine(observeMalAccount(), override) { account, local ->
-            MalAccountState(local ?: account.toStatus())
+        combine(observeMalAccount(), override, observeMalOutbox()) { account, local, outbox ->
+            MalAccountState(local ?: account.toStatus(), outbox.pendingCount, outbox.lastError)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), MalAccountState())
 
     fun onAction(action: MalAccountAction) {
@@ -37,6 +41,7 @@ class MalAccountViewModel(
             MalAccountAction.OnConsentAccepted -> acceptMalConsent()
             MalAccountAction.OnConnectClick -> connect()
             MalAccountAction.OnDisconnectClick -> viewModelScope.launch { disconnectMal() }
+            MalAccountAction.OnRetryClick -> viewModelScope.launch { retryMalSend() }
             MalAccountAction.OnErrorDismissed -> override.update { if (it is MalAccountStatus.Error) null else it }
         }
     }

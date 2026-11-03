@@ -19,6 +19,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalAnimeSummary
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalSearchPage
 import com.greenzean.animekmp.shared.mal.domain.MalThrottle
+import com.greenzean.animekmp.shared.mal.idleQueueMalChange
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
 import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
@@ -110,11 +111,11 @@ abstract class DetailsViewModelTestBase {
             malId,
             GetAnimeDetailsUseCase(MalAnimeRepository(api, cache(), MalThrottle())),
             ObserveLibraryUseCase(local),
-            AddToLibraryUseCase(local, scheduler),
+            AddToLibraryUseCase(local, scheduler, idleQueueMalChange()),
             ObserveTitleLanguageUseCase(settings),
-            EditEntryUseCase(local, scheduler),
-            RemoveFromLibraryUseCase(local, scheduler),
-            RestoreEntryUseCase(local, scheduler),
+            EditEntryUseCase(local, scheduler, idleQueueMalChange()),
+            RemoveFromLibraryUseCase(local, scheduler, idleQueueMalChange()),
+            RestoreEntryUseCase(local, scheduler, idleQueueMalChange()),
             clock = FixedClock(Instant.parse("2023-10-13T12:00:00Z")),
         )
 
