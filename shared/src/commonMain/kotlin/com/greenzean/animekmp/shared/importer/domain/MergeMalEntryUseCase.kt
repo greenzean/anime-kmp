@@ -13,6 +13,8 @@ enum class MergeOutcome {
 
 interface OnMalLocalDataSource {
     suspend fun markOnMal(malId: Int)
+
+    suspend fun activeOnMalIds(): List<Int>
 }
 
 class MergeMalEntryUseCase(

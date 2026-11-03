@@ -39,6 +39,7 @@ class ResolveConflictUseCase(
             ConflictSide.Other -> {
                 val conflict = conflicts.getConflicts().firstOrNull { it.malId == malId } ?: return
                 applyOther(library, conflicts, conflict)
+                queueMalChange(conflict.other.toMalChange(malId))
                 scheduler.requestSync()
             }
         }
@@ -62,7 +63,10 @@ class ResolveAllConflictsUseCase(
             }
 
             ConflictSide.Other -> {
-                all.forEach { applyOther(library, conflicts, it) }
+                all.forEach {
+                    applyOther(library, conflicts, it)
+                    queueMalChange(it.other.toMalChange(it.malId))
+                }
                 scheduler.requestSync()
             }
         }

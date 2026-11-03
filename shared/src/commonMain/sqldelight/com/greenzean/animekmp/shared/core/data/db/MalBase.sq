@@ -1,0 +1,18 @@
+CREATE TABLE mal_base (
+    mal_id   INTEGER NOT NULL PRIMARY KEY,
+    status   TEXT    NOT NULL,
+    progress INTEGER NOT NULL,
+    score    INTEGER
+);
+
+selectByMalId:
+SELECT status, progress, score FROM mal_base WHERE mal_id = ?;
+
+save:
+INSERT OR REPLACE INTO mal_base (mal_id, status, progress, score) VALUES (?, ?, ?, ?);
+
+deleteByMalId:
+DELETE FROM mal_base WHERE mal_id = ?;
+
+clear:
+DELETE FROM mal_base;

@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared.mal.presentation
 
 import com.greenzean.animekmp.shared.mal.domain.MalSendError
+import kotlin.time.Instant
 
 enum class MalAccountError {
     Cancelled,
@@ -30,6 +31,8 @@ data class MalAccountState(
     val status: MalAccountStatus = MalAccountStatus.NotConnected,
     val pendingCount: Int = 0,
     val lastError: MalSendError? = null,
+    val lastSyncedAt: Instant? = null,
+    val syncing: Boolean = false,
 )
 
 sealed interface MalAccountAction {
@@ -42,4 +45,6 @@ sealed interface MalAccountAction {
     data object OnErrorDismissed : MalAccountAction
 
     data object OnRetryClick : MalAccountAction
+
+    data object OnSyncNowClick : MalAccountAction
 }

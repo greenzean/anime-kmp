@@ -10,7 +10,9 @@ import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalSendError
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalPullUseCase
 import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
+import com.greenzean.animekmp.shared.mal.domain.SyncMalNowUseCase
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountError
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
@@ -33,12 +35,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MalAccountViewModelTest {
     private var harness = MalAccountHarness()
     private val importScope = CoroutineScope(UnconfinedTestDispatcher())
     private val importHarness = MalImportHarness(importScope)
+    private val pullHarness = MalPullHarness(importScope)
     private val outbox = FakeMalOutbox()
     private val sendScheduler = FakeMalSendScheduler()
 
@@ -66,9 +71,13 @@ class MalAccountViewModelTest {
                     harness.repository,
                     FakeMalImportProgressStore(),
                     outbox,
+                    pullHarness.pullStore,
+                    pullHarness.baseStore,
                 ),
                 ObserveMalOutboxUseCase(outbox),
                 RetryMalSendUseCase(outbox, sendScheduler),
+                ObserveMalPullUseCase(pullHarness.pullStore, pullHarness.coordinator),
+                SyncMalNowUseCase(pullHarness.coordinator),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { } }
         return viewModel
@@ -292,6 +301,103 @@ class MalAccountViewModelTest {
             assertEquals(1, sendScheduler.requests)
             assertNull(viewModel.state.value.lastError)
             assertEquals(1, viewModel.state.value.pendingCount)
+        }
+
+    @Test
+    fun theStateStartsNeverSyncedAndNotSyncing() =
+        runTest {
+            val viewModel = viewModel()
+
+            assertNull(viewModel.state.value.lastSyncedAt)
+            assertFalse(viewModel.state.value.syncing)
+        }
+
+    @Test
+    fun lastSyncedAtFollowsThePullStore() =
+        runTest {
+            val viewModel = viewModel()
+
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW - 2.hours)
+
+            assertEquals(PULL_NOW - 2.hours, viewModel.state.value.lastSyncedAt)
+        }
+
+    @Test
+    fun syncNowStartsAPullAndTheStateIsSyncingWhileItRuns() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val gate = CompletableDeferred<Unit>()
+            pullHarness.api.gates[0] = gate
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnSyncNowClick)
+
+            assertEquals(listOf(0), pullHarness.api.offsets)
+            assertTrue(viewModel.state.value.syncing)
+            gate.complete(Unit)
+            assertFalse(viewModel.state.value.syncing)
+        }
+
+    @Test
+    fun afterASyncTheStateShowsTheNewLastSyncedAt() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnSyncNowClick)
+
+            assertEquals(PULL_NOW, viewModel.state.value.lastSyncedAt)
+            assertFalse(viewModel.state.value.syncing)
+        }
+
+    @Test
+    fun syncNowClickedTwiceWhileSyncingStartsOnlyOnePull() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            pullHarness.api.gates[0] = gate
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnSyncNowClick)
+            viewModel.onAction(MalAccountAction.OnSyncNowClick)
+            gate.complete(Unit)
+
+            assertEquals(listOf(0), pullHarness.api.offsets)
+        }
+
+    @Test
+    fun syncingAndOutboxStateAreKeptTogether() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val gate = CompletableDeferred<Unit>()
+            pullHarness.api.gates[0] = gate
+            val viewModel = viewModel()
+            outbox.emit(pendingCount = 2, lastError = MalSendError.SERVER)
+
+            viewModel.onAction(MalAccountAction.OnSyncNowClick)
+
+            assertEquals(
+                MalAccountState(
+                    MalAccountStatus.Connected("francisco"),
+                    pendingCount = 2,
+                    lastError = MalSendError.SERVER,
+                    syncing = true,
+                ),
+                viewModel.state.value,
+            )
+            gate.complete(Unit)
+        }
+
+    @Test
+    fun disconnectClearsTheLastPullTime() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW)
+            val viewModel = viewModel()
+            assertEquals(PULL_NOW, viewModel.state.value.lastSyncedAt)
+
+            viewModel.onAction(MalAccountAction.OnDisconnectClick)
+
+            assertNull(viewModel.state.value.lastSyncedAt)
         }
 
     private fun assertLoginError(

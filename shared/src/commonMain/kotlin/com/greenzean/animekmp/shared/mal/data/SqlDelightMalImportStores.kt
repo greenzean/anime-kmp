@@ -41,4 +41,12 @@ class SqlDelightOnMalDataSource(
             db.listEntryQueries.markOnMal(malId.toLong())
         }
     }
+
+    override suspend fun activeOnMalIds(): List<Int> =
+        withContext(dispatcher) {
+            db.listEntryQueries
+                .selectActiveOnMalIds()
+                .executeAsList()
+                .map { it.toInt() }
+        }
 }

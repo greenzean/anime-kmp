@@ -120,10 +120,23 @@ class MalImportHarness(
     val store = FakeMalImportProgressStore(initialOffset)
     val scheduler = FakeSyncScheduler()
     val api = FakeMalListApi()
+    val pullStore = FakeMalPullStore()
+    val baseStore = FakeMalBaseStore()
     val throttle = MalThrottle(clock)
     val merge = MergeMalEntryUseCase(local, conflicts, onMal)
     val outboxHarness = MalOutboxHarness()
-    val importList = ImportMalListUseCase(api, throttle, merge, store, scheduler, outboxHarness.queueAppOnly)
+    val importList =
+        ImportMalListUseCase(
+            api,
+            throttle,
+            merge,
+            store,
+            scheduler,
+            outboxHarness.queueAppOnly,
+            pullStore = pullStore,
+            baseStore = baseStore,
+            clock = clock,
+        )
     val coordinator = MalImportCoordinator(importList, scope)
     val observe = ObserveMalImportUseCase(coordinator)
     val start = StartMalImportUseCase(coordinator)

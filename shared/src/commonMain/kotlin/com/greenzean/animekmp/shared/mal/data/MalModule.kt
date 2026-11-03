@@ -6,10 +6,13 @@ import com.greenzean.animekmp.shared.mal.domain.MalAnimeCache
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeRepository
 import com.greenzean.animekmp.shared.mal.domain.MalAuthApi
 import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
+import com.greenzean.animekmp.shared.mal.domain.MalBaseStore
 import com.greenzean.animekmp.shared.mal.domain.MalImportCoordinator
 import com.greenzean.animekmp.shared.mal.domain.MalImportProgressStore
 import com.greenzean.animekmp.shared.mal.domain.MalListApi
 import com.greenzean.animekmp.shared.mal.domain.MalOutboxLocalDataSource
+import com.greenzean.animekmp.shared.mal.domain.MalPullCoordinator
+import com.greenzean.animekmp.shared.mal.domain.MalPullStore
 import com.greenzean.animekmp.shared.mal.domain.MalRedirectHandler
 import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsApi
 import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsRepository
@@ -30,11 +33,14 @@ val malModule =
         single<MalSuggestionsApi> { KtorMalSuggestionsApi(HttpClient { followRedirects = false }, get(), get()) }
         single<MalUserApi> { KtorMalUserApi(HttpClient { followRedirects = false }, get(), get()) }
         single<MalListApi> { KtorMalListApi(HttpClient { followRedirects = false }, get(), get()) }
+        single<MalBaseStore> { SqlDelightMalBaseStore(get()) }
         single<MalImportProgressStore> { SqlDelightMalImportProgressStore(get()) }
         single<OnMalLocalDataSource> { SqlDelightOnMalDataSource(get()) }
         single { MalImportCoordinator(get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
         single<MalAnimeCache> { SqlDelightMalCache(get()) }
         single<MalOutboxLocalDataSource> { SqlDelightMalOutboxDataSource(get()) }
+        single<MalPullStore> { SqlDelightMalPullStore(get()) }
+        single { MalPullCoordinator(get(), get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
         single { MalThrottle(logger = get()) }
         single { MalAnimeRepository(get(), get(), get(), logger = get()) }
         single { MalSuggestionsRepository(get(), get(), get(), logger = get()) }

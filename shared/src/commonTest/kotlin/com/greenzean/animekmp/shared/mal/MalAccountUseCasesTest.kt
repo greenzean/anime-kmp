@@ -1,12 +1,14 @@
 package com.greenzean.animekmp.shared.mal
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.mal.domain.AcceptMalConsentUseCase
 import com.greenzean.animekmp.shared.mal.domain.ConnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalAccount
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
+import com.greenzean.animekmp.shared.mal.domain.MalBaseValues
 import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalImportStatus
@@ -35,6 +37,8 @@ class MalAccountUseCasesTest {
     }
 
     private val outbox = FakeMalOutbox()
+    private val pullStore = FakeMalPullStore()
+    private val baseStore = FakeMalBaseStore()
 
     private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start)
 
@@ -45,6 +49,8 @@ class MalAccountUseCasesTest {
             harness.repository,
             importHarness.store,
             outbox,
+            pullStore,
+            baseStore,
         )
 
     @Test
@@ -195,5 +201,38 @@ class MalAccountUseCasesTest {
 
             assertEquals(1, outbox.clears)
             assertTrue(outbox.pending.isEmpty())
+        }
+
+    @Test
+    fun disconnectingClearsTheLastPullTime() =
+        runTest {
+            pullStore.setLastPulledAt(PULL_NOW)
+
+            disconnect()()
+
+            assertEquals(1, pullStore.clears)
+            assertNull(pullStore.lastPulledAt())
+        }
+
+    @Test
+    fun disconnectingClearsTheMalBaseValues() =
+        runTest {
+            baseStore.save(1, MalBaseValues(WatchStatus.WATCHING, 5, 7))
+
+            disconnect()()
+
+            assertEquals(1, baseStore.clears)
+            assertTrue(baseStore.values.isEmpty())
+        }
+
+    @Test
+    fun disconnectingWithoutAPullTimeIsHarmless() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+
+            disconnect()()
+
+            assertNull(pullStore.lastPulledAt())
+            assertNull(harness.tokenStore.get())
         }
 }

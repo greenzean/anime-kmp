@@ -1,5 +1,7 @@
 package com.greenzean.animekmp.shared.mal
 
+import com.greenzean.animekmp.shared.conflict.data.SqlDelightConflictDataSource
+import com.greenzean.animekmp.shared.conflict.domain.EntryValues
 import com.greenzean.animekmp.shared.core.data.TestAnimeCatalog
 import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
@@ -16,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -33,6 +36,7 @@ class SqlDelightMalOutboxDataSourceTest {
         }
     private val library = SqlDelightLibraryDataSource(db, clock, dispatcher)
     private val outbox = SqlDelightMalOutboxDataSource(db, dispatcher)
+    private val conflicts = SqlDelightConflictDataSource(db, clock, dispatcher)
     private val bebop = 1
     private val fmab = 5114
     private val steinsGate = 9253
@@ -404,5 +408,143 @@ class SqlDelightMalOutboxDataSourceTest {
                 item = outbox.oldest()
             }
             assertEquals(3, seqs.toSet().size)
+        }
+
+    @Test
+    fun anAnimeWithAQueuedChangeIsPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+
+            assertTrue(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aQueuedRemoveIsPending() =
+        runTest {
+            outbox.enqueue(MalChange.Remove(bebop))
+
+            assertTrue(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun anAnimeWithoutAQueuedChangeIsNotPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+
+            assertFalse(outbox.isPending(fmab))
+        }
+
+    @Test
+    fun nothingIsPendingInAnEmptyQueue() =
+        runTest {
+            assertFalse(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aSentChangeIsNoLongerPending() =
+        runTest {
+            library.saveEntry(bebop, WatchStatus.WATCHING, 5, 7)
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+
+            outbox.markSent(outbox.oldest()!!)
+
+            assertFalse(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aDroppedChangeIsNoLongerPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+
+            outbox.drop(outbox.oldest()!!)
+
+            assertFalse(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aFailedChangeIsStillPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+            outbox.markFailed(outbox.oldest()!!, MalSendError.SERVER)
+
+            assertTrue(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aClearedQueueHasNothingPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+
+            outbox.clear()
+
+            assertFalse(outbox.isPending(bebop))
+        }
+
+    @Test
+    fun aConflictedAnimeStaysPendingButIsNotOffered() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.COMPLETED, 26, 9, removed = false))
+
+            assertTrue(outbox.isPending(bebop))
+            assertNull(outbox.oldest())
+        }
+
+    @Test
+    fun oldestSkipsAChangeWhoseAnimeHasAConflictAndOffersTheNextOne() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+            outbox.enqueue(MalChange.Upsert(fmab, WatchStatus.COMPLETED, 64, 10))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.COMPLETED, 26, 9, removed = false))
+
+            assertEquals(MalChange.Upsert(fmab, WatchStatus.COMPLETED, 64, 10), outbox.oldest()?.change)
+        }
+
+    @Test
+    fun aConflictedRemoveIsSkippedToo() =
+        runTest {
+            outbox.enqueue(MalChange.Remove(bebop))
+            outbox.enqueue(MalChange.Remove(fmab))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.WATCHING, 5, 7, removed = true))
+
+            assertEquals(MalChange.Remove(fmab), outbox.oldest()?.change)
+        }
+
+    @Test
+    fun drainingOffersOnlyTheChangesWithoutAConflict() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(steinsGate, WatchStatus.WATCHING, 1, null))
+            outbox.enqueue(MalChange.Remove(bebop))
+            outbox.enqueue(MalChange.Upsert(fmab, WatchStatus.COMPLETED, 64, 10))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.COMPLETED, 26, 9, removed = false))
+
+            assertEquals(
+                listOf(
+                    MalChange.Upsert(steinsGate, WatchStatus.WATCHING, 1, null),
+                    MalChange.Upsert(fmab, WatchStatus.COMPLETED, 64, 10),
+                ),
+                drain(),
+            )
+        }
+
+    @Test
+    fun resolvingTheConflictOffersTheChangeAgain() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.COMPLETED, 26, 9, removed = false))
+            assertNull(outbox.oldest())
+
+            conflicts.deleteConflict(bebop)
+
+            assertEquals(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7), outbox.oldest()?.change)
+        }
+
+    @Test
+    fun aConflictedChangeIsStillCountedAsPending() =
+        runTest {
+            outbox.enqueue(MalChange.Upsert(bebop, WatchStatus.WATCHING, 5, 7))
+            conflicts.saveConflict(bebop, EntryValues(WatchStatus.COMPLETED, 26, 9, removed = false))
+
+            assertEquals(1, status().pendingCount)
         }
 }

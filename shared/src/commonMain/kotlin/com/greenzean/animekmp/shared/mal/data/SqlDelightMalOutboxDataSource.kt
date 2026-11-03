@@ -82,6 +82,9 @@ class SqlDelightMalOutboxDataSource(
         withContext(dispatcher) { outbox.setError(error.name, item.change.malId.toLong(), item.seq) }
     }
 
+    override suspend fun isPending(malId: Int): Boolean =
+        withContext(dispatcher) { outbox.selectByMalId(malId.toLong()).executeAsOneOrNull() != null }
+
     override suspend fun clearErrors() {
         withContext(dispatcher) { outbox.clearErrors() }
     }
