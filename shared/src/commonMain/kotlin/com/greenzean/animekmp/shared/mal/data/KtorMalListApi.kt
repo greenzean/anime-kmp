@@ -28,6 +28,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.Instant
 import kotlin.time.TimeSource
 
 private const val LIST_URL = "https://api.myanimelist.net/v2/users/@me/animelist"
@@ -55,6 +56,7 @@ internal data class ListStatusDto(
     val status: String? = null,
     val score: Int = 0,
     @SerialName("num_episodes_watched") val numEpisodesWatched: Int = 0,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
@@ -90,6 +92,13 @@ internal fun String?.toWatchStatus(): WatchStatus? =
 
 private val ScoreRange = 1..10
 
+private fun String?.toInstantOrNull(): Instant? =
+    try {
+        this?.let { Instant.parse(it) }
+    } catch (_: IllegalArgumentException) {
+        null
+    }
+
 internal fun ListItemDto.toListItem(): MalListItem? {
     val listStatus = listStatus
     val status = listStatus?.status.toWatchStatus()
@@ -106,6 +115,7 @@ internal fun ListItemDto.toListItem(): MalListItem? {
                     score = listStatus.score.takeIf { it in ScoreRange },
                 ),
             imageUrl = node.mainPicture?.let { it.large ?: it.medium },
+            updatedAt = listStatus.updatedAt.toInstantOrNull(),
         )
     } else {
         null

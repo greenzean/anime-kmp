@@ -53,6 +53,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.merge_sent
 import com.greenzean.animekmp.composeapp.generated.resources.merge_total
 import com.greenzean.animekmp.composeapp.generated.resources.settings_account_heading
 import com.greenzean.animekmp.composeapp.generated.resources.settings_delete_account
+import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_last_synced_never
 import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_title
 import com.greenzean.animekmp.composeapp.generated.resources.settings_sign_out
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_message
@@ -628,5 +629,55 @@ class SettingsScreenTest {
         runComposeUiTest {
             SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NeedsConsent))
                 .assertTagMissing(MalImportTags.ROW)
+        }
+
+    @Test
+    fun malPullRowIsShownOnlyWhileConnected() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.Connected("francisco")))
+                .assertTagShown(MalPullTags.STATUS)
+                .assertTagShown(MalPullTags.SYNC_NOW)
+        }
+
+    @Test
+    fun malPullRowIsMissingWhenNotConnected() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NotConnected))
+                .assertTagMissing(MalPullTags.STATUS)
+                .assertTagMissing(MalPullTags.SYNC_NOW)
+        }
+
+    @Test
+    fun malPullRowIsMissingWhileConsentIsPending() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.NeedsConsent))
+                .assertTagMissing(MalPullTags.STATUS)
+                .assertTagMissing(MalPullTags.SYNC_NOW)
+        }
+
+    @Test
+    fun clickingSyncNowSendsOnSyncNowClick() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.Connected("francisco")))
+                .clickTag(MalPullTags.SYNC_NOW)
+                .assertMalActions(MalAccountAction.OnSyncNowClick)
+        }
+
+    @Test
+    fun syncingDisablesSyncNowInSettings() =
+        runComposeUiTest {
+            SettingsRobot(
+                this,
+                signedOut,
+                malState = MalAccountState(MalAccountStatus.Connected("francisco"), syncing = true),
+            ).clickTag(MalPullTags.SYNC_NOW)
+                .assertMalActions()
+        }
+
+    @Test
+    fun neverSyncedShowsTheNeverLabelInSettings() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut, malState = MalAccountState(MalAccountStatus.Connected("francisco")))
+                .assertTextShown(str(Res.string.settings_mal_last_synced_never))
         }
 }

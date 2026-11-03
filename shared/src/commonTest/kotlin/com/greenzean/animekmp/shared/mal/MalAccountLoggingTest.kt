@@ -172,6 +172,8 @@ class MalAccountLoggingTest {
                 harness.repository,
                 FakeMalImportProgressStore(),
                 FakeMalOutbox(),
+                FakeMalPullStore(),
+                FakeMalBaseStore(),
                 logger = logger,
             )()
 

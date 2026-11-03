@@ -27,6 +27,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Instant
 
 class KtorMalListApiTest {
     private val harness = MalAccountHarness(validMalSession())
@@ -107,6 +108,52 @@ class KtorMalListApiTest {
                     hasNext = true,
                 )
             assertEquals(Result.Success(expected), result)
+        }
+
+    private fun statusBody(updatedAt: String?) =
+        "{\"data\":[{\"node\":{\"id\":1,\"title\":\"Title 1\",\"num_episodes\":26}," +
+            "\"list_status\":{\"status\":\"completed\",\"score\":9,\"num_episodes_watched\":26" +
+            (updatedAt?.let { ",\"updated_at\":\"$it\"" } ?: "") + "}}],\"paging\":{}}"
+
+    @Test
+    fun updatedAtIsParsedFromTheListStatus() =
+        runTest {
+            val parsed = items(statusBody("2026-10-30T08:15:42+00:00")).single()
+
+            assertEquals(Instant.parse("2026-10-30T08:15:42Z"), parsed.updatedAt)
+        }
+
+    @Test
+    fun updatedAtWithAZSuffixIsParsed() =
+        runTest {
+            val parsed = items(statusBody("2026-10-30T08:15:42Z")).single()
+
+            assertEquals(Instant.parse("2026-10-30T08:15:42Z"), parsed.updatedAt)
+        }
+
+    @Test
+    fun updatedAtWithAnOffsetIsConvertedToTheSameInstant() =
+        runTest {
+            val parsed = items(statusBody("2026-10-30T10:15:42+02:00")).single()
+
+            assertEquals(Instant.parse("2026-10-30T08:15:42Z"), parsed.updatedAt)
+        }
+
+    @Test
+    fun missingUpdatedAtIsNull() =
+        runTest {
+            val parsed = items(statusBody(null)).single()
+
+            assertNull(parsed.updatedAt)
+            assertEquals(WatchStatus.COMPLETED, parsed.entry.status)
+        }
+
+    @Test
+    fun updatedAtDoesNotChangeTheOtherParsedValues() =
+        runTest {
+            val parsed = items(statusBody("2026-10-30T08:15:42+00:00")).single()
+
+            assertEquals(MalExportEntry(1, "Title 1", 26, WatchStatus.COMPLETED, 26, 9), parsed.entry)
         }
 
     @Test

@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -18,7 +23,11 @@ import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
 import com.greenzean.animekmp.shared.mal.presentation.MalImportAction
 import com.greenzean.animekmp.shared.mal.presentation.MalImportState
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @Composable
 fun MalAccountSection(
@@ -27,7 +36,15 @@ fun MalAccountSection(
     modifier: Modifier = Modifier,
     importState: MalImportState = MalImportState(),
     onImportAction: (MalImportAction) -> Unit = {},
+    initialNow: Instant = Clock.System.now(),
 ) {
+    var now by remember { mutableStateOf(initialNow) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1.minutes)
+            now = Clock.System.now()
+        }
+    }
     Column(modifier = modifier) {
         Text(
             stringResource(Res.string.settings_mal_title),
@@ -43,6 +60,12 @@ fun MalAccountSection(
                     pendingCount = state.pendingCount,
                     lastError = state.lastError,
                     onRetryClick = { onAction(MalAccountAction.OnRetryClick) },
+                )
+                MalPullRow(
+                    lastSyncedAt = state.lastSyncedAt,
+                    now = now,
+                    syncing = state.syncing,
+                    onSyncNowClick = { onAction(MalAccountAction.OnSyncNowClick) },
                 )
             }
         }

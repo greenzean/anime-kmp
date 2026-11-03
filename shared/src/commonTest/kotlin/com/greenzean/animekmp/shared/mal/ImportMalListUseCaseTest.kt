@@ -11,11 +11,13 @@ import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalListItem
 import com.greenzean.animekmp.shared.mal.domain.MalListPage
+import com.greenzean.animekmp.shared.mal.domain.toBase
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -56,6 +58,56 @@ class ImportMalListUseCaseTest {
             assertEquals(listOf(1, 2, 3), h.local.savedAnime.map { it.malId })
             assertEquals(listOf("img-1", "img-2", "img-3"), h.local.savedAnime.map { it.imageUrl })
             assertEquals(3, h.local.savedEntries.size)
+        }
+
+    @Test
+    fun everyImportedItemSavesItsMalValuesAsTheBase() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, 3, hasNext = false)
+
+            h.importList {}
+
+            assertEquals(listItems(0, 3).associate { it.entry.malId to it.entry.toBase() }, h.baseStore.values)
+        }
+
+    @Test
+    fun itemsOnLaterPagesSaveTheirBaseToo() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, IMPORT_PAGE_SIZE, hasNext = true)
+            h.api.results[IMPORT_PAGE_SIZE] = listPage(IMPORT_PAGE_SIZE, 2, hasNext = false)
+
+            h.importList {}
+
+            assertEquals(IMPORT_PAGE_SIZE + 2, h.baseStore.values.size)
+            assertEquals(
+                listItems(IMPORT_PAGE_SIZE, 2).last().entry.toBase(),
+                h.baseStore.values[IMPORT_PAGE_SIZE + 2],
+            )
+        }
+
+    @Test
+    fun aConflictingItemStillSavesTheMalValuesAsTheBase() =
+        runTest {
+            val h = harness()
+            h.local.put(Anime(1, "Title 1", episodes = 26), SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            h.api.results[0] = listPage(0, 1, hasNext = false)
+
+            h.importList {}
+
+            assertEquals(listItems(0, 1).single().entry.toBase(), h.baseStore.values[1])
+        }
+
+    @Test
+    fun aFailedPageSavesNoBaseForIt() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = Result.Error(MalApiError.SERVER)
+
+            h.importList {}
+
+            assertTrue(h.baseStore.values.isEmpty())
         }
 
     @Test
@@ -331,5 +383,39 @@ class ImportMalListUseCaseTest {
                 h.outboxHarness.outbox.enqueued
                     .isEmpty(),
             )
+        }
+
+    @Test
+    fun finishingTheImportSetsLastPulledAtToNow() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, 2, hasNext = false)
+
+            h.importList {}
+
+            assertEquals(listOf(Instant.fromEpochMilliseconds(testScheduler.currentTime)), h.pullStore.saved)
+        }
+
+    @Test
+    fun finishingAnEmptyImportSetsLastPulledAt() =
+        runTest {
+            val h = harness()
+
+            h.importList {}
+
+            assertEquals(1, h.pullStore.saved.size)
+        }
+
+    @Test
+    fun aFailedImportDoesNotSetLastPulledAt() =
+        runTest {
+            val h = harness()
+            h.api.results[0] = listPage(0, 100, hasNext = true)
+            h.api.results[100] = Result.Error(MalApiError.NO_CONNECTION)
+
+            h.importList {}
+
+            assertTrue(h.pullStore.saved.isEmpty())
+            assertNull(h.pullStore.lastPulledAt())
         }
 }

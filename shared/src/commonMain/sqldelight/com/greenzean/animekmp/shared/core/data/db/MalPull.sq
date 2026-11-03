@@ -1,0 +1,13 @@
+CREATE TABLE mal_pull (
+    id             INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+    last_pulled_at INTEGER NOT NULL
+);
+
+selectLastPulledAt:
+SELECT last_pulled_at FROM mal_pull WHERE id = 1;
+
+saveLastPulledAt:
+INSERT OR REPLACE INTO mal_pull (id, last_pulled_at) VALUES (1, ?);
+
+clearLastPulledAt:
+DELETE FROM mal_pull;

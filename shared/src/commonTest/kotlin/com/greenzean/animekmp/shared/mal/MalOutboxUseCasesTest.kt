@@ -4,14 +4,13 @@ import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
+import com.greenzean.animekmp.shared.mal.domain.MalBaseValues
 import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalOutboxStatus
 import com.greenzean.animekmp.shared.mal.domain.MalSendError
 import com.greenzean.animekmp.shared.mal.domain.MalSendOutcome
-import com.greenzean.animekmp.shared.mal.domain.MalThrottle
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
 import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
-import com.greenzean.animekmp.shared.mal.domain.SendMalChangesUseCase
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -19,8 +18,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Clock
-import kotlin.time.Instant
 
 class MalOutboxUseCasesTest {
     private val upsert = MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7)
@@ -124,16 +121,11 @@ class MalOutboxUseCasesTest {
         scope: TestScope,
         loggedIn: Boolean = true,
     ) {
-        val base = MalOutboxHarness(loggedIn)
-        val outbox = base.outbox
-        val api = FakeMalListApi()
-        val throttle =
-            MalThrottle(
-                object : Clock {
-                    override fun now(): Instant = Instant.fromEpochMilliseconds(scope.testScheduler.currentTime)
-                },
-            )
-        val send = SendMalChangesUseCase(outbox, api, throttle, base.auth)
+        private val pullHarness = MalPullHarness(scope.backgroundScope, loggedIn, lastPulledAt = PULL_NOW)
+        val outbox = pullHarness.outbox
+        val api = pullHarness.api
+        val baseStore = pullHarness.baseStore
+        val send = pullHarness.send
     }
 
     @Test
@@ -321,6 +313,72 @@ class MalOutboxUseCasesTest {
             assertEquals(listOf(upsert, edited), h.api.updates)
             assertEquals(listOf<MalChange>(upsert, edited), h.outbox.sent)
             assertTrue(h.outbox.pending.isEmpty())
+        }
+
+    @Test
+    fun aSuccessfulUpsertSavesItsValuesAsTheMalBase() =
+        runTest {
+            val h = SendHarness(this)
+            h.outbox.enqueue(upsert)
+
+            h.send()
+
+            assertEquals(MalBaseValues(WatchStatus.WATCHING, 5, 7), h.baseStore.values[1])
+        }
+
+    @Test
+    fun aSuccessfulRemoveDeletesTheMalBase() =
+        runTest {
+            val h = SendHarness(this)
+            h.baseStore.save(5, MalBaseValues(WatchStatus.WATCHING, 5, 7))
+            h.outbox.enqueue(MalChange.Remove(5))
+
+            h.send()
+
+            assertNull(h.baseStore.get(5))
+        }
+
+    @Test
+    fun aRemoveThatMalAlreadyLostDeletesTheMalBase() =
+        runTest {
+            val h = SendHarness(this)
+            h.baseStore.save(5, MalBaseValues(WatchStatus.WATCHING, 5, 7))
+            h.outbox.enqueue(MalChange.Remove(5))
+            h.api.deleteResults[5] = Result.Error(MalApiError.NOT_FOUND)
+
+            h.send()
+
+            assertNull(h.baseStore.get(5))
+        }
+
+    @Test
+    fun aFailedUpsertLeavesTheMalBaseUntouched() =
+        runTest {
+            val h = SendHarness(this)
+            val before = MalBaseValues(WatchStatus.WATCHING, 4, 7)
+            h.baseStore.save(1, before)
+            h.outbox.enqueue(upsert)
+            h.api.updateResults[1] = Result.Error(MalApiError.SERVER)
+
+            h.send()
+
+            assertEquals(before, h.baseStore.get(1))
+            assertEquals(1, h.baseStore.saved.size)
+        }
+
+    @Test
+    fun aFailedRemoveLeavesTheMalBaseUntouched() =
+        runTest {
+            val h = SendHarness(this)
+            val before = MalBaseValues(WatchStatus.WATCHING, 4, 7)
+            h.baseStore.save(5, before)
+            h.outbox.enqueue(MalChange.Remove(5))
+            h.api.deleteResults[5] = Result.Error(MalApiError.SERVER)
+
+            h.send()
+
+            assertEquals(before, h.baseStore.get(5))
+            assertTrue(h.baseStore.deleted.isEmpty())
         }
 
     @Test

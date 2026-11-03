@@ -5,6 +5,7 @@ import com.greenzean.animekmp.shared.importer.domain.ImportSummary
 import com.greenzean.animekmp.shared.importer.domain.MergeMalEntryUseCase
 import com.greenzean.animekmp.shared.importer.domain.MergeOutcome
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
+import kotlin.time.Clock
 
 private const val PAGE_SIZE = 100
 
@@ -15,6 +16,9 @@ class ImportMalListUseCase(
     private val progress: MalImportProgressStore,
     private val scheduler: SyncScheduler,
     private val queueAppOnly: QueueAppOnlyEntriesUseCase,
+    private val pullStore: MalPullStore,
+    private val baseStore: MalBaseStore,
+    private val clock: Clock = Clock.System,
 ) {
     suspend operator fun invoke(onProgress: (done: Int) -> Unit): Result<ImportSummary, MalError> {
         var offset = progress.offset()
@@ -30,6 +34,7 @@ class ImportMalListUseCase(
                     is Result.Error -> return Result.Error(result.error)
                 }
             page.items.forEach { item ->
+                baseStore.save(item.entry.malId, item.entry.toBase())
                 when (merge(item.entry, item.imageUrl, markOnMal = true)) {
                     MergeOutcome.Added -> added++
                     MergeOutcome.Conflict -> conflicts++
@@ -45,6 +50,7 @@ class ImportMalListUseCase(
         progress.clear()
         if (added > 0) scheduler.requestSync()
         queueAppOnly()
+        pullStore.setLastPulledAt(clock.now())
         return Result.Success(ImportSummary(added = added, conflicts = conflicts, invalid = 0))
     }
 }

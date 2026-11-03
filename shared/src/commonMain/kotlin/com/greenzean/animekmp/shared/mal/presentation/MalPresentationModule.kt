@@ -8,11 +8,15 @@ import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalImportUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalPullUseCase
+import com.greenzean.animekmp.shared.mal.domain.PullMalChangesUseCase
+import com.greenzean.animekmp.shared.mal.domain.PullMalIfStaleUseCase
 import com.greenzean.animekmp.shared.mal.domain.QueueAppOnlyEntriesUseCase
 import com.greenzean.animekmp.shared.mal.domain.QueueMalChangeUseCase
 import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
 import com.greenzean.animekmp.shared.mal.domain.SendMalChangesUseCase
 import com.greenzean.animekmp.shared.mal.domain.StartMalImportUseCase
+import com.greenzean.animekmp.shared.mal.domain.SyncMalNowUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
@@ -32,6 +36,10 @@ val malPresentationModule =
         factoryOf(::StartMalImportUseCase)
         factoryOf(::ImportMalListUseCase)
         factoryOf(::MergeMalEntryUseCase)
+        factoryOf(::PullMalChangesUseCase)
+        factoryOf(::ObserveMalPullUseCase)
+        factoryOf(::SyncMalNowUseCase)
+        factoryOf(::PullMalIfStaleUseCase)
         viewModelOf(::MalAccountViewModel)
         viewModelOf(::MalImportViewModel)
     }

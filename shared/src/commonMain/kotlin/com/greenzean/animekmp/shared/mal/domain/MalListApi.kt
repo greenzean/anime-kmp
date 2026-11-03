@@ -3,10 +3,12 @@ package com.greenzean.animekmp.shared.mal.domain
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.importer.domain.MalExportEntry
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import kotlin.time.Instant
 
 data class MalListItem(
     val entry: MalExportEntry,
     val imageUrl: String?,
+    val updatedAt: Instant? = null,
 )
 
 data class MalListPage(

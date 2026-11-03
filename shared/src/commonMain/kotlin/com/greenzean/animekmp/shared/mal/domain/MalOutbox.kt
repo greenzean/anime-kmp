@@ -39,6 +39,8 @@ interface MalOutboxLocalDataSource {
 
     suspend fun oldest(): QueuedMalChange?
 
+    suspend fun isPending(malId: Int): Boolean
+
     suspend fun markSent(item: QueuedMalChange)
 
     suspend fun drop(item: QueuedMalChange)

@@ -81,10 +81,58 @@ class ResolveAllConflictsUseCaseTest {
         }
 
     @Test
-    fun keepAllMalQueuesNothing() =
+    fun keepAllMalQueuesEveryMalVersionForMal() =
         runTest {
             seedThree()
 
+            resolveAll(ConflictSide.Other)
+
+            assertEquals(
+                listOf(
+                    MalChange.Upsert(1, WatchStatus.COMPLETED, 26, 9),
+                    MalChange.Upsert(2, WatchStatus.DROPPED, 40, null),
+                    MalChange.Remove(3),
+                ),
+                mal.outbox.enqueued,
+            )
+            assertEquals(3, mal.scheduler.requests)
+        }
+
+    @Test
+    fun keepAllMalReplacesTheChangesWaitingInTheOutbox() =
+        runTest {
+            seedThree()
+            mal.outbox.enqueue(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7))
+
+            resolveAll(ConflictSide.Other)
+
+            assertEquals(
+                setOf<MalChange>(
+                    MalChange.Upsert(1, WatchStatus.COMPLETED, 26, 9),
+                    MalChange.Upsert(2, WatchStatus.DROPPED, 40, null),
+                    MalChange.Remove(3),
+                ),
+                mal.outbox.pending.toSet(),
+            )
+            assertEquals(3, mal.outbox.pending.size)
+        }
+
+    @Test
+    fun keepAllMalQueuesNothingWhileMalIsNotConnected() =
+        runTest {
+            val offline = MalOutboxHarness(loggedIn = false)
+            seedThree()
+
+            ResolveAllConflictsUseCase(conflicts, library, scheduler, offline.queue)(ConflictSide.Other)
+
+            assertTrue(offline.outbox.enqueued.isEmpty())
+            assertTrue(conflicts.current.isEmpty())
+            assertEquals(1, scheduler.requests)
+        }
+
+    @Test
+    fun keepAllMalWithNoConflictsQueuesNothing() =
+        runTest {
             resolveAll(ConflictSide.Other)
 
             assertTrue(mal.outbox.enqueued.isEmpty())

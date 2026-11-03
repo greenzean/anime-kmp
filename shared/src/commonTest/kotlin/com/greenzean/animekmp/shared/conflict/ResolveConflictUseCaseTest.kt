@@ -175,25 +175,71 @@ class ResolveConflictUseCaseTest {
         }
 
     @Test
-    fun keepOtherQueuesNothingBecauseTheValueCameFromMal() =
+    fun keepMalQueuesTheMalValuesForMal() =
         runTest {
             library.put(bebop, SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
             conflicts.put(conflict(other = values(WatchStatus.COMPLETED, 26, 9)))
 
             resolve(1, ConflictSide.Other)
 
-            assertTrue(mal.outbox.enqueued.isEmpty())
-            assertEquals(0, mal.scheduler.requests)
+            assertEquals(listOf<MalChange>(MalChange.Upsert(1, WatchStatus.COMPLETED, 26, 9)), mal.outbox.enqueued)
+            assertEquals(1, mal.scheduler.requests)
         }
 
     @Test
-    fun keepOtherRemovedQueuesNothing() =
+    fun keepMalKeepsANullScoreInTheQueuedChange() =
+        runTest {
+            library.put(bebop, SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            conflicts.put(conflict(other = values(WatchStatus.DROPPED, 3, null)))
+
+            resolve(1, ConflictSide.Other)
+
+            assertEquals(listOf<MalChange>(MalChange.Upsert(1, WatchStatus.DROPPED, 3, null)), mal.outbox.enqueued)
+        }
+
+    @Test
+    fun keepMalQueuesARemoveWhenTheMalSideIsRemoved() =
         runTest {
             library.put(bebop, SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
             conflicts.put(conflict(other = values(removed = true)))
 
             resolve(1, ConflictSide.Other)
 
+            assertEquals(listOf<MalChange>(MalChange.Remove(1)), mal.outbox.enqueued)
+        }
+
+    @Test
+    fun keepMalReplacesTheChangeWaitingInTheOutbox() =
+        runTest {
+            library.put(bebop, SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            conflicts.put(conflict(other = values(WatchStatus.COMPLETED, 26, 9)))
+            mal.outbox.enqueue(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7))
+
+            resolve(1, ConflictSide.Other)
+
+            assertEquals(listOf<MalChange>(MalChange.Upsert(1, WatchStatus.COMPLETED, 26, 9)), mal.outbox.pending)
+        }
+
+    @Test
+    fun keepMalForAnUnknownConflictQueuesNothing() =
+        runTest {
+            resolve(99, ConflictSide.Other)
+
             assertTrue(mal.outbox.enqueued.isEmpty())
+            assertEquals(0, mal.scheduler.requests)
+        }
+
+    @Test
+    fun keepMalQueuesNothingWhileMalIsNotConnected() =
+        runTest {
+            val offline = MalOutboxHarness(loggedIn = false)
+            library.put(bebop, SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            conflicts.put(conflict(other = values(WatchStatus.COMPLETED, 26, 9)))
+
+            ResolveConflictUseCase(conflicts, library, scheduler, offline.queue)(1, ConflictSide.Other)
+
+            assertTrue(offline.outbox.enqueued.isEmpty())
+            assertEquals(listOf(SavedEntry(1, WatchStatus.COMPLETED, 26, 9)), library.savedEntries)
+            assertTrue(conflicts.current.isEmpty())
         }
 }

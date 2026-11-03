@@ -46,6 +46,7 @@ class FakeMalOutbox(
     var appOnlyEnqueues = 0
     var errorClears = 0
     var clears = 0
+    var heldBack: (Int) -> Boolean = { false }
 
     val pending: List<MalChange> get() = rows.values.sortedBy { it.seq }.map { it.change }
 
@@ -75,7 +76,15 @@ class FakeMalOutbox(
     }
 
     override suspend fun oldest(): QueuedMalChange? =
-        rows.values.minByOrNull { it.seq }?.let { QueuedMalChange(it.seq, it.change) }
+        rows.values
+            .filterNot {
+                heldBack(
+                    it.change.malId,
+                )
+            }.minByOrNull { it.seq }
+            ?.let { QueuedMalChange(it.seq, it.change) }
+
+    override suspend fun isPending(malId: Int): Boolean = rows.containsKey(malId)
 
     override suspend fun markSent(item: QueuedMalChange) {
         sent += item.change

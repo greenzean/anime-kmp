@@ -29,7 +29,12 @@ FROM list_entry AS le
 WHERE le.on_mal = 0 AND le.deleted_at IS NULL;
 
 oldest:
-SELECT * FROM mal_outbox ORDER BY seq LIMIT 1;
+SELECT * FROM mal_outbox
+WHERE mal_id NOT IN (SELECT mal_id FROM conflict)
+ORDER BY seq LIMIT 1;
+
+selectByMalId:
+SELECT mal_id FROM mal_outbox WHERE mal_id = ?;
 
 deleteSent:
 DELETE FROM mal_outbox WHERE mal_id = ? AND seq = ?;

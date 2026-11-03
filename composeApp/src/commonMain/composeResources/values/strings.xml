@@ -167,6 +167,22 @@
     </plurals>
     <string name="settings_mal_send_failed">Sending failed</string>
     <string name="settings_mal_send_retry">Retry</string>
+    <string name="settings_mal_sync_now">Sync now</string>
+    <string name="settings_mal_syncing">Syncing...</string>
+    <string name="settings_mal_last_synced_never">Never synced</string>
+    <string name="settings_mal_last_synced_just_now">Last synced just now</string>
+    <plurals name="settings_mal_last_synced_minutes">
+        <item quantity="one">Last synced %1$d minute ago</item>
+        <item quantity="other">Last synced %1$d minutes ago</item>
+    </plurals>
+    <plurals name="settings_mal_last_synced_hours">
+        <item quantity="one">Last synced %1$d hour ago</item>
+        <item quantity="other">Last synced %1$d hours ago</item>
+    </plurals>
+    <plurals name="settings_mal_last_synced_days">
+        <item quantity="one">Last synced %1$d day ago</item>
+        <item quantity="other">Last synced %1$d days ago</item>
+    </plurals>
     <string name="cd_import_mal">Import a library from a MyAnimeList export file</string>
     <string name="mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
     <string name="mal_consent_accept">I understand</string>

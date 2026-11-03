@@ -130,4 +130,34 @@ class SqlDelightMalImportStoresTest {
 
             assertEquals(1L, onMalFlag(bebop))
         }
+
+    @Test
+    fun activeOnMalIdsIsEmptyByDefault() =
+        runTest {
+            library.saveEntry(bebop, WatchStatus.WATCHING, 5, 7)
+
+            assertEquals(emptyList(), onMal.activeOnMalIds())
+        }
+
+    @Test
+    fun activeOnMalIdsListsOnlyMarkedEntries() =
+        runTest {
+            library.saveEntry(bebop, WatchStatus.WATCHING, 5, 7)
+            library.saveEntry(steinsGate, WatchStatus.WATCHING, 1, null)
+            onMal.markOnMal(bebop)
+
+            assertEquals(listOf(bebop), onMal.activeOnMalIds())
+        }
+
+    @Test
+    fun activeOnMalIdsLeavesOutRemovedEntries() =
+        runTest {
+            library.saveEntry(bebop, WatchStatus.WATCHING, 5, 7)
+            library.saveEntry(steinsGate, WatchStatus.WATCHING, 1, null)
+            onMal.markOnMal(bebop)
+            onMal.markOnMal(steinsGate)
+            library.remove(bebop)
+
+            assertEquals(listOf(steinsGate), onMal.activeOnMalIds())
+        }
 }
