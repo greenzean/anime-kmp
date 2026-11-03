@@ -54,6 +54,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
 import com.greenzean.animekmp.shared.mal.domain.MalAuthorizer
 import com.greenzean.animekmp.shared.mal.domain.MalConfig
 import com.greenzean.animekmp.shared.mal.domain.MalRedirectHandler
+import com.greenzean.animekmp.shared.mal.domain.MalSendScheduler
 import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokenStore
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
@@ -160,6 +161,11 @@ class KoinGraphTest {
             single<SyncScheduler> {
                 object : SyncScheduler {
                     override fun requestSync() = Unit
+                }
+            }
+            single<MalSendScheduler> {
+                object : MalSendScheduler {
+                    override fun requestSend() = Unit
                 }
             }
             single<GoogleIdTokenProvider> { GoogleIdTokenProvider { Result.Error(GoogleSignInError.NOT_CONFIGURED) } }

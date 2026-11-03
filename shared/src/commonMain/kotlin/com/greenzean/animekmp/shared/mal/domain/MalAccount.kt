@@ -59,10 +59,12 @@ class DisconnectMalUseCase(
     private val store: MalAccountStore,
     private val repository: MalAnimeRepository,
     private val importProgress: MalImportProgressStore,
+    private val outbox: MalOutboxLocalDataSource,
     private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke() {
         auth.logout()
+        outbox.clear()
         store.setUsername(null)
         store.setConsent(false)
         repository.clearCache()

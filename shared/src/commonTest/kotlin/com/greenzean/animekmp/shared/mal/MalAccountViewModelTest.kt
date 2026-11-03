@@ -6,7 +6,11 @@ import com.greenzean.animekmp.shared.mal.domain.ConnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
+import com.greenzean.animekmp.shared.mal.domain.MalChange
+import com.greenzean.animekmp.shared.mal.domain.MalSendError
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
+import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountError
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
@@ -35,6 +39,8 @@ class MalAccountViewModelTest {
     private var harness = MalAccountHarness()
     private val importScope = CoroutineScope(UnconfinedTestDispatcher())
     private val importHarness = MalImportHarness(importScope)
+    private val outbox = FakeMalOutbox()
+    private val sendScheduler = FakeMalSendScheduler()
 
     @BeforeTest
     fun setUp() {
@@ -59,7 +65,10 @@ class MalAccountViewModelTest {
                     harness.accountStore,
                     harness.repository,
                     FakeMalImportProgressStore(),
+                    outbox,
                 ),
+                ObserveMalOutboxUseCase(outbox),
+                RetryMalSendUseCase(outbox, sendScheduler),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { } }
         return viewModel
@@ -210,6 +219,79 @@ class MalAccountViewModelTest {
             harness = MalAccountHarness(consent = true)
 
             assertEquals(MalAccountStatus.NotConnected, status(viewModel()))
+        }
+
+    @Test
+    fun theStateStartsWithNothingPendingAndNoError() =
+        runTest {
+            val viewModel = viewModel()
+
+            assertEquals(0, viewModel.state.value.pendingCount)
+            assertNull(viewModel.state.value.lastError)
+        }
+
+    @Test
+    fun pendingCountFollowsTheOutbox() =
+        runTest {
+            val viewModel = viewModel()
+
+            outbox.emit(pendingCount = 3)
+
+            assertEquals(3, viewModel.state.value.pendingCount)
+            assertNull(viewModel.state.value.lastError)
+        }
+
+    @Test
+    fun lastErrorFollowsTheOutbox() =
+        runTest {
+            val viewModel = viewModel()
+
+            outbox.emit(pendingCount = 2, lastError = MalSendError.THROTTLED)
+
+            assertEquals(2, viewModel.state.value.pendingCount)
+            assertEquals(MalSendError.THROTTLED, viewModel.state.value.lastError)
+        }
+
+    @Test
+    fun theErrorClearsWhenTheOutboxReportsNone() =
+        runTest {
+            val viewModel = viewModel()
+            outbox.emit(pendingCount = 2, lastError = MalSendError.SERVER)
+
+            outbox.emit(pendingCount = 0)
+
+            assertNull(viewModel.state.value.lastError)
+            assertEquals(0, viewModel.state.value.pendingCount)
+        }
+
+    @Test
+    fun outboxStateAndAccountStatusAreKeptTogether() =
+        runTest {
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            outbox.emit(pendingCount = 1)
+
+            assertEquals(
+                MalAccountState(MalAccountStatus.Connected("francisco"), pendingCount = 1),
+                viewModel.state.value,
+            )
+        }
+
+    @Test
+    fun retryClearsTheErrorsAndRequestsASend() =
+        runTest {
+            val viewModel = viewModel()
+            outbox.enqueue(MalChange.Remove(1))
+            outbox.markFailed(outbox.oldest()!!, MalSendError.NO_CONNECTION)
+            assertEquals(MalSendError.NO_CONNECTION, viewModel.state.value.lastError)
+
+            viewModel.onAction(MalAccountAction.OnRetryClick)
+
+            assertEquals(1, outbox.errorClears)
+            assertEquals(1, sendScheduler.requests)
+            assertNull(viewModel.state.value.lastError)
+            assertEquals(1, viewModel.state.value.pendingCount)
         }
 
     private fun assertLoginError(

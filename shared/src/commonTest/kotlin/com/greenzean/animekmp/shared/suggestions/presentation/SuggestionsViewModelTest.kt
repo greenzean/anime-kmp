@@ -18,6 +18,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsApi
 import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsRepository
 import com.greenzean.animekmp.shared.mal.domain.MalThrottle
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import com.greenzean.animekmp.shared.mal.idleQueueMalChange
 import com.greenzean.animekmp.shared.mal.validMalSession
 import com.greenzean.animekmp.shared.search.presentation.SearchResultUi
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
@@ -442,7 +443,7 @@ class SuggestionsViewModelTest {
                 ObserveMalAccountUseCase(harness.auth, harness.accountStore),
                 GetSuggestionsUseCase(repository),
                 ObserveLibraryUseCase(local),
-                AddToLibraryUseCase(local, scheduler),
+                AddToLibraryUseCase(local, scheduler, idleQueueMalChange()),
                 ObserveTitleLanguageUseCase(settings),
             )
         backgroundScope.launch { viewModel.state.collect {} }

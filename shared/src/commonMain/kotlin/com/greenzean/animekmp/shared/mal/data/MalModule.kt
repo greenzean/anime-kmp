@@ -9,6 +9,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalAuthManager
 import com.greenzean.animekmp.shared.mal.domain.MalImportCoordinator
 import com.greenzean.animekmp.shared.mal.domain.MalImportProgressStore
 import com.greenzean.animekmp.shared.mal.domain.MalListApi
+import com.greenzean.animekmp.shared.mal.domain.MalOutboxLocalDataSource
 import com.greenzean.animekmp.shared.mal.domain.MalRedirectHandler
 import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsApi
 import com.greenzean.animekmp.shared.mal.domain.MalSuggestionsRepository
@@ -33,6 +34,7 @@ val malModule =
         single<OnMalLocalDataSource> { SqlDelightOnMalDataSource(get()) }
         single { MalImportCoordinator(get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
         single<MalAnimeCache> { SqlDelightMalCache(get()) }
+        single<MalOutboxLocalDataSource> { SqlDelightMalOutboxDataSource(get()) }
         single { MalThrottle(logger = get()) }
         single { MalAnimeRepository(get(), get(), get(), logger = get()) }
         single { MalSuggestionsRepository(get(), get(), get(), logger = get()) }

@@ -15,6 +15,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalAnimeSummary
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalSearchPage
 import com.greenzean.animekmp.shared.mal.domain.MalThrottle
+import com.greenzean.animekmp.shared.mal.idleQueueMalChange
 import com.greenzean.animekmp.shared.search.domain.SearchAnimeUseCase
 import com.greenzean.animekmp.shared.search.presentation.SearchAction
 import com.greenzean.animekmp.shared.search.presentation.SearchEvent
@@ -99,7 +100,7 @@ class SearchViewModelTest {
         return SearchViewModel(
             searchAnime,
             ObserveLibraryUseCase(local),
-            AddToLibraryUseCase(local, scheduler),
+            AddToLibraryUseCase(local, scheduler, idleQueueMalChange()),
             ObserveTitleLanguageUseCase(settings),
         )
     }

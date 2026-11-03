@@ -89,3 +89,6 @@ SELECT COUNT(*) FROM list_entry WHERE deleted_at IS NULL;
 
 markOnMal:
 UPDATE list_entry SET on_mal = 1 WHERE mal_id = ?;
+
+clearOnMal:
+UPDATE list_entry SET on_mal = 0 WHERE mal_id = ?;

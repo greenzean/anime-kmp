@@ -1,5 +1,7 @@
 package com.greenzean.animekmp.shared.mal.presentation
 
+import com.greenzean.animekmp.shared.mal.domain.MalSendError
+
 enum class MalAccountError {
     Cancelled,
     AccessDenied,
@@ -26,6 +28,8 @@ sealed interface MalAccountStatus {
 
 data class MalAccountState(
     val status: MalAccountStatus = MalAccountStatus.NotConnected,
+    val pendingCount: Int = 0,
+    val lastError: MalSendError? = null,
 )
 
 sealed interface MalAccountAction {
@@ -36,4 +40,6 @@ sealed interface MalAccountAction {
     data object OnDisconnectClick : MalAccountAction
 
     data object OnErrorDismissed : MalAccountAction
+
+    data object OnRetryClick : MalAccountAction
 }

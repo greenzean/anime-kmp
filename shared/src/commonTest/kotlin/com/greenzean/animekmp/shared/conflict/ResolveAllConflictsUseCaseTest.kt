@@ -8,6 +8,8 @@ import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.presentation.SavedEntry
+import com.greenzean.animekmp.shared.mal.MalOutboxHarness
+import com.greenzean.animekmp.shared.mal.domain.MalChange
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +19,8 @@ class ResolveAllConflictsUseCaseTest {
     private val library = FakeLibraryLocalDataSource()
     private val conflicts = FakeConflictLocalDataSource()
     private val scheduler = FakeSyncScheduler()
-    private val resolveAll = ResolveAllConflictsUseCase(conflicts, library, scheduler)
+    private val mal = MalOutboxHarness()
+    private val resolveAll = ResolveAllConflictsUseCase(conflicts, library, scheduler, mal.queue)
 
     @Test
     fun keepAllAppDeletesEveryConflictAndChangesNoEntry() =
@@ -59,6 +62,32 @@ class ResolveAllConflictsUseCaseTest {
             resolveAll(ConflictSide.Other)
 
             assertEquals(40, library.savedEntries.first { it.malId == 2 }.progress)
+        }
+
+    @Test
+    fun keepAllAppQueuesEveryAppVersionForMal() =
+        runTest {
+            library.put(Anime(1, "Anime 1", episodes = 12), SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            library.put(Anime(2, "Anime 2", episodes = 12), SyncState.SYNCED, WatchStatus.WATCHING, 5, 7)
+            conflicts.put(conflict(malId = 1, app = values(WatchStatus.WATCHING, 5, 7)))
+            conflicts.put(conflict(malId = 2, app = values(removed = true)))
+
+            resolveAll(ConflictSide.App)
+
+            assertEquals(
+                listOf(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7), MalChange.Remove(2)),
+                mal.outbox.enqueued,
+            )
+        }
+
+    @Test
+    fun keepAllMalQueuesNothing() =
+        runTest {
+            seedThree()
+
+            resolveAll(ConflictSide.Other)
+
+            assertTrue(mal.outbox.enqueued.isEmpty())
         }
 
     private fun seedThree() {

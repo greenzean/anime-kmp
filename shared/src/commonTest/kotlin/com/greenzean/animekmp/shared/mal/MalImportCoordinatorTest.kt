@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared.mal
 
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalImportCoordinator
@@ -174,10 +175,26 @@ class MalImportCoordinatorTest {
                         offset: Int,
                         limit: Int,
                     ): Result<MalListPage, MalApiError> = error("boom")
+
+                    override suspend fun update(
+                        malId: Int,
+                        status: WatchStatus,
+                        progress: Int,
+                        score: Int?,
+                    ): Result<Unit, MalApiError> = error("boom")
+
+                    override suspend fun delete(malId: Int): Result<Unit, MalApiError> = error("boom")
                 }
             val coordinator =
                 MalImportCoordinator(
-                    ImportMalListUseCase(failing, h.throttle, h.merge, h.store, h.scheduler),
+                    ImportMalListUseCase(
+                        failing,
+                        h.throttle,
+                        h.merge,
+                        h.store,
+                        h.scheduler,
+                        h.outboxHarness.queueAppOnly,
+                    ),
                     scope,
                 )
 

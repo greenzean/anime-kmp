@@ -11,9 +11,15 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.forms.FormDataContent
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
+import io.ktor.http.content.TextContent
 import io.ktor.http.headersOf
+import io.ktor.http.parseUrlEncodedParameters
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
 import kotlin.test.AfterTest
@@ -236,6 +242,172 @@ class KtorMalListApiTest {
                 }
 
             val result = KtorMalListApi(HttpClient(engine), loggedOut.auth).page(0, 100)
+
+            assertEquals(0, requests.size)
+            assertTrue(result is Result.Error)
+            loggedOut.close()
+        }
+
+    private fun form(request: HttpRequestData): Parameters =
+        when (val body = request.body) {
+            is FormDataContent -> body.formData
+            is TextContent -> body.text.parseUrlEncodedParameters()
+            else -> error("unexpected body ${body::class}")
+        }
+
+    @Test
+    fun updatePatchesTheListStatusOfThatAnimeWithTheBearerToken() =
+        runTest {
+            api(body = "{}").update(52991, WatchStatus.WATCHING, 4, 8)
+
+            val request = requests.single()
+            assertEquals(HttpMethod.Patch, request.method)
+            assertEquals(
+                "https://api.myanimelist.net/v2/anime/52991/my_list_status",
+                request.url.toString().substringBefore('?'),
+            )
+            assertEquals("Bearer stored-access", request.headers[HttpHeaders.Authorization])
+        }
+
+    @Test
+    fun updateSendsAFormEncodedBody() =
+        runTest {
+            api(body = "{}").update(1, WatchStatus.COMPLETED, 26, 9)
+
+            val request = requests.single()
+            assertEquals(ContentType.Application.FormUrlEncoded, request.body.contentType?.withoutParameters())
+            val sent = form(request)
+            assertEquals("completed", sent["status"])
+            assertEquals("26", sent["num_watched_episodes"])
+            assertEquals("9", sent["score"])
+        }
+
+    @Test
+    fun updateSendsScoreZeroWhenThereIsNoScore() =
+        runTest {
+            api(body = "{}").update(1, WatchStatus.PLAN_TO_WATCH, 0, null)
+
+            val sent = form(requests.single())
+            assertEquals("0", sent["score"])
+            assertEquals("plan_to_watch", sent["status"])
+            assertEquals("0", sent["num_watched_episodes"])
+        }
+
+    @Test
+    fun updateMapsEveryStatusToTheMalString() =
+        runTest {
+            val expected =
+                mapOf(
+                    WatchStatus.WATCHING to "watching",
+                    WatchStatus.COMPLETED to "completed",
+                    WatchStatus.ON_HOLD to "on_hold",
+                    WatchStatus.DROPPED to "dropped",
+                    WatchStatus.PLAN_TO_WATCH to "plan_to_watch",
+                )
+
+            expected.keys.forEach { api(body = "{}").update(1, it, 1, null) }
+
+            assertEquals(expected.values.toList(), requests.map { form(it)["status"] })
+        }
+
+    @Test
+    fun updateSucceedsOnOk() =
+        runTest {
+            assertEquals(Result.Success(Unit), api(body = "{}").update(1, WatchStatus.WATCHING, 1, null))
+        }
+
+    @Test
+    fun updateOfAnimeMalDoesNotKnowIsNotFound() =
+        runTest {
+            val result = api(HttpStatusCode.NotFound).update(1, WatchStatus.WATCHING, 1, null)
+
+            assertEquals(Result.Error(MalApiError.NOT_FOUND), result)
+        }
+
+    @Test
+    fun updateErrorsMapLikeTheListErrors() =
+        runTest {
+            assertEquals(
+                Result.Error(MalApiError.THROTTLED),
+                api(HttpStatusCode.TooManyRequests).update(1, WatchStatus.WATCHING, 1, null),
+            )
+            assertEquals(
+                Result.Error(MalApiError.FORBIDDEN),
+                api(HttpStatusCode.Forbidden).update(1, WatchStatus.WATCHING, 1, null),
+            )
+            assertEquals(
+                Result.Error(MalApiError.SERVER),
+                api(HttpStatusCode.InternalServerError).update(1, WatchStatus.WATCHING, 1, null),
+            )
+            assertEquals(
+                Result.Error(MalApiError.NO_CONNECTION),
+                api(fail = IOException("offline")).update(1, WatchStatus.WATCHING, 1, null),
+            )
+        }
+
+    @Test
+    fun updateWithoutASessionSendsNothing() =
+        runTest {
+            val loggedOut = MalAccountHarness()
+            val engine =
+                MockEngine { request ->
+                    requests += request
+                    respond("{}", HttpStatusCode.OK)
+                }
+
+            val result = KtorMalListApi(HttpClient(engine), loggedOut.auth).update(1, WatchStatus.WATCHING, 1, null)
+
+            assertEquals(0, requests.size)
+            assertTrue(result is Result.Error)
+            loggedOut.close()
+        }
+
+    @Test
+    fun deleteSendsDeleteToTheListStatusOfThatAnime() =
+        runTest {
+            api(body = "").delete(52991)
+
+            val request = requests.single()
+            assertEquals(HttpMethod.Delete, request.method)
+            assertEquals(
+                "https://api.myanimelist.net/v2/anime/52991/my_list_status",
+                request.url.toString().substringBefore('?'),
+            )
+            assertEquals("Bearer stored-access", request.headers[HttpHeaders.Authorization])
+        }
+
+    @Test
+    fun deleteSucceedsOnOkWithAnEmptyBody() =
+        runTest {
+            assertEquals(Result.Success(Unit), api(body = "").delete(1))
+        }
+
+    @Test
+    fun deleteOfAnAnimeNotInTheMalListIsNotFound() =
+        runTest {
+            assertEquals(Result.Error(MalApiError.NOT_FOUND), api(HttpStatusCode.NotFound).delete(1))
+        }
+
+    @Test
+    fun deleteErrorsMapLikeTheListErrors() =
+        runTest {
+            assertEquals(Result.Error(MalApiError.THROTTLED), api(HttpStatusCode.TooManyRequests).delete(1))
+            assertEquals(Result.Error(MalApiError.FORBIDDEN), api(HttpStatusCode.Forbidden).delete(1))
+            assertEquals(Result.Error(MalApiError.SERVER), api(HttpStatusCode.InternalServerError).delete(1))
+            assertEquals(Result.Error(MalApiError.NO_CONNECTION), api(fail = IOException("offline")).delete(1))
+        }
+
+    @Test
+    fun deleteWithoutASessionSendsNothing() =
+        runTest {
+            val loggedOut = MalAccountHarness()
+            val engine =
+                MockEngine { request ->
+                    requests += request
+                    respond("", HttpStatusCode.OK)
+                }
+
+            val result = KtorMalListApi(HttpClient(engine), loggedOut.auth).delete(1)
 
             assertEquals(0, requests.size)
             assertTrue(result is Result.Error)

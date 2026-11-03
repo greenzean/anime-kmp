@@ -38,3 +38,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0017 | [Reading MAL export files with xmlutil and okio, and filling imported anime images](0017-mal-export-reading-with-xmlutil-and-okio.md) | Accepted | M2-18 |
 | 0018 | [Import conflicts are stored locally and the user picks the version](0018-conflicts-stored-locally-user-picks-version.md) | Accepted | M2-19 |
 | 0019 | [MAL list import reads the account's list page by page and resumes after a failure](0019-mal-list-import.md) | Accepted | M2-20 |
+| 0020 | [Changes made on this device go to MAL through a local outbox, one row per anime](0020-send-changes-to-mal.md) | Accepted | M2-21 |

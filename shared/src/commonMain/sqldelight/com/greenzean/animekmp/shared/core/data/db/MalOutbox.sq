@@ -1,0 +1,50 @@
+CREATE TABLE mal_outbox (
+    mal_id     INTEGER NOT NULL PRIMARY KEY,
+    seq        INTEGER NOT NULL,
+    op         TEXT    NOT NULL
+        CHECK (op IN ('UPSERT', 'REMOVE')),
+    status     TEXT,
+    progress   INTEGER,
+    score      INTEGER,
+    last_error TEXT
+);
+
+upsert:
+INSERT OR REPLACE INTO mal_outbox (mal_id, seq, op, status, progress, score, last_error)
+VALUES (?, (SELECT COALESCE(MAX(seq), 0) + 1 FROM mal_outbox), ?, ?, ?, ?, NULL);
+
+enqueueAppOnly:
+INSERT OR IGNORE INTO mal_outbox (mal_id, seq, op, status, progress, score, last_error)
+SELECT le.mal_id,
+       (SELECT COALESCE(MAX(seq), 0) FROM mal_outbox) + (
+           SELECT COUNT(*)
+           FROM list_entry AS earlier
+           WHERE earlier.on_mal = 0
+             AND earlier.deleted_at IS NULL
+             AND (earlier.updated_at < le.updated_at
+                  OR (earlier.updated_at = le.updated_at AND earlier.mal_id <= le.mal_id))
+       ),
+       'UPSERT', le.status, le.progress, le.score, NULL
+FROM list_entry AS le
+WHERE le.on_mal = 0 AND le.deleted_at IS NULL;
+
+oldest:
+SELECT * FROM mal_outbox ORDER BY seq LIMIT 1;
+
+deleteSent:
+DELETE FROM mal_outbox WHERE mal_id = ? AND seq = ?;
+
+setError:
+UPDATE mal_outbox SET last_error = ? WHERE mal_id = ? AND seq = ?;
+
+clearErrors:
+UPDATE mal_outbox SET last_error = NULL;
+
+countPending:
+SELECT COUNT(*) FROM mal_outbox;
+
+firstError:
+SELECT last_error FROM mal_outbox WHERE last_error IS NOT NULL ORDER BY seq LIMIT 1;
+
+clear:
+DELETE FROM mal_outbox;

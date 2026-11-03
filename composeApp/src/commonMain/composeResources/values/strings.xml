@@ -160,6 +160,13 @@
     <string name="settings_mal_import_progress">Imported %1$d so far</string>
     <string name="settings_mal_import_error">Could not import your MAL list. Try again.</string>
     <string name="settings_mal_import_retry">Retry</string>
+    <string name="settings_mal_send_up_to_date">Up to date</string>
+    <plurals name="settings_mal_send_pending">
+        <item quantity="one">%1$d change waiting</item>
+        <item quantity="other">%1$d changes waiting</item>
+    </plurals>
+    <string name="settings_mal_send_failed">Sending failed</string>
+    <string name="settings_mal_send_retry">Retry</string>
     <string name="cd_import_mal">Import a library from a MyAnimeList export file</string>
     <string name="mal_consent_body">Connecting lets this app read and update your MyAnimeList list on this device. Nothing from MyAnimeList is stored on our server.</string>
     <string name="mal_consent_accept">I understand</string>

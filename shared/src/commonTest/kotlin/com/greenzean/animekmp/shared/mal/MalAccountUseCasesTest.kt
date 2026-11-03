@@ -7,6 +7,7 @@ import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalAccount
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
+import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalImportStatus
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
@@ -33,6 +34,8 @@ class MalAccountUseCasesTest {
         harness.close()
     }
 
+    private val outbox = FakeMalOutbox()
+
     private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start)
 
     private fun disconnect() =
@@ -41,6 +44,7 @@ class MalAccountUseCasesTest {
             harness.accountStore,
             harness.repository,
             importHarness.store,
+            outbox,
         )
 
     @Test
@@ -180,5 +184,16 @@ class MalAccountUseCasesTest {
             disconnect()()
 
             assertEquals(0, importHarness.store.offset())
+        }
+
+    @Test
+    fun disconnectingClearsTheOutbox() =
+        runTest {
+            outbox.enqueue(MalChange.Remove(1))
+
+            disconnect()()
+
+            assertEquals(1, outbox.clears)
+            assertTrue(outbox.pending.isEmpty())
         }
 }

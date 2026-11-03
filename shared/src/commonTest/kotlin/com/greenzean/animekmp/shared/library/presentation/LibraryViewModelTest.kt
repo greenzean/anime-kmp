@@ -16,6 +16,7 @@ import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.SetLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import com.greenzean.animekmp.shared.mal.idleQueueMalChange
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
 import com.greenzean.animekmp.shared.settings.FakeLibrarySettings
 import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
@@ -62,7 +63,7 @@ class LibraryViewModelTest {
             ObserveLibrarySortUseCase(librarySettings),
             SetLibrarySortUseCase(librarySettings),
             ObserveTitleLanguageUseCase(settings),
-            EditEntryUseCase(local, scheduler),
+            EditEntryUseCase(local, scheduler, idleQueueMalChange()),
             ObserveConflictCountUseCase(conflicts),
         )
 
