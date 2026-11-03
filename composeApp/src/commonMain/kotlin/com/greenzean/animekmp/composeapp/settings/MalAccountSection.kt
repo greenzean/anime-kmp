@@ -39,6 +39,11 @@ fun MalAccountSection(
             MalConnectionContent(state = state, onAction = onAction)
             if (state.status is MalAccountStatus.Connected) {
                 MalImportRow(state = importState, onAction = onImportAction)
+                MalSendRow(
+                    pendingCount = state.pendingCount,
+                    lastError = state.lastError,
+                    onRetryClick = { onAction(MalAccountAction.OnRetryClick) },
+                )
             }
         }
     }
