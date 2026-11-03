@@ -55,4 +55,4 @@ Other rules:
 - Checked on a real account with 277 entries: paging beyond the first page worked, and a failure after page 1 resumed from the stored offset 100. [ADR 0008](0008-mal-api.md) listed this as not tested.
 - Not verified: a throttled (429) or blocked (403) answer from the real MAL API; covered by tests only.
 - Known: after a resume the count shown starts from the stored offset and the summary counts only the entries merged after the resume.
-- Follow-ups: M2-21 removes app-only entries when the user asks. M2-22 uses `on_mal` to detect removals on MAL.
+- Follow-ups: M2-21 removes app-only entries when the user asks; see [ADR 0020](0020-send-changes-to-mal.md). M2-22 uses `on_mal` to detect removals on MAL.
