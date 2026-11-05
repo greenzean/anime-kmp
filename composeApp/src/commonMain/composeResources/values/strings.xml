@@ -191,6 +191,14 @@
     <string name="mal_connected_as">Connected as %1$s</string>
     <string name="mal_connected_no_name">Connected to MyAnimeList</string>
     <string name="mal_disconnect">Disconnect</string>
+    <string name="mal_linked_prompt">MyAnimeList is linked to your account, but not connected on this device. Changes made here are saved to your account and are not sent to MyAnimeList from this device.</string>
+    <string name="mal_linked_connect">Connect MAL on this device</string>
+    <string name="mal_linked_not_here">Not on this device</string>
+    <string name="mal_unlink_row">Unlink MAL from account</string>
+    <string name="mal_unlink_dialog_title">Unlink MyAnimeList from your account?</string>
+    <string name="mal_unlink_dialog_message">Your other devices will stop being offered the MyAnimeList connection. Your library stays as it is.</string>
+    <string name="mal_unlink_dialog_confirm">Unlink</string>
+    <string name="mal_unlink_failed">Couldn't unlink MyAnimeList. Check your connection and try again.</string>
     <string name="mal_error_cancelled">The connection was cancelled.</string>
     <string name="mal_error_denied">MyAnimeList did not grant access.</string>
     <string name="mal_error_no_browser">No browser was found to sign in to MyAnimeList.</string>

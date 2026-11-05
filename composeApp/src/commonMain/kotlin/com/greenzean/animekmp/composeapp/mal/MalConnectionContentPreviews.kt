@@ -56,10 +56,11 @@ private fun MalConnectionErrorDarkPreview() =
 internal fun MalConnectionPreview(
     status: MalAccountStatus,
     darkTheme: Boolean,
+    linkedElsewhere: Boolean = false,
 ) {
     ThemedPreview(darkTheme) {
         MalConnectionContent(
-            state = MalAccountState(status),
+            state = MalAccountState(status, linkedElsewhere = linkedElsewhere),
             onAction = {},
             modifier = Modifier.padding(16.dp),
         )
