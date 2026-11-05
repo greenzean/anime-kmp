@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.server
 
 import com.expediagroup.graphql.server.ktor.GraphQL
+import com.greenzean.animekmp.server.account.LinkedPlatformRepository
 import com.greenzean.animekmp.server.auth.AuthRepository
 import com.greenzean.animekmp.server.auth.AuthService
 import com.greenzean.animekmp.server.auth.GoogleIdTokenVerifier
@@ -57,12 +58,13 @@ fun Application.module(
     googleClientId: String? = null,
 ) {
     val sync = SyncRepository(database, clock)
+    val linked = LinkedPlatformRepository(database)
     install(CallLogging)
     install(GraphQL) {
         schema {
             packages = GraphQLSchemaDefinition.packages
-            queries = GraphQLSchemaDefinition.queries(sync)
-            mutations = GraphQLSchemaDefinition.mutations(sync, auth)
+            queries = GraphQLSchemaDefinition.queries(sync, linked)
+            mutations = GraphQLSchemaDefinition.mutations(sync, auth, linked)
             hooks = SyncSchemaHooks
         }
         server {

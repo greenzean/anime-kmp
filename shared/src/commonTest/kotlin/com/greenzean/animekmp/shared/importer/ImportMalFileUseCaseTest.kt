@@ -14,6 +14,7 @@ import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
 import com.greenzean.animekmp.shared.library.presentation.SavedEntry
+import com.greenzean.animekmp.shared.mal.FakeMalOutbox
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -33,7 +34,8 @@ class ImportMalFileUseCaseTest {
     private val conflicts = FakeConflictLocalDataSource()
     private val scheduler = FakeSyncScheduler()
     private val onMal = FakeOnMalLocalDataSource()
-    private val useCase = ImportMalFileUseCase(MergeMalEntryUseCase(local, conflicts, onMal), scheduler)
+    private val useCase =
+        ImportMalFileUseCase(MergeMalEntryUseCase(local, conflicts, onMal, FakeMalOutbox()), scheduler)
 
     @Test
     fun newEntryIsAddedWithAnimeAndEntry() =

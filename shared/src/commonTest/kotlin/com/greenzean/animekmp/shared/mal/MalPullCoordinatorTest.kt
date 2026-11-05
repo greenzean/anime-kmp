@@ -20,13 +20,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
+
+private val PREVIOUS_PULL = PULL_NOW - 2.hours
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MalPullCoordinatorTest {
     private fun TestScope.harness(
         loggedIn: Boolean = true,
         initialOffset: Int = 0,
-    ) = MalPullHarness(backgroundScope + UnconfinedTestDispatcher(testScheduler), loggedIn, initialOffset)
+        lastPulledAt: Instant? = PREVIOUS_PULL,
+    ) = MalPullHarness(
+        backgroundScope + UnconfinedTestDispatcher(testScheduler),
+        loggedIn,
+        initialOffset,
+        lastPulledAt,
+    )
 
     private fun MalPullHarness.gatePull(): CompletableDeferred<Unit> =
         CompletableDeferred<Unit>().also { api.gates[0] = it }
@@ -84,6 +93,19 @@ class MalPullCoordinatorTest {
 
             assertEquals(MalPullResult.RETRY, h.coordinator.pull())
             assertFalse(h.coordinator.syncing.value)
+        }
+
+    @Test
+    fun aPullBeforeAnyImportHasFinishedIsSkippedAndNotSyncingAfterwards() =
+        runTest {
+            val h = harness(lastPulledAt = null)
+
+            val result = h.coordinator.pull()
+
+            assertEquals(MalPullResult.SKIPPED, result)
+            assertTrue(h.api.offsets.isEmpty())
+            assertFalse(h.coordinator.syncing.value)
+            assertTrue(h.pullStore.saved.isEmpty())
         }
 
     @Test
@@ -192,9 +214,9 @@ class MalPullCoordinatorTest {
             val gate = h.gatePull()
 
             observe().test {
-                assertEquals(MalPullInfo(lastSyncedAt = null, syncing = false), awaitItem())
+                assertEquals(MalPullInfo(lastSyncedAt = PREVIOUS_PULL, syncing = false), awaitItem())
                 h.coordinator.start()
-                assertEquals(MalPullInfo(lastSyncedAt = null, syncing = true), awaitItem())
+                assertEquals(MalPullInfo(lastSyncedAt = PREVIOUS_PULL, syncing = true), awaitItem())
                 gate.complete(Unit)
                 var latest = awaitItem()
                 while (latest.syncing) latest = awaitItem()

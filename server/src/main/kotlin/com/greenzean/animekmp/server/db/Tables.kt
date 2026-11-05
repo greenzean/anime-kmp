@@ -49,3 +49,10 @@ object RefreshTokenTable : Table("refresh_token") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+object LinkedPlatformTable : Table("linked_platform") {
+    val userId = uuid("user_id").references(AppUserTable.id)
+    val platform = text("platform")
+
+    override val primaryKey = PrimaryKey(userId, platform)
+}

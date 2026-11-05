@@ -11,12 +11,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import com.greenzean.animekmp.composeapp.designsystem.components.AppBanner
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButton
+import com.greenzean.animekmp.composeapp.designsystem.components.AppButtonStyle
 import com.greenzean.animekmp.composeapp.designsystem.components.AppCard
 import com.greenzean.animekmp.composeapp.designsystem.spacing
 import com.greenzean.animekmp.composeapp.generated.resources.Res
+import com.greenzean.animekmp.composeapp.generated.resources.action_dismiss
+import com.greenzean.animekmp.composeapp.generated.resources.mal_unlink_failed
 import com.greenzean.animekmp.composeapp.generated.resources.settings_mal_title
+import com.greenzean.animekmp.composeapp.mal.MalAccountTags
 import com.greenzean.animekmp.composeapp.mal.MalConnectionContent
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
@@ -54,6 +61,25 @@ fun MalAccountSection(
         )
         AppCard(modifier = Modifier.padding(top = MaterialTheme.spacing.md)) {
             MalConnectionContent(state = state, onAction = onAction)
+            if (state.linkedToAccount) {
+                MalUnlinkRow(
+                    onConfirm = { onAction(MalAccountAction.OnUnlinkFromAccountClick) },
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.md),
+                )
+            }
+            if (state.unlinkFailed) {
+                AppBanner(
+                    message = stringResource(Res.string.mal_unlink_failed),
+                    modifier = Modifier.padding(top = MaterialTheme.spacing.md).testTag(MalAccountTags.UNLINK_ERROR),
+                ) {
+                    AppButton(
+                        text = stringResource(Res.string.action_dismiss),
+                        onClick = { onAction(MalAccountAction.OnUnlinkErrorDismissed) },
+                        style = AppButtonStyle.Text,
+                        modifier = Modifier.testTag(MalAccountTags.UNLINK_ERROR_DISMISS),
+                    )
+                }
+            }
             if (state.status is MalAccountStatus.Connected) {
                 MalImportRow(state = importState, onAction = onImportAction)
                 MalSendRow(

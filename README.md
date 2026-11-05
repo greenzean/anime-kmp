@@ -71,6 +71,8 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0019: MAL list import reads the account's list page by page and resumes after a failure](docs/decisions/0019-mal-list-import.md)
 - [0020: Changes made on this device go to MAL through a local outbox, one row per anime](docs/decisions/0020-send-changes-to-mal.md)
 - [0021: Changes made on MAL are pulled by the app and applied by MAL's update time](docs/decisions/0021-get-changes-from-mal.md)
+- [0022: MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](docs/decisions/0022-mal-on-a-second-device.md)
+- [0023: When the MAL list is imported, MAL's update time settles differences instead of asking the user](docs/decisions/0023-mal-connect-import-by-update-time.md)
 
 ## Build
 

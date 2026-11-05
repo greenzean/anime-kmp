@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -58,14 +59,15 @@ class SendMalChangesUseCaseTest {
     }
 
     @Test
-    fun pullsFirstWhenNothingWasPulledYet() =
+    fun whenNothingWasPulledYetThePullIsSkippedAndTheSendStillRuns() =
         runTest {
             val h = harness(lastPulledAt = null)
             h.outbox.enqueue(upsert)
 
             assertEquals(MalSendOutcome.DONE, h.send())
 
-            assertEquals(listOf(0 to 100), h.api.calls)
+            assertTrue(h.api.calls.isEmpty())
+            assertNull(h.pullStore.lastPulledAt())
             assertEquals(listOf(upsert), h.api.updates)
         }
 
@@ -132,7 +134,7 @@ class SendMalChangesUseCaseTest {
     @Test
     fun aPullThatNeedsARetryReturnsRetryAndSendsNothing() =
         runTest {
-            val h = harness(lastPulledAt = null)
+            val h = harness(lastPulledAt = PULL_NOW - 2.minutes)
             h.outbox.enqueue(upsert)
             h.outbox.enqueue(MalChange.Remove(2))
             h.api.results[0] = Result.Error(MalApiError.NO_CONNECTION)
@@ -160,7 +162,7 @@ class SendMalChangesUseCaseTest {
     @Test
     fun aRowThatTheFreshPullTurnedIntoAConflictIsNotSent() =
         runTest {
-            val h = harness(lastPulledAt = null)
+            val h = harness(lastPulledAt = PULL_NOW - 2.minutes)
             h.seedLocal(1, WatchStatus.COMPLETED, 983, 9)
             val other = MalChange.Upsert(2, WatchStatus.WATCHING, 3, null)
             h.outbox.enqueue(upsert)
@@ -229,7 +231,7 @@ class SendMalChangesUseCaseTest {
     @Test
     fun aChangeMadeOnMalWhileTheAppWasOfflineIsNotOverwritten() =
         runTest {
-            val h = harness(lastPulledAt = null)
+            val h = harness(lastPulledAt = PULL_NOW - 2.minutes)
             h.seedLocal(1, WatchStatus.COMPLETED, 983, 9)
             h.baseStore.save(1, MalBaseValues(WatchStatus.COMPLETED, 982, 9))
             h.outbox.enqueue(upsert)
@@ -245,7 +247,7 @@ class SendMalChangesUseCaseTest {
     @Test
     fun aChangeThatMalStillHasAsTheBaseIsSentWithoutAConflict() =
         runTest {
-            val h = harness(lastPulledAt = null)
+            val h = harness(lastPulledAt = PULL_NOW - 2.minutes)
             h.seedLocal(1, WatchStatus.COMPLETED, 983, 9)
             h.baseStore.save(1, MalBaseValues(WatchStatus.COMPLETED, 982, 9))
             h.outbox.enqueue(upsert)

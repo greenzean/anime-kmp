@@ -56,6 +56,8 @@ import com.greenzean.animekmp.composeapp.generated.resources.library_sort_last_u
 import com.greenzean.animekmp.composeapp.generated.resources.library_sort_score
 import com.greenzean.animekmp.composeapp.generated.resources.library_sort_title
 import com.greenzean.animekmp.composeapp.generated.resources.library_title
+import com.greenzean.animekmp.composeapp.mal.MalAccountTags
+import com.greenzean.animekmp.composeapp.mal.MalLinkedPrompt
 import com.greenzean.animekmp.shared.library.domain.LibrarySort
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.EntryUi
@@ -106,6 +108,9 @@ fun LibraryScreen(
             if (state.conflictCount > 0) {
                 ConflictsBanner(count = state.conflictCount, onReview = { onAction(LibraryAction.OnConflictsClick) })
             }
+            if (state.showMalPrompt) {
+                LibraryMalPrompt(onAction = onAction)
+            }
             if (!state.isLibraryEmpty) {
                 LibraryControls(state = state, onAction = onAction)
             }
@@ -142,6 +147,22 @@ fun LibraryScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LibraryMalPrompt(onAction: (LibraryAction) -> Unit) {
+    MalLinkedPrompt(
+        onConnect = { onAction(LibraryAction.OnConnectMalClick) },
+        onNotHere = { onAction(LibraryAction.OnNotOnThisDeviceClick) },
+        promptTag = MalAccountTags.LIBRARY_PROMPT,
+        connectTag = MalAccountTags.LIBRARY_CONNECT,
+        notHereTag = MalAccountTags.LIBRARY_NOT_HERE,
+        modifier =
+            Modifier.padding(
+                horizontal = MaterialTheme.spacing.lg,
+                vertical = MaterialTheme.spacing.sm,
+            ),
+    )
 }
 
 @Composable

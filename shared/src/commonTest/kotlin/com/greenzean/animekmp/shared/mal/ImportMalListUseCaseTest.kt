@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.shared.mal
 
+import com.greenzean.animekmp.shared.conflict.conflict
 import com.greenzean.animekmp.shared.conflict.values
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.importer.domain.ImportSummary
@@ -7,10 +8,15 @@ import com.greenzean.animekmp.shared.importer.malEntry
 import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import com.greenzean.animekmp.shared.library.presentation.SavedEntry
+import com.greenzean.animekmp.shared.mal.domain.ImportMalListUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
+import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalListItem
 import com.greenzean.animekmp.shared.mal.domain.MalListPage
+import com.greenzean.animekmp.shared.mal.domain.MalPullResult
+import com.greenzean.animekmp.shared.mal.domain.PullMalChangesUseCase
 import com.greenzean.animekmp.shared.mal.domain.toBase
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -417,5 +423,339 @@ class ImportMalListUseCaseTest {
 
             assertTrue(h.pullStore.saved.isEmpty())
             assertNull(h.pullStore.lastPulledAt())
+        }
+
+    private fun TestScope.localEntry(
+        h: MalImportHarness,
+        updatedAtMillis: Long,
+    ) = h.local.put(
+        Anime(1, "Title 1", episodes = 26),
+        SyncState.SYNCED,
+        WatchStatus.WATCHING,
+        5,
+        7,
+        updatedAtMillis,
+    )
+
+    private fun TestScope.malItem(updatedAt: Instant?) =
+        Result.Success(
+            MalListPage(
+                listOf(MalListItem(malEntry(malId = 1, title = "Title 1"), "img-1", updatedAt)),
+                hasNext = false,
+            ),
+        )
+
+    @Test
+    fun newerMalOverwritesLocalWithoutAConflictAndRequestsAServerSync() =
+        runTest {
+            val h = harness()
+            localEntry(h, 1000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 0, invalid = 0), summary(result))
+            assertEquals(listOf(SavedEntry(1, WatchStatus.COMPLETED, 26, 9)), h.local.savedEntries)
+            assertTrue(h.conflicts.saved.isEmpty())
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+            assertEquals(1, h.scheduler.requests)
+        }
+
+    @Test
+    fun onTheFirstImportNewerLocalStaysAndItsUpsertIsQueuedForMal() =
+        runTest {
+            val h = harness()
+            localEntry(h, 3000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 0, invalid = 0), summary(result))
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertTrue(h.conflicts.saved.isEmpty())
+            assertEquals(
+                listOf<MalChange>(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7)),
+                h.outboxHarness.outbox.enqueued,
+            )
+            assertEquals(0, h.scheduler.requests)
+        }
+
+    private fun TestScope.pullOf(h: MalImportHarness) =
+        PullMalChangesUseCase(
+            h.api,
+            h.throttle,
+            h.outboxHarness.auth,
+            h.local,
+            h.conflicts,
+            h.onMal,
+            h.outboxHarness.outbox,
+            h.pullStore,
+            h.store,
+            h.scheduler,
+            h.baseStore,
+            object : Clock {
+                override fun now(): Instant = Instant.fromEpochMilliseconds(testScheduler.currentTime)
+            },
+        )
+
+    @Test
+    fun aFailedFirstImportThenAPullIsSkippedAndTheNextImportIsStillTheFirstImport() =
+        runTest {
+            val h = harness()
+            localEntry(h, 3000)
+            h.api.results[0] = Result.Error(MalApiError.NO_CONNECTION)
+
+            assertIs<Result.Error<*>>(h.importList {})
+            val pulled = pullOf(h)()
+
+            assertEquals(MalPullResult.SKIPPED, pulled)
+            assertEquals(1, h.api.calls.size)
+            assertNull(h.pullStore.lastPulledAt())
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+            h.importList {}
+
+            assertEquals(
+                listOf<MalChange>(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7)),
+                h.outboxHarness.outbox.enqueued,
+            )
+            assertEquals(Instant.fromEpochMilliseconds(testScheduler.currentTime), h.pullStore.lastPulledAt())
+        }
+
+    private val completedImportAt = Instant.fromEpochMilliseconds(500)
+
+    @Test
+    fun aReimportDoesNotQueueAKeptLocalValueForAnEntryThatIsNotPending() =
+        runTest {
+            val h = harness()
+            h.pullStore.setLastPulledAt(completedImportAt)
+            localEntry(h, 3000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 0, invalid = 0), summary(result))
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertTrue(h.conflicts.saved.isEmpty())
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+            assertEquals(0, h.scheduler.requests)
+        }
+
+    @Test
+    fun aReimportKeepsTheLocalValueWhenTimestampsAreEqual() =
+        runTest {
+            val h = harness()
+            h.pullStore.setLastPulledAt(completedImportAt)
+            localEntry(h, 2000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            h.importList {}
+
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun aReimportStillAppliesANewerMalValue() =
+        runTest {
+            val h = harness()
+            h.pullStore.setLastPulledAt(completedImportAt)
+            localEntry(h, 1000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 0, invalid = 0), summary(result))
+            assertEquals(listOf(SavedEntry(1, WatchStatus.COMPLETED, 26, 9)), h.local.savedEntries)
+            assertEquals(1, h.scheduler.requests)
+        }
+
+    @Test
+    fun aReimportStillAppliesThePendingConflictRule() =
+        runTest {
+            val h = harness()
+            h.pullStore.setLastPulledAt(completedImportAt)
+            pendingLocalNewerThanMal(h)
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 1, invalid = 0), summary(result))
+            assertEquals(1, h.conflicts.saved.size)
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertEquals(1, h.outboxHarness.outbox.enqueued.size)
+        }
+
+    @Test
+    fun aReimportStillAddsNewEntries() =
+        runTest {
+            val h = harness()
+            h.pullStore.setLastPulledAt(completedImportAt)
+            h.api.results[0] = listPage(0, 2, hasNext = false)
+
+            val result = h.importList {}
+
+            assertEquals(2, summary(result).added)
+        }
+
+    @Test
+    fun anInterruptedFirstImportResumedStillQueuesAKeptLocalValue() =
+        runTest {
+            val h = harness(initialOffset = 100)
+            assertNull(h.pullStore.lastPulledAt())
+            localEntry(h, 3000)
+            h.api.results[100] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            h.importList {}
+
+            assertEquals(
+                listOf<MalChange>(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7)),
+                h.outboxHarness.outbox.enqueued,
+            )
+        }
+
+    @Test
+    fun onTheFirstImportEqualTimestampsKeepLocalAndQueueTheUpsert() =
+        runTest {
+            val h = harness()
+            localEntry(h, 2000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            h.importList {}
+
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertEquals(
+                listOf<MalChange>(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7)),
+                h.outboxHarness.outbox.enqueued,
+            )
+        }
+
+    @Test
+    fun keptLocalIsNotQueuedWhenMalIsNotConnected() =
+        runTest {
+            val h = harness()
+            val loggedOut = MalOutboxHarness(loggedIn = false)
+            val importList =
+                ImportMalListUseCase(
+                    h.api,
+                    h.throttle,
+                    h.merge,
+                    h.store,
+                    h.scheduler,
+                    loggedOut.queueAppOnly,
+                    loggedOut.queue,
+                    pullStore = h.pullStore,
+                    baseStore = h.baseStore,
+                )
+            localEntry(h, 3000)
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            importList {}
+
+            assertTrue(loggedOut.outbox.enqueued.isEmpty())
+            assertEquals(0, loggedOut.scheduler.requests)
+            assertTrue(h.local.savedEntries.isEmpty())
+        }
+
+    @Test
+    fun resolvingByTimestampDeletesAStaleConflict() =
+        runTest {
+            val h = harness()
+            localEntry(h, 3000)
+            h.conflicts.put(conflict(malId = 1))
+            h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+
+            h.importList {}
+
+            assertTrue(h.conflicts.current.isEmpty())
+        }
+
+    @Test
+    fun entriesWithoutAMalTimestampStillConflict() =
+        runTest {
+            val h = harness()
+            localEntry(h, 1000)
+            h.api.results[0] = malItem(null)
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 1, invalid = 0), summary(result))
+            assertEquals(1, h.conflicts.saved.size)
+            assertTrue(h.local.savedEntries.isEmpty())
+            assertTrue(
+                h.outboxHarness.outbox.enqueued
+                    .isEmpty(),
+            )
+        }
+
+    private suspend fun TestScope.pendingLocalNewerThanMal(h: MalImportHarness) {
+        localEntry(h, 3000)
+        h.outboxHarness.outbox.enqueue(MalChange.Upsert(1, WatchStatus.WATCHING, 5, 7))
+        h.api.results[0] = malItem(Instant.fromEpochMilliseconds(2000))
+    }
+
+    @Test
+    fun pendingEntryWhoseMalValuesEqualTheBaseIsNotAConflict() =
+        runTest {
+            val h = harness()
+            pendingLocalNewerThanMal(h)
+            h.baseStore.values[1] = malEntry(malId = 1, title = "Title 1").toBase()
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 0, invalid = 0), summary(result))
+            assertTrue(h.conflicts.saved.isEmpty())
+            assertEquals(1, h.outboxHarness.outbox.enqueued.size)
+        }
+
+    @Test
+    fun pendingEntryWithoutABaseIsAConflict() =
+        runTest {
+            val h = harness()
+            pendingLocalNewerThanMal(h)
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 1, invalid = 0), summary(result))
+            assertEquals(1, h.conflicts.saved.size)
+            assertEquals(1, h.outboxHarness.outbox.enqueued.size)
+        }
+
+    @Test
+    fun pendingEntryWhoseMalValuesDifferFromTheBaseIsAConflict() =
+        runTest {
+            val h = harness()
+            pendingLocalNewerThanMal(h)
+            h.baseStore.values[1] = malEntry(malId = 1, title = "Title 1", progress = 3).toBase()
+
+            val result = h.importList {}
+
+            assertEquals(ImportSummary(added = 0, conflicts = 1, invalid = 0), summary(result))
+            assertEquals(1, h.conflicts.saved.size)
+        }
+
+    @Test
+    fun anExistingConflictSurvivesWhenMalHasNotChangedSinceTheBase() =
+        runTest {
+            val h = harness()
+            pendingLocalNewerThanMal(h)
+            h.baseStore.values[1] = malEntry(malId = 1, title = "Title 1").toBase()
+            h.conflicts.put(conflict(malId = 1))
+
+            h.importList {}
+
+            assertEquals(1, h.conflicts.current.size)
         }
 }

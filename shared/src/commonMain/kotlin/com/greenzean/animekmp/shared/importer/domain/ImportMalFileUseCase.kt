@@ -17,7 +17,7 @@ class ImportMalFileUseCase(
             when (merge(entry, imageUrl = null, markOnMal = false)) {
                 MergeOutcome.Added -> added++
                 MergeOutcome.Conflict -> conflictCount++
-                MergeOutcome.Unchanged -> Unit
+                is MergeOutcome.KeptLocal, MergeOutcome.TookMal, MergeOutcome.Unchanged -> Unit
             }
             onProgress((index + 1).toFloat() / total)
         }

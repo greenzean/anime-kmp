@@ -11,6 +11,8 @@ import com.greenzean.animekmp.shared.library.domain.ObserveLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.SetLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import com.greenzean.animekmp.shared.mal.domain.DismissMalPromptUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalLinkStateUseCase
 import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
 import com.greenzean.animekmp.shared.settings.domain.TitleLanguage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +38,8 @@ class LibraryViewModel(
     observeTitleLanguage: ObserveTitleLanguageUseCase,
     private val editEntry: EditEntryUseCase,
     observeConflictCount: ObserveConflictCountUseCase,
+    observeMalLinkState: ObserveMalLinkStateUseCase,
+    private val dismissMalPrompt: DismissMalPromptUseCase,
 ) : ViewModel() {
     private val query = MutableStateFlow("")
     private val statusFilter = MutableStateFlow<WatchStatus?>(null)
@@ -52,7 +56,12 @@ class LibraryViewModel(
                 observeLibrary(request.query.trim(), request.status, request.sort, request.language)
                     .map { list -> request to list.map { it.toEntryUi(request.language) } }
             }
-        combine(entries, observeLibraryIsEmpty(), observeConflictCount()) { (request, list), isEmpty, conflictCount ->
+        combine(
+            entries,
+            observeLibraryIsEmpty(),
+            observeConflictCount(),
+            observeMalLinkState(),
+        ) { (request, list), isEmpty, conflictCount, link ->
             LibraryState(
                 entries = list,
                 query = request.query,
@@ -60,6 +69,7 @@ class LibraryViewModel(
                 sort = request.sort,
                 isLibraryEmpty = isEmpty,
                 conflictCount = conflictCount,
+                showMalPrompt = link.linkedElsewhere,
             )
         }.onEach { next -> _state.update { next } }
             .launchIn(viewModelScope)
@@ -93,6 +103,14 @@ class LibraryViewModel(
 
             LibraryAction.OnConflictsClick -> {
                 viewModelScope.launch { _events.send(LibraryEvent.NavigateToConflicts) }
+            }
+
+            LibraryAction.OnConnectMalClick -> {
+                viewModelScope.launch { _events.send(LibraryEvent.NavigateToSettings) }
+            }
+
+            LibraryAction.OnNotOnThisDeviceClick -> {
+                dismissMalPrompt()
             }
 
             LibraryAction.OnSettingsClick -> {

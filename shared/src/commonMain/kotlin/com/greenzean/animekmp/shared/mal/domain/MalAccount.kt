@@ -35,6 +35,7 @@ class ConnectMalUseCase(
     private val userApi: MalUserApi,
     private val store: MalAccountStore,
     private val startImport: StartMalImportUseCase,
+    private val requestMalLink: RequestMalLinkUseCase,
     private val logger: AppLogger = NoOpAppLogger,
 ) {
     suspend operator fun invoke(): Result<Unit, MalAuthError> =
@@ -48,6 +49,8 @@ class ConnectMalUseCase(
                 logger.info(TAG, "connect ok")
                 val name = (userApi.me() as? Result.Success)?.data?.name
                 store.setUsername(name)
+                store.setNotOnThisDevice(false)
+                requestMalLink()
                 startImport()
                 login
             }
@@ -71,6 +74,7 @@ class DisconnectMalUseCase(
         baseStore.clear()
         store.setUsername(null)
         store.setConsent(false)
+        store.setLinkPending(false)
         repository.clearCache()
         importProgress.clear()
         logger.info(TAG, "disconnected, cache cleared")

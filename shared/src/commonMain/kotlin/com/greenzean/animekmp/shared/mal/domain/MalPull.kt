@@ -61,7 +61,11 @@ class PullMalChangesUseCase(
     private val clock: Clock = Clock.System,
 ) {
     suspend operator fun invoke(): MalPullResult =
-        if (!auth.isLoggedIn.first() || importProgress.offset() > 0) MalPullResult.SKIPPED else pullAll()
+        if (!auth.isLoggedIn.first() || importProgress.offset() > 0 || pullStore.lastPulledAt() == null) {
+            MalPullResult.SKIPPED
+        } else {
+            pullAll()
+        }
 
     private suspend fun pullAll(): MalPullResult {
         val seen = HashSet<Int>()

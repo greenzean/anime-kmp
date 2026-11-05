@@ -1,7 +1,7 @@
 # 0018: Import conflicts are stored locally and the user picks the version
 
 ## Status
-Accepted (M2-19)
+Accepted (M2-19). Partly superseded by [ADR 0023](0023-mal-connect-import-by-update-time.md): when the MAL list is imported, differences are settled by MAL's update time. The MAL file import still makes conflicts.
 
 ## Context
 D15 says the user decides when the app and MAL disagree about the same anime, during sync or import. Until M2-18, file import kept the app's version and dropped the MAL version (`keptYours`, `ImportMalFileUseCase`). The user was never asked.

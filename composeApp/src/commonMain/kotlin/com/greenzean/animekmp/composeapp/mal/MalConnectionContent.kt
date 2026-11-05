@@ -40,6 +40,13 @@ fun MalConnectionContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.md)) {
+        if (state.linkedElsewhere) {
+            MalLinkedPrompt(
+                onNotHere = { onAction(MalAccountAction.OnNotOnThisDeviceClick) },
+                promptTag = MalAccountTags.LINKED_PROMPT,
+                notHereTag = MalAccountTags.LINKED_NOT_HERE,
+            )
+        }
         when (val status = state.status) {
             MalAccountStatus.NeedsConsent -> {
                 NeedsConsent(onAction)

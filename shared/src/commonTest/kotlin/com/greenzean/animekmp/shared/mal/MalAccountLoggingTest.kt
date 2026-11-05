@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.shared.mal
 
+import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.core.logging.COMMON_LEAKS
 import com.greenzean.animekmp.shared.core.logging.LogLevel
@@ -17,6 +18,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalSession
 import com.greenzean.animekmp.shared.mal.domain.MalTokens
 import com.greenzean.animekmp.shared.mal.domain.MalUser
 import com.greenzean.animekmp.shared.mal.domain.RandomBytes
+import com.greenzean.animekmp.shared.mal.domain.RequestMalLinkUseCase
 import io.ktor.http.Url
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -138,7 +140,14 @@ class MalAccountLoggingTest {
     @Test
     fun connectLogsOkWithoutTheUsername() =
         runTest {
-            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importStarter(), logger = logger)()
+            ConnectMalUseCase(
+                harness.auth,
+                harness.userApi,
+                harness.accountStore,
+                importStarter(),
+                RequestMalLinkUseCase(harness.accountStore, FakeSyncScheduler()),
+                logger = logger,
+            )()
 
             val messages = sink.messages(MAL_AUTH)
             assertTrue("login started" in messages, messages.toString())
@@ -152,7 +161,14 @@ class MalAccountLoggingTest {
         runTest {
             harness.authorizer.error = MalAuthError.CANCELLED
 
-            ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importStarter(), logger = logger)()
+            ConnectMalUseCase(
+                harness.auth,
+                harness.userApi,
+                harness.accountStore,
+                importStarter(),
+                RequestMalLinkUseCase(harness.accountStore, FakeSyncScheduler()),
+                logger = logger,
+            )()
 
             val entry = sink.entries.single { it.message.startsWith("connect failed") }
             assertEquals("connect failed: CANCELLED", entry.message)

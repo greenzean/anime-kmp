@@ -18,7 +18,7 @@ kotlin {
                 .get()
                 .toInt()
 
-        withHostTest {}
+        withHostTest { isIncludeAndroidResources = true }
     }
 
     if (providers.gradleProperty("animekmp.enableIos").get().toBoolean()) {
@@ -55,6 +55,8 @@ kotlin {
         getByName("androidHostTest").dependencies {
             implementation(libs.sqldelight.sqlite.driver)
             implementation(libs.konsist)
+            implementation(libs.junit)
+            implementation(libs.robolectric)
         }
     }
 }
@@ -77,4 +79,12 @@ sqldelight {
             schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
         }
     }
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgs(
+        "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens=java.base/java.io=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    )
 }

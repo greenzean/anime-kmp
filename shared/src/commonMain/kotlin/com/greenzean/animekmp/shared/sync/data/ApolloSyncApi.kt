@@ -81,16 +81,7 @@ class ApolloSyncApi(
 
     private suspend fun <D : Operation.Data> authorized(
         call: suspend (token: String) -> ApolloResponse<D>,
-    ): Result<ApolloResponse<D>, DataError.Network> =
-        sessions.accessToken().flatMap { token ->
-            val response = call(token)
-            if (response.isUnauthenticated()) {
-                logger.warn(TAG, "request unauthenticated, renewing session")
-                sessions.renewAfterRejection(token).flatMap { renewed -> Result.Success(call(renewed)) }
-            } else {
-                Result.Success(response)
-            }
-        }
+    ): Result<ApolloResponse<D>, DataError.Network> = sessions.authorized(logger, call)
 }
 
 private const val TAG = "Sync"

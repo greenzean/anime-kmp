@@ -1,7 +1,7 @@
 # 0019: MAL list import reads the account's list page by page and resumes after a failure
 
 ## Status
-Accepted (M2-20)
+Accepted (M2-20). The merge table is partly superseded by [ADR 0023](0023-mal-connect-import-by-update-time.md): when the MAL list is imported, differences are settled by MAL's update time.
 
 ## Context
 M2-18 imports a MyAnimeList export file. A user with a MAL account also needs the list pulled from MAL directly, without a file. The import should run after login, and the user should be able to start it again from Settings.

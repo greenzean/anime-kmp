@@ -1,0 +1,5 @@
+mutation UnlinkPlatform($platform: Platform!) {
+  unlinkPlatform(platform: $platform) {
+    linkedPlatforms
+  }
+}

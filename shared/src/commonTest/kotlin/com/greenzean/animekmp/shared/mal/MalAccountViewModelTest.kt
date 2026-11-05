@@ -1,18 +1,24 @@
 package com.greenzean.animekmp.shared.mal
 
+import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
+import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.mal.domain.AcceptMalConsentUseCase
 import com.greenzean.animekmp.shared.mal.domain.ConnectMalUseCase
 import com.greenzean.animekmp.shared.mal.domain.DisconnectMalUseCase
+import com.greenzean.animekmp.shared.mal.domain.DismissMalPromptUseCase
 import com.greenzean.animekmp.shared.mal.domain.MalApiError
 import com.greenzean.animekmp.shared.mal.domain.MalAuthError
 import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalSendError
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalLinkStateUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalOutboxUseCase
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalPullUseCase
+import com.greenzean.animekmp.shared.mal.domain.RequestMalLinkUseCase
 import com.greenzean.animekmp.shared.mal.domain.RetryMalSendUseCase
 import com.greenzean.animekmp.shared.mal.domain.SyncMalNowUseCase
+import com.greenzean.animekmp.shared.mal.domain.UnlinkMalFromAccountUseCase
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountError
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
@@ -46,6 +52,8 @@ class MalAccountViewModelTest {
     private val pullHarness = MalPullHarness(importScope)
     private val outbox = FakeMalOutbox()
     private val sendScheduler = FakeMalSendScheduler()
+    private var linkRepository = FakeLinkedPlatformsRepository()
+    private val linkScheduler = FakeSyncScheduler()
 
     @BeforeTest
     fun setUp() {
@@ -64,7 +72,13 @@ class MalAccountViewModelTest {
             MalAccountViewModel(
                 ObserveMalAccountUseCase(harness.auth, harness.accountStore),
                 AcceptMalConsentUseCase(harness.accountStore),
-                ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start),
+                ConnectMalUseCase(
+                    harness.auth,
+                    harness.userApi,
+                    harness.accountStore,
+                    importHarness.start,
+                    RequestMalLinkUseCase(harness.accountStore, linkScheduler),
+                ),
                 DisconnectMalUseCase(
                     harness.auth,
                     harness.accountStore,
@@ -78,6 +92,9 @@ class MalAccountViewModelTest {
                 RetryMalSendUseCase(outbox, sendScheduler),
                 ObserveMalPullUseCase(pullHarness.pullStore, pullHarness.coordinator),
                 SyncMalNowUseCase(pullHarness.coordinator),
+                ObserveMalLinkStateUseCase(linkRepository, harness.auth, harness.accountStore),
+                DismissMalPromptUseCase(harness.accountStore),
+                UnlinkMalFromAccountUseCase(linkRepository, harness.accountStore),
             )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.state.collect { } }
         return viewModel
@@ -115,6 +132,18 @@ class MalAccountViewModelTest {
             assertEquals(MalAccountStatus.Connecting, status(viewModel))
             gate.complete(Unit)
             assertEquals(MalAccountStatus.Connected("francisco"), status(viewModel))
+        }
+
+    @Test
+    fun connectWithoutConsentDoesNothing() =
+        runTest {
+            harness = MalAccountHarness(consent = false)
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnConnectClick)
+
+            assertEquals(MalAccountStatus.NeedsConsent, status(viewModel))
+            assertEquals(0, harness.authorizer.calls)
         }
 
     @Test
@@ -326,6 +355,7 @@ class MalAccountViewModelTest {
     fun syncNowStartsAPullAndTheStateIsSyncingWhileItRuns() =
         runTest {
             harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW - 2.hours)
             val gate = CompletableDeferred<Unit>()
             pullHarness.api.gates[0] = gate
             val viewModel = viewModel()
@@ -342,6 +372,7 @@ class MalAccountViewModelTest {
     fun afterASyncTheStateShowsTheNewLastSyncedAt() =
         runTest {
             harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW - 2.hours)
             val viewModel = viewModel()
 
             viewModel.onAction(MalAccountAction.OnSyncNowClick)
@@ -353,6 +384,7 @@ class MalAccountViewModelTest {
     @Test
     fun syncNowClickedTwiceWhileSyncingStartsOnlyOnePull() =
         runTest {
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW - 2.hours)
             val gate = CompletableDeferred<Unit>()
             pullHarness.api.gates[0] = gate
             val viewModel = viewModel()
@@ -368,6 +400,7 @@ class MalAccountViewModelTest {
     fun syncingAndOutboxStateAreKeptTogether() =
         runTest {
             harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            pullHarness.pullStore.setLastPulledAt(PULL_NOW - 2.hours)
             val gate = CompletableDeferred<Unit>()
             pullHarness.api.gates[0] = gate
             val viewModel = viewModel()
@@ -381,6 +414,7 @@ class MalAccountViewModelTest {
                     pendingCount = 2,
                     lastError = MalSendError.SERVER,
                     syncing = true,
+                    lastSyncedAt = PULL_NOW - 2.hours,
                 ),
                 viewModel.state.value,
             )
@@ -412,4 +446,147 @@ class MalAccountViewModelTest {
 
         assertEquals(MalAccountStatus.Error(expected), status(viewModel))
     }
+
+    @Test
+    fun linkedOnTheAccountButNotConnectedHereShowsLinkedElsewhere() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+
+            val state = viewModel().state.value
+
+            assertTrue(state.linkedToAccount)
+            assertTrue(state.linkedElsewhere)
+        }
+
+    @Test
+    fun notLinkedShowsNeitherFlag() =
+        runTest {
+            val state = viewModel().state.value
+
+            assertFalse(state.linkedToAccount)
+            assertFalse(state.linkedElsewhere)
+        }
+
+    @Test
+    fun connectedHereIsLinkedToAccountButNotElsewhere() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            harness = MalAccountHarness(validMalSession(), consent = true)
+
+            val state = viewModel().state.value
+
+            assertTrue(state.linkedToAccount)
+            assertFalse(state.linkedElsewhere)
+        }
+
+    @Test
+    fun notOnThisDeviceHidesLinkedElsewhereButKeepsLinkedToAccount() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnNotOnThisDeviceClick)
+
+            assertTrue(harness.accountStore.notOnThisDevice.value)
+            assertFalse(viewModel.state.value.linkedElsewhere)
+            assertTrue(viewModel.state.value.linkedToAccount)
+        }
+
+    @Test
+    fun unlinkFromAccountClearsTheServerFlagOnly() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+
+            assertEquals(1, linkRepository.unlinkCalls)
+            assertFalse(viewModel.state.value.linkedToAccount)
+            assertEquals(MalAccountStatus.Connected("francisco"), status(viewModel))
+        }
+
+    @Test
+    fun connectingRequestsTheLinkWithoutCallingTheServer() =
+        runTest {
+            harness = MalAccountHarness(consent = true)
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnConnectClick)
+
+            assertEquals(0, linkRepository.linkCalls)
+            assertTrue(harness.accountStore.linkPending.value)
+            assertEquals(1, linkScheduler.requests)
+        }
+
+    @Test
+    fun disconnectingKeepsTheAccountLinkAndShowsLinkedElsewhere() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnDisconnectClick)
+
+            assertEquals(0, linkRepository.unlinkCalls)
+            assertTrue(viewModel.state.value.linkedToAccount)
+            assertTrue(viewModel.state.value.linkedElsewhere)
+        }
+
+    @Test
+    fun aFailedUnlinkSetsUnlinkFailed() =
+        runTest {
+            linkRepository =
+                FakeLinkedPlatformsRepository(linked = true).apply { error = DataError.Network.NO_INTERNET }
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+
+            assertTrue(viewModel.state.value.unlinkFailed)
+            assertTrue(viewModel.state.value.linkedToAccount)
+        }
+
+    @Test
+    fun aSuccessfulUnlinkLeavesUnlinkFailedFalse() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+
+            assertFalse(viewModel.state.value.unlinkFailed)
+        }
+
+    @Test
+    fun dismissingTheUnlinkErrorResetsUnlinkFailed() =
+        runTest {
+            linkRepository =
+                FakeLinkedPlatformsRepository(linked = true).apply { error = DataError.Network.NO_INTERNET }
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+
+            viewModel.onAction(MalAccountAction.OnUnlinkErrorDismissed)
+
+            assertFalse(viewModel.state.value.unlinkFailed)
+        }
+
+    @Test
+    fun startingANewUnlinkClearsAPreviousFailure() =
+        runTest {
+            linkRepository =
+                FakeLinkedPlatformsRepository(linked = true).apply { error = DataError.Network.NO_INTERNET }
+            harness = MalAccountHarness(validMalSession(), consent = true, username = "francisco")
+            val viewModel = viewModel()
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+            assertTrue(viewModel.state.value.unlinkFailed)
+
+            linkRepository.error = null
+            viewModel.onAction(MalAccountAction.OnUnlinkFromAccountClick)
+
+            assertFalse(viewModel.state.value.unlinkFailed)
+            assertFalse(viewModel.state.value.linkedToAccount)
+        }
 }

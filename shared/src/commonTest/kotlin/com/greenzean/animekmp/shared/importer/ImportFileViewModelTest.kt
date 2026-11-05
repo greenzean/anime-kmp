@@ -21,6 +21,7 @@ import com.greenzean.animekmp.shared.library.domain.Anime
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.library.presentation.FakeLibraryLocalDataSource
+import com.greenzean.animekmp.shared.mal.FakeMalOutbox
 import com.greenzean.animekmp.shared.sync.domain.ParkedAnimeResolver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -74,7 +75,10 @@ class ImportFileViewModelTest {
     private fun viewModel() =
         ImportFileViewModel(
             ReadImportFileUseCase(reader, MalXmlParser()),
-            ImportMalFileUseCase(MergeMalEntryUseCase(local, conflicts, FakeOnMalLocalDataSource()), scheduler),
+            ImportMalFileUseCase(
+                MergeMalEntryUseCase(local, conflicts, FakeOnMalLocalDataSource(), FakeMalOutbox()),
+                scheduler,
+            ),
             FillImportedImagesUseCase(resolver),
             ObserveConflictCountUseCase(conflicts),
         )
