@@ -40,13 +40,13 @@ An app to keep track of the anime you watched, are watching and want to watch. I
 ### MAL import, export and sync
 - **D13.** When the user is logged in to MAL, every change made in the app is sent to MAL automatically. This also keeps MAL's suggestions up to date.
 - **D14.** MAL sync is two-way and automatic: changes made on MAL's website also come into the app.
-- **D15.** **User decides** (a feature of its own): when the app and MAL disagree about the same anime, during sync or import, the user chooses which version to keep. It also covers MAL being linked on one device but not another: the device without MAL asks the user what to do.
+- **D15.** **User decides** (a feature of its own): when the app and MAL disagree about the same anime, during sync or import, the user chooses which version to keep. One exception: when the MAL list is imported, a difference is settled by MAL's update time when MAL gives one, so the user is not asked. Only the first import after connecting sends a newer local value to MAL ([ADR 0023](decisions/0023-mal-connect-import-by-update-time.md)). The MAL file import still asks. It also covers MAL being linked on one device but not another: the device without MAL asks the user what to do.
 - **D16.** MAL is the only platform in the MVP, by two routes: MAL login (import and sync through the API) and manual files (import a MAL export file, export the library to a file).
 - **D23.** Manual export writes a MAL-format file only.
-- **D27.** Connecting MAL on a device merges both ways automatically: the MAL list is imported (differences become choices for the user, D15), and anime that exist only in the app are added to MAL. (Added 2026-10-26.)
+- **D27.** Connecting MAL on a device merges both ways automatically: the MAL list is imported, and anime that exist only in the app are added to MAL. When the MAL list is imported, a difference is settled by MAL's update time where MAL gives one, and only the first import after connecting sends a newer local value to MAL ([ADR 0023](decisions/0023-mal-connect-import-by-update-time.md)). Otherwise it becomes a choice for the user (D15). (Added 2026-10-26. Changed 2026-11-03.)
 
 ### Several devices and the account
-- **D17.** Only the device where a change was made sends it to MAL. Other devices get it through our server and do not send it again. This is strict: a change made on a device without MAL never reaches MAL, and that device's prompt (D15) says so.
+- **D17.** Only the device where a change was made sends it to MAL, and only while that device is connected to MAL. A device without MAL never sends anything to MAL. A change made on a device without MAL can reach MAL later through another device that connects MAL and imports for the first time ([ADR 0023](decisions/0023-mal-connect-import-by-update-time.md)).
 - **D18.** On the first login on a device that already has a library, its entries are merged into the account automatically.
 - **D19.** For linked platforms, the server stores only that a platform is linked (for example "MAL"), with no platform username or other platform user data.
 - **D20.** On logout, the app asks whether to keep or delete the library on the device.

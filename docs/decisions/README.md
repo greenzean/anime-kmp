@@ -36,7 +36,9 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0015 | [Parts are built in parallel against a Contract](0015-parallel-parts-against-a-contract.md) | Accepted | M2-12d |
 | 0016 | [App logging through a small AppLogger interface](0016-app-logging.md) | Accepted | M2-32 |
 | 0017 | [Reading MAL export files with xmlutil and okio, and filling imported anime images](0017-mal-export-reading-with-xmlutil-and-okio.md) | Accepted | M2-18 |
-| 0018 | [Import conflicts are stored locally and the user picks the version](0018-conflicts-stored-locally-user-picks-version.md) | Accepted | M2-19 |
-| 0019 | [MAL list import reads the account's list page by page and resumes after a failure](0019-mal-list-import.md) | Accepted | M2-20 |
+| 0018 | [Import conflicts are stored locally and the user picks the version](0018-conflicts-stored-locally-user-picks-version.md) | Accepted; partly superseded by 0023 | M2-19 |
+| 0019 | [MAL list import reads the account's list page by page and resumes after a failure](0019-mal-list-import.md) | Accepted; partly superseded by 0023 | M2-20 |
 | 0020 | [Changes made on this device go to MAL through a local outbox, one row per anime](0020-send-changes-to-mal.md) | Accepted | M2-21 |
 | 0021 | [Changes made on MAL are pulled by the app and applied by MAL's update time](0021-get-changes-from-mal.md) | Accepted | M2-22 |
+| 0022 | [MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](0022-mal-on-a-second-device.md) | Accepted | M2-23 |
+| 0023 | [When the MAL list is imported, MAL's update time settles differences instead of asking the user](0023-mal-connect-import-by-update-time.md) | Accepted | M2-23 |

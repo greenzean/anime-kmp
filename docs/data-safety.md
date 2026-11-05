@@ -8,13 +8,14 @@ Input for the Play Data safety form (M2-27) and the privacy policy (M2-26). Desc
 | Google account ID (`sub`), creation time | `app_user` | Identify the account |
 | List entries: anime (MAL ID), status, update time, deletion time | `list_entry` | Sync the library between devices |
 | SHA-256 hashes of refresh tokens, family, expiry, revocation time | `refresh_token` | Keep sessions |
+| Linked platforms: the platform name only (for example `MAL`), no username or ID | `linked_platform` | Offer to connect MAL on the user's other devices (ADR 0022) |
 
 No email, name, MAL token or MAL profile data is stored (ADR 0007).
 
 ## Account deletion
 - In the app: Settings, Delete account, confirm, approve the Google sign-in.
 - On the web: `/account/delete` on the server. The user signs in with Google there and confirms. No app is needed.
-- `deleteAccount` removes the user, all entries and tombstones, and all sessions in one transaction (ADR 0013). It needs a fresh Google ID token.
+- `deleteAccount` removes the user, all entries and tombstones, all linked platforms and all sessions in one transaction (ADR 0013). It needs a fresh Google ID token.
 
 ## Kept after deletion
 - The library copy on the user's device, until the user removes it.

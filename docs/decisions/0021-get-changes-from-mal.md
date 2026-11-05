@@ -64,4 +64,5 @@ State:
 - Risk: clocks differ between this device and MAL. A device clock that runs ahead makes local changes look newer than MAL's.
 - Verified on the emulator (2026-11-03): `list_status.updated_at` from the real MAL API parses with `Instant.parse`, because a change made on MAL's website was applied by a pull, and that only happens when `updated_at` is present and newer. The official reference page could not be read (it is rendered by JavaScript), so the documented format is not quoted here. A missing or unparseable value counts as not newer.
 - Not verified: WorkManager 2.12.0 runs the 6 hour periodic pull under Doze on a real device. To be checked by the M2-22 emulator run.
+- Changed by [ADR 0023](0023-mal-connect-import-by-update-time.md): a pull is skipped until one MAL import has finished since MAL was connected.
 - Follow-up: devices without MAL are M2-23.
