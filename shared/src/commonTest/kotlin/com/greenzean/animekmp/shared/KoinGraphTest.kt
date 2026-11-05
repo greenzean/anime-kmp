@@ -105,6 +105,12 @@ class KoinGraphTest {
                 object : MalAccountStore {
                     override val consentGiven = MutableStateFlow(false)
                     override val username = MutableStateFlow<String?>(null)
+                    override val notOnThisDevice = MutableStateFlow(false)
+                    override val linkPending = MutableStateFlow(false)
+
+                    override fun setLinkPending(value: Boolean) = Unit
+
+                    override fun setNotOnThisDevice(value: Boolean) = Unit
 
                     override fun setConsent(given: Boolean) = Unit
 

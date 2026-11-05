@@ -10,6 +10,7 @@ data class LibraryState(
     val sort: LibrarySort = LibrarySort.LAST_UPDATED,
     val isLibraryEmpty: Boolean = true,
     val conflictCount: Int = 0,
+    val showMalPrompt: Boolean = false,
 )
 
 sealed interface LibraryAction {
@@ -24,6 +25,10 @@ sealed interface LibraryAction {
     data object OnSettingsClick : LibraryAction
 
     data object OnConflictsClick : LibraryAction
+
+    data object OnConnectMalClick : LibraryAction
+
+    data object OnNotOnThisDeviceClick : LibraryAction
 
     data class OnQueryChange(
         val query: String,

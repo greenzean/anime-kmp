@@ -1,6 +1,7 @@
 package com.greenzean.animekmp.shared.mal.data
 
 import com.greenzean.animekmp.shared.importer.domain.OnMalLocalDataSource
+import com.greenzean.animekmp.shared.mal.domain.LinkedPlatformsRepository
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeApi
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeCache
 import com.greenzean.animekmp.shared.mal.domain.MalAnimeRepository
@@ -41,6 +42,7 @@ val malModule =
         single<MalOutboxLocalDataSource> { SqlDelightMalOutboxDataSource(get()) }
         single<MalPullStore> { SqlDelightMalPullStore(get()) }
         single { MalPullCoordinator(get(), get(), CoroutineScope(SupervisorJob() + Dispatchers.Default)) }
+        single<LinkedPlatformsRepository> { ApolloLinkedPlatformsRepository(get(), get(), get()) }
         single { MalThrottle(logger = get()) }
         single { MalAnimeRepository(get(), get(), get(), logger = get()) }
         single { MalSuggestionsRepository(get(), get(), get(), logger = get()) }

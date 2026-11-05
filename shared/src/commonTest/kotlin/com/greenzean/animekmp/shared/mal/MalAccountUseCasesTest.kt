@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.shared.mal
 
+import com.greenzean.animekmp.shared.auth.FakeSyncScheduler
 import com.greenzean.animekmp.shared.core.domain.Result
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
 import com.greenzean.animekmp.shared.mal.domain.AcceptMalConsentUseCase
@@ -13,6 +14,7 @@ import com.greenzean.animekmp.shared.mal.domain.MalChange
 import com.greenzean.animekmp.shared.mal.domain.MalError
 import com.greenzean.animekmp.shared.mal.domain.MalImportStatus
 import com.greenzean.animekmp.shared.mal.domain.ObserveMalAccountUseCase
+import com.greenzean.animekmp.shared.mal.domain.RequestMalLinkUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -40,7 +42,14 @@ class MalAccountUseCasesTest {
     private val pullStore = FakeMalPullStore()
     private val baseStore = FakeMalBaseStore()
 
-    private fun connect() = ConnectMalUseCase(harness.auth, harness.userApi, harness.accountStore, importHarness.start)
+    private fun connect() =
+        ConnectMalUseCase(
+            harness.auth,
+            harness.userApi,
+            harness.accountStore,
+            importHarness.start,
+            RequestMalLinkUseCase(harness.accountStore, FakeSyncScheduler()),
+        )
 
     private fun disconnect() =
         DisconnectMalUseCase(

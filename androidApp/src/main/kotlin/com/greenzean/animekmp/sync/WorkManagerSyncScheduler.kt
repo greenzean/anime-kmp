@@ -11,7 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.logging.AppLogger
-import com.greenzean.animekmp.shared.sync.domain.SyncEngine
+import com.greenzean.animekmp.shared.mal.domain.BackgroundSyncUseCase
 import com.greenzean.animekmp.shared.sync.domain.SyncResult
 import com.greenzean.animekmp.shared.sync.domain.SyncScheduler
 import org.koin.core.component.KoinComponent
@@ -42,11 +42,11 @@ class SyncWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params),
     KoinComponent {
-    private val engine: SyncEngine by inject()
+    private val backgroundSync: BackgroundSyncUseCase by inject()
     private val logger: AppLogger by inject()
 
     override suspend fun doWork(): Result =
-        when (val result = engine.sync()) {
+        when (val result = backgroundSync()) {
             is SyncResult.Success -> {
                 logger.info(TAG, "sync ok: pushed=${result.pushed} pulled=${result.pulled}")
                 Result.success()

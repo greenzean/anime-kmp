@@ -18,6 +18,11 @@ import com.greenzean.animekmp.shared.core.data.createTestDriver
 import com.greenzean.animekmp.shared.core.data.db.AnimeDatabase
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.mal.FakeLinkedPlatformsRepository
+import com.greenzean.animekmp.shared.mal.MalAccountHarness
+import com.greenzean.animekmp.shared.mal.domain.LinkMalIfConnectedUseCase
+import com.greenzean.animekmp.shared.mal.domain.RequestMalLinkUseCase
+import com.greenzean.animekmp.shared.mal.validMalSession
 import com.greenzean.animekmp.shared.sync.FakeServerSyncApi
 import com.greenzean.animekmp.shared.sync.data.SqlDelightAccountLibraryDataSource
 import com.greenzean.animekmp.shared.sync.data.SqlDelightSyncLocalDataSource
@@ -43,12 +48,15 @@ class AccountViewModelTest {
     private val api = FakeAuthApi()
     private val provider = FakeGoogleIdTokenProvider()
     private val scheduler = FakeSyncScheduler()
+    private val linkScheduler = FakeSyncScheduler()
     private val server = FakeServerSyncApi()
     private val driver = createTestDriver()
     private val db = AnimeDatabase(driver).also(TestAnimeCatalog::apply)
     private val local = SqlDelightSyncLocalDataSource(db, UnconfinedTestDispatcher())
     private val accountLibrary = SqlDelightAccountLibraryDataSource(db, UnconfinedTestDispatcher())
     private val engine = SyncEngine(server, local)
+    private var malHarness = MalAccountHarness()
+    private val linkRepository = FakeLinkedPlatformsRepository()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -62,7 +70,17 @@ class AccountViewModelTest {
     private fun viewModel() =
         AccountViewModel(
             sessionStore = store,
-            signInWithGoogle = SignInWithGoogleUseCase(provider, api, store),
+            signInWithGoogle =
+                SignInWithGoogleUseCase(
+                    provider,
+                    api,
+                    store,
+                    LinkMalIfConnectedUseCase(
+                        malHarness.auth,
+                        RequestMalLinkUseCase(malHarness.accountStore, linkScheduler),
+                        malHarness.accountStore,
+                    ),
+                ),
             mergeLibrary = MergeLibraryUseCase(engine, accountLibrary, scheduler),
             signOut = SignOutUseCase(store, engine, accountLibrary, api),
             deleteAccount = DeleteAccountUseCase(provider, api, store, engine, accountLibrary),
@@ -101,6 +119,59 @@ class AccountViewModelTest {
         assertEquals("id-token", api.idTokens.single())
         assertEquals(MergeState.Done(MergeSummary(sent = 1, rejected = 0, total = 1)), viewModel.state.value.merge)
         assertEquals(0, scheduler.requests)
+    }
+
+    @Test
+    fun signingInWithMalAlreadyConnectedRequestsTheLinkWithoutCallingTheServer() {
+        malHarness = MalAccountHarness(validMalSession())
+        val viewModel = viewModel()
+
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertTrue(malHarness.accountStore.linkPending.value)
+        assertEquals(1, linkScheduler.requests)
+        assertEquals(0, linkRepository.linkCalls)
+    }
+
+    @Test
+    fun signingInClearsNotOnThisDevice() {
+        malHarness = MalAccountHarness(notOnThisDevice = true)
+        val viewModel = viewModel()
+
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertFalse(malHarness.accountStore.notOnThisDevice.value)
+    }
+
+    @Test
+    fun signingInWithoutMalConnectedDoesNotLinkAnything() {
+        val viewModel = viewModel()
+
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertEquals(0, linkRepository.linkCalls)
+        assertFalse(malHarness.accountStore.linkPending.value)
+        assertEquals(0, linkScheduler.requests)
+    }
+
+    @Test
+    fun signingInWithMalConnectedLeavesLinkPendingAndCallsNoRepository() {
+        malHarness = MalAccountHarness(validMalSession())
+        linkRepository.error = DataError.Network.NO_INTERNET
+        val viewModel = viewModel()
+
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertTrue(viewModel.state.value.isSignedIn)
+        assertNull(viewModel.state.value.error)
+        assertTrue(malHarness.accountStore.linkPending.value)
+        assertEquals(1, linkScheduler.requests)
+        assertEquals(0, linkRepository.linkCalls)
+        assertEquals(0, linkRepository.linkIfCalls)
+        assertEquals(0, linkRepository.refreshCalls)
     }
 
     @Test

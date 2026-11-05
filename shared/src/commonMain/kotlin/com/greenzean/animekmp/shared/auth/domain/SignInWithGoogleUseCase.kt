@@ -3,6 +3,7 @@ package com.greenzean.animekmp.shared.auth.domain
 import com.greenzean.animekmp.shared.core.domain.DataError
 import com.greenzean.animekmp.shared.core.domain.Error
 import com.greenzean.animekmp.shared.core.domain.Result
+import com.greenzean.animekmp.shared.mal.domain.LinkMalIfConnectedUseCase
 
 sealed interface SignInError : Error {
     data class Google(
@@ -18,6 +19,7 @@ class SignInWithGoogleUseCase(
     private val provider: GoogleIdTokenProvider,
     private val api: AuthApi,
     private val store: SessionStore,
+    private val linkMalIfConnected: LinkMalIfConnectedUseCase,
 ) {
     suspend operator fun invoke(): Result<Unit, SignInError> =
         when (val nonce = api.signInNonce()) {
@@ -39,6 +41,7 @@ class SignInWithGoogleUseCase(
 
             is Result.Success -> {
                 store.save(session.data)
+                linkMalIfConnected()
                 Result.Success(Unit)
             }
         }

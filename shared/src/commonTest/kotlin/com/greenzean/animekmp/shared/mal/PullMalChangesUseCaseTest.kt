@@ -33,7 +33,7 @@ class PullMalChangesUseCaseTest {
     private fun TestScope.harness(
         loggedIn: Boolean = true,
         initialOffset: Int = 0,
-        lastPulledAt: Instant? = null,
+        lastPulledAt: Instant? = PREVIOUS_PULL,
     ) = MalPullHarness(
         backgroundScope + UnconfinedTestDispatcher(testScheduler),
         loggedIn,
@@ -367,7 +367,7 @@ class PullMalChangesUseCaseTest {
             h.api.results[0] = Result.Error(MalApiError.SERVER)
 
             assertEquals(MalPullResult.RETRY, h.pull())
-            assertNull(h.pullStore.lastPulledAt())
+            assertEquals(PREVIOUS_PULL, h.pullStore.lastPulledAt())
         }
 
     @Test
@@ -440,6 +440,24 @@ class PullMalChangesUseCaseTest {
             assertTrue(h.api.calls.isEmpty())
             assertTrue(h.pullStore.saved.isEmpty())
             assertTrue(h.library.removedMalIds.isEmpty())
+        }
+
+    @Test
+    fun aPullBeforeAnyImportHasFinishedIsSkippedWithoutReadingMal() =
+        runTest {
+            val h = harness(lastPulledAt = null)
+            h.seed(2)
+            h.api.results[0] = pullPage(pullItem(1))
+
+            val result = h.pull()
+
+            assertEquals(MalPullResult.SKIPPED, result)
+            assertTrue(h.api.calls.isEmpty())
+            assertTrue(h.pullStore.saved.isEmpty())
+            assertNull(h.pullStore.lastPulledAt())
+            assertTrue(h.library.savedEntries.isEmpty())
+            assertTrue(h.library.removedMalIds.isEmpty())
+            assertTrue(h.baseStore.saved.isEmpty())
         }
 
     @Test

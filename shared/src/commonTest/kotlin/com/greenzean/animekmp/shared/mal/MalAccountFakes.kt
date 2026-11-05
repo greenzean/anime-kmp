@@ -39,11 +39,25 @@ import kotlin.time.Instant
 class FakeMalAccountStore(
     consent: Boolean = false,
     username: String? = null,
+    notOnThisDevice: Boolean = false,
+    linkPending: Boolean = false,
 ) : MalAccountStore {
     private val consentState = MutableStateFlow(consent)
     private val usernameState = MutableStateFlow(username)
+    private val notOnThisDeviceState = MutableStateFlow(notOnThisDevice)
+    private val linkPendingState = MutableStateFlow(linkPending)
     override val consentGiven: StateFlow<Boolean> = consentState
     override val username: StateFlow<String?> = usernameState
+    override val notOnThisDevice: StateFlow<Boolean> = notOnThisDeviceState
+    override val linkPending: StateFlow<Boolean> = linkPendingState
+
+    override fun setLinkPending(value: Boolean) {
+        linkPendingState.value = value
+    }
+
+    override fun setNotOnThisDevice(value: Boolean) {
+        notOnThisDeviceState.value = value
+    }
 
     override fun setConsent(given: Boolean) {
         consentState.value = given
@@ -124,12 +138,14 @@ class MalAccountHarness(
     session: MalSession? = null,
     consent: Boolean = false,
     username: String? = null,
+    notOnThisDevice: Boolean = false,
+    linkPending: Boolean = false,
     userResult: Result<MalUser, MalApiError> = Result.Success(MalUser("francisco")),
     val logger: AppLogger = NoOpAppLogger,
 ) {
     val tokenStore = InMemoryMalTokenStore(session)
     val authorizer = ScriptedMalAuthorizer()
-    val accountStore = FakeMalAccountStore(consent, username)
+    val accountStore = FakeMalAccountStore(consent, username, notOnThisDevice, linkPending)
     val userApi = FakeMalUserApi(userResult)
     val auth =
         MalAuthManager(

@@ -33,6 +33,9 @@ data class MalAccountState(
     val lastError: MalSendError? = null,
     val lastSyncedAt: Instant? = null,
     val syncing: Boolean = false,
+    val linkedElsewhere: Boolean = false,
+    val linkedToAccount: Boolean = false,
+    val unlinkFailed: Boolean = false,
 )
 
 sealed interface MalAccountAction {
@@ -47,4 +50,10 @@ sealed interface MalAccountAction {
     data object OnRetryClick : MalAccountAction
 
     data object OnSyncNowClick : MalAccountAction
+
+    data object OnNotOnThisDeviceClick : MalAccountAction
+
+    data object OnUnlinkFromAccountClick : MalAccountAction
+
+    data object OnUnlinkErrorDismissed : MalAccountAction
 }

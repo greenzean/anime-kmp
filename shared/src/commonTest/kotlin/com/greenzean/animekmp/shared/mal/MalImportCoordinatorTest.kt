@@ -194,6 +194,7 @@ class MalImportCoordinatorTest {
                         h.store,
                         h.scheduler,
                         h.outboxHarness.queueAppOnly,
+                        h.outboxHarness.queue,
                         pullStore = h.pullStore,
                         baseStore = h.baseStore,
                     ),

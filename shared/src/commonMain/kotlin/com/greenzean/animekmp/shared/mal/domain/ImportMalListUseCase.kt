@@ -16,14 +16,17 @@ class ImportMalListUseCase(
     private val progress: MalImportProgressStore,
     private val scheduler: SyncScheduler,
     private val queueAppOnly: QueueAppOnlyEntriesUseCase,
+    private val queueMalChange: QueueMalChangeUseCase,
     private val pullStore: MalPullStore,
     private val baseStore: MalBaseStore,
     private val clock: Clock = Clock.System,
 ) {
     suspend operator fun invoke(onProgress: (done: Int) -> Unit): Result<ImportSummary, MalError> {
+        val firstImport = pullStore.lastPulledAt() == null
         var offset = progress.offset()
         var added = 0
         var conflicts = 0
+        var tookMal = 0
         var seen = offset
         onProgress(seen)
         var hasNext = true
@@ -34,10 +37,22 @@ class ImportMalListUseCase(
                     is Result.Error -> return Result.Error(result.error)
                 }
             page.items.forEach { item ->
+                val malChanged = baseStore.get(item.entry.malId) != item.entry.toBase()
                 baseStore.save(item.entry.malId, item.entry.toBase())
-                when (merge(item.entry, item.imageUrl, markOnMal = true)) {
+                when (
+                    val outcome =
+                        merge(
+                            item.entry,
+                            item.imageUrl,
+                            markOnMal = true,
+                            malUpdatedAt = item.updatedAt,
+                            malChanged = malChanged,
+                        )
+                ) {
                     MergeOutcome.Added -> added++
                     MergeOutcome.Conflict -> conflicts++
+                    MergeOutcome.TookMal -> tookMal++
+                    is MergeOutcome.KeptLocal -> if (firstImport) queueMalChange(outcome.change)
                     MergeOutcome.Unchanged -> Unit
                 }
             }
@@ -48,7 +63,7 @@ class ImportMalListUseCase(
             hasNext = page.hasNext
         }
         progress.clear()
-        if (added > 0) scheduler.requestSync()
+        if (added + tookMal > 0) scheduler.requestSync()
         queueAppOnly()
         pullStore.setLastPulledAt(clock.now())
         return Result.Success(ImportSummary(added = added, conflicts = conflicts, invalid = 0))

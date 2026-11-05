@@ -1,0 +1,5 @@
+mutation LinkPlatform($platform: Platform!) {
+  linkPlatform(platform: $platform) {
+    linkedPlatforms
+  }
+}

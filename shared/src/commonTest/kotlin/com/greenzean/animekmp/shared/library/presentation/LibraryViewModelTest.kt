@@ -16,7 +16,12 @@ import com.greenzean.animekmp.shared.library.domain.ObserveLibraryUseCase
 import com.greenzean.animekmp.shared.library.domain.SetLibrarySortUseCase
 import com.greenzean.animekmp.shared.library.domain.SyncState
 import com.greenzean.animekmp.shared.library.domain.WatchStatus
+import com.greenzean.animekmp.shared.mal.FakeLinkedPlatformsRepository
+import com.greenzean.animekmp.shared.mal.MalAccountHarness
+import com.greenzean.animekmp.shared.mal.domain.DismissMalPromptUseCase
+import com.greenzean.animekmp.shared.mal.domain.ObserveMalLinkStateUseCase
 import com.greenzean.animekmp.shared.mal.idleQueueMalChange
+import com.greenzean.animekmp.shared.mal.validMalSession
 import com.greenzean.animekmp.shared.settings.FakeDisplaySettings
 import com.greenzean.animekmp.shared.settings.FakeLibrarySettings
 import com.greenzean.animekmp.shared.settings.domain.ObserveTitleLanguageUseCase
@@ -49,6 +54,8 @@ class LibraryViewModelTest {
     private val librarySettings = FakeLibrarySettings()
     private val scheduler = FakeSyncScheduler()
     private val conflicts = FakeConflictLocalDataSource()
+    private var linkRepository = FakeLinkedPlatformsRepository()
+    private var malHarness = MalAccountHarness()
 
     @BeforeTest
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -65,6 +72,8 @@ class LibraryViewModelTest {
             ObserveTitleLanguageUseCase(settings),
             EditEntryUseCase(local, scheduler, idleQueueMalChange()),
             ObserveConflictCountUseCase(conflicts),
+            ObserveMalLinkStateUseCase(linkRepository, malHarness.auth, malHarness.accountStore),
+            DismissMalPromptUseCase(malHarness.accountStore),
         )
 
     @Test
@@ -482,6 +491,51 @@ class LibraryViewModelTest {
                     .single()
             assertEquals(WatchStatus.COMPLETED, entry.status)
             assertEquals(28, entry.progress)
+        }
+
+    @Test
+    fun noPromptWhenNothingIsLinked() {
+        assertFalse(viewModel().state.value.showMalPrompt)
+    }
+
+    @Test
+    fun promptShowsWhenMalIsLinkedOnTheAccountButNotConnectedHere() {
+        linkRepository = FakeLinkedPlatformsRepository(linked = true)
+
+        assertTrue(viewModel().state.value.showMalPrompt)
+    }
+
+    @Test
+    fun noPromptWhenMalIsConnectedOnThisDevice() {
+        linkRepository = FakeLinkedPlatformsRepository(linked = true)
+        malHarness = MalAccountHarness(validMalSession())
+
+        assertFalse(viewModel().state.value.showMalPrompt)
+    }
+
+    @Test
+    fun noPromptAfterNotOnThisDevice() {
+        linkRepository = FakeLinkedPlatformsRepository(linked = true)
+        val viewModel = viewModel()
+
+        viewModel.onAction(LibraryAction.OnNotOnThisDeviceClick)
+
+        assertTrue(malHarness.accountStore.notOnThisDevice.value)
+        assertFalse(viewModel.state.value.showMalPrompt)
+    }
+
+    @Test
+    fun connectMalClickEmitsNavigateToSettings() =
+        runTest {
+            linkRepository = FakeLinkedPlatformsRepository(linked = true)
+            val viewModel = viewModel()
+
+            viewModel.events.test {
+                viewModel.onAction(LibraryAction.OnConnectMalClick)
+                advanceUntilIdle()
+
+                assertEquals(LibraryEvent.NavigateToSettings, awaitItem())
+            }
         }
 }
 

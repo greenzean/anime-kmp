@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -29,13 +30,14 @@ class PullMalIfStaleUseCaseTest {
     private fun MalPullHarness.ifStale() = PullMalIfStaleUseCase(auth, pullStore, coordinator, clock)
 
     @Test
-    fun neverPulledStartsAPull() =
+    fun neverPulledStartsAPullThatReadsNothingBecauseNoImportHasFinished() =
         runTest {
             val h = harness(lastPulledAt = null)
 
             h.ifStale()()
 
-            assertEquals(listOf(0), h.api.offsets)
+            assertEquals(emptyList(), h.api.offsets)
+            assertTrue(h.pullStore.saved.isEmpty())
         }
 
     @Test
