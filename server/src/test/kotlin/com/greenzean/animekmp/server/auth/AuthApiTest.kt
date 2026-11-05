@@ -344,6 +344,24 @@ class AuthApiTest {
         }
 
     @Test
+    fun deleteAccountRemovesTheLinkedPlatforms() =
+        authApp {
+            client.signIn(idToken(client.nonce(), sub = "sub-mine"))
+            client.signIn(idToken(client.nonce(), sub = "sub-other"))
+            val mineId = userId("sub-mine")
+            val otherId = userId("sub-other")
+            transaction(db) {
+                exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$mineId', 'MAL'), ('$otherId', 'MAL')")
+            }
+
+            val result = client.deleteAccount(idToken(client.deleteNonce(), sub = "sub-mine"))
+
+            assertNull(result["errors"])
+            assertEquals(0L, rowsFor("linked_platform", mineId))
+            assertEquals(1L, rowsFor("linked_platform", otherId))
+        }
+
+    @Test
     fun deleteAccountRefusesASignInNonce() =
         authApp {
             client.signIn(idToken(client.nonce(), sub = "sub-mine"))

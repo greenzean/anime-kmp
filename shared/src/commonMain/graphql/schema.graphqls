@@ -36,6 +36,10 @@ directive @specifiedBy(
     url: String!
   ) on SCALAR
 
+type Account {
+  linkedPlatforms: [Platform!]!
+}
+
 type AuthPayload {
   accessToken: String!
   accessTokenExpiresAt: Instant!
@@ -68,11 +72,13 @@ type ListEntryChange {
 type Mutation {
   deleteAccount(idToken: String!): Boolean!
   deleteAccountNonce: String!
+  linkPlatform(platform: Platform!): Account!
   pushChanges(changes: [ListEntryChangeInput!]!): PushResult!
   refreshSession(refreshToken: String!): AuthPayload!
   signInNonce: String!
   signInWithGoogle(idToken: String!): AuthPayload!
   signOut(refreshToken: String!): Boolean!
+  unlinkPlatform(platform: Platform!): Account!
 }
 
 type PushResult {
@@ -80,6 +86,7 @@ type PushResult {
 }
 
 type Query {
+  account: Account!
   changesSince(cursor: String, limit: Int): ChangesPage!
   hello: String!
 }
@@ -90,6 +97,10 @@ enum ListStatus {
   ON_HOLD
   PLAN_TO_WATCH
   WATCHING
+}
+
+enum Platform {
+  MAL
 }
 
 enum PushOutcome {

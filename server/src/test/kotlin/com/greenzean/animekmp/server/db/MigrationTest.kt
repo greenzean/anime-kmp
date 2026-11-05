@@ -17,6 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
 class MigrationTest {
@@ -292,5 +293,67 @@ class MigrationTest {
                 ) { rs -> if (rs.next()) rs.getString(1) else null }
             }
         assertEquals("NO", nullable)
+    }
+
+    @Test
+    fun linkedPlatformMigrationIsApplied() {
+        val versions =
+            transaction(db) {
+                exec("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank") { rs ->
+                    generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
+                }
+            }
+        assertTrue(versions.orEmpty().containsAll(listOf("1", "2")))
+    }
+
+    private fun linkedCount(userId: Uuid): Long =
+        transaction(db) {
+            var count = 0L
+            exec("SELECT count(*) FROM linked_platform WHERE user_id = '$userId'") { rs ->
+                rs.next()
+                count = rs.getLong(1)
+            }
+            count
+        }
+
+    @Test
+    fun linkedPlatformAcceptsMal() {
+        val user = newUser("sub-link")
+        transaction(db) { exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$user', 'MAL')") }
+        assertEquals(1L, linkedCount(user))
+    }
+
+    @Test
+    fun linkedPlatformRejectsAnUnknownPlatform() {
+        val user = newUser("sub-unknown")
+        assertFailsWith<SQLException> {
+            transaction(db) { exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$user', 'ANILIST')") }
+        }
+    }
+
+    @Test
+    fun linkedPlatformIsUniquePerUser() {
+        val user = newUser("sub-twice")
+        transaction(db) { exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$user', 'MAL')") }
+        assertFailsWith<SQLException> {
+            transaction(db) { exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$user', 'MAL')") }
+        }
+    }
+
+    @Test
+    fun linkedPlatformNeedsAnExistingUser() {
+        assertFailsWith<SQLException> {
+            transaction(db) {
+                exec("INSERT INTO linked_platform (user_id, platform) VALUES (gen_random_uuid(), 'MAL')")
+            }
+        }
+    }
+
+    @Test
+    fun deletingTheUserDeletesItsLinks() {
+        val user = newUser("sub-gone")
+        transaction(db) { exec("INSERT INTO linked_platform (user_id, platform) VALUES ('$user', 'MAL')") }
+        transaction(db) { exec("DELETE FROM app_user WHERE id = '$user'") }
+        assertEquals(0L, linkedCount(user))
     }
 }
