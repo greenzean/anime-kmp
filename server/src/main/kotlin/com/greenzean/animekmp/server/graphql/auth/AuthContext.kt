@@ -17,36 +17,36 @@ private const val BEARER_PREFIX = "Bearer "
 
 private val log = LoggerFactory.getLogger(AuthContextFactory::class.java)
 
-/**
- * Puts the user id of a valid `Authorization: Bearer <access token>` into the GraphQL context (ADR 0010).
- * A missing or bad token leaves the context empty instead of failing, so the sign-in operations stay open;
- * operations that need a user call [requireUserId]. `tokens` is null when sign-in is not configured (dev only).
- */
+fun bearerToken(authorization: String?): String? =
+    authorization
+        ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = true) }
+        ?.substring(BEARER_PREFIX.length)
+        ?.trim()
+
+fun SessionTokens.userIdOrNull(
+    authorization: String?,
+    onRejected: (String) -> Unit = {},
+): UUID? =
+    bearerToken(authorization)?.let {
+        try {
+            verifyAccess(it)
+        } catch (e: AuthFailure) {
+            onRejected(e.reason)
+            null
+        }
+    }
+
+private fun logRejected(reason: String) = log.info("Auth rejected: {}", reason)
+
 class AuthContextFactory(
     private val tokens: SessionTokens?,
 ) : DefaultKtorGraphQLContextFactory() {
     override suspend fun generateContext(request: ApplicationRequest): GraphQLContext {
         val base = super.generateContext(request)
-        val userId = bearerToken(request)?.let(::userIdOrNull) ?: return base
+        val userId = tokens?.userIdOrNull(request.header(HttpHeaders.Authorization), ::logRejected) ?: return base
         return (base.stream().toList().associate { it.key to it.value } + (USER_ID_KEY to userId)).toGraphQLContext()
     }
-
-    private fun bearerToken(request: ApplicationRequest): String? =
-        request
-            .header(HttpHeaders.Authorization)
-            ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = true) }
-            ?.substring(BEARER_PREFIX.length)
-            ?.trim()
-
-    private fun userIdOrNull(token: String): UUID? =
-        try {
-            tokens?.verifyAccess(token)
-        } catch (e: AuthFailure) {
-            log.info("Auth rejected: {}", e.reason)
-            null
-        }
 }
 
-/** The signed-in user of this request, never taken from operation input. */
 fun DataFetchingEnvironment.requireUserId(): UUID =
     graphQlContext.get<UUID>(USER_ID_KEY) ?: throw AuthFailure("No valid access token on a protected operation")

@@ -57,6 +57,7 @@ data class ChangesSlice(
 class SyncRepository(
     private val database: Database? = null,
     private val clock: Clock = Clock.systemUTC(),
+    private val maxEntriesPerUser: Int = MAX_ENTRIES_PER_USER,
 ) {
     private val seq = Sequence("list_entry_sync_seq")
 
@@ -67,7 +68,9 @@ class SyncRepository(
         transaction(database) {
             exec("SELECT pg_advisory_xact_lock(hashtextextended('list_entry:$userId', 0))") {}
             requireUser(userId)
-            batch.map { apply(userId, it.truncatedToMillis()) }
+            val existing = ListEntryTable.selectAll().where { ListEntryTable.userId eq userId.toKotlinUuid() }.count()
+            val room = EntryRoom(maxOf(0L, maxEntriesPerUser - existing))
+            batch.map { apply(userId, it.truncatedToMillis(), room) }
         }
 
     fun changesSince(
@@ -97,9 +100,14 @@ class SyncRepository(
         }
     }
 
+    private class EntryRoom(
+        var remaining: Long,
+    )
+
     private fun apply(
         userId: UUID,
         change: EntryChange,
+        room: EntryRoom,
     ): ChangeResult {
         val rejected = rejection(change)
         val byId =
@@ -108,23 +116,33 @@ class SyncRepository(
             } else {
                 null
             }
-        if (rejected != null) return ChangeResult(change.id, rejected, change.id)
-        val animeId = animeIdFor(change.malId)
-        return if (byId != null) update(userId, change, animeId, byId) else applyToSlot(userId, change, animeId)
+        val animeId =
+            if (rejected == null) animeIdFor(change.malId, create = byId != null || room.remaining > 0) else null
+        return when {
+            rejected != null -> ChangeResult(change.id, rejected, change.id)
+            animeId == null -> ChangeResult(change.id, PushOutcome.REJECTED_INVALID, change.id)
+            byId != null -> update(userId, change, animeId, byId)
+            else -> applyToSlot(userId, change, animeId, room)
+        }
     }
 
-    private fun animeIdFor(malId: Int): Long {
-        AnimeTable.insertIgnore { it[AnimeTable.malId] = malId }
+    private fun animeIdFor(
+        malId: Int,
+        create: Boolean,
+    ): Long? {
+        if (create) AnimeTable.insertIgnore { it[AnimeTable.malId] = malId }
         return AnimeTable
             .select(AnimeTable.id)
             .where { AnimeTable.malId eq malId }
-            .single()[AnimeTable.id]
+            .singleOrNull()
+            ?.get(AnimeTable.id)
     }
 
     private fun applyToSlot(
         userId: UUID,
         change: EntryChange,
         animeId: Long,
+        room: EntryRoom,
     ): ChangeResult {
         val slot =
             ListEntryTable
@@ -132,7 +150,7 @@ class SyncRepository(
                 .where {
                     (ListEntryTable.userId eq userId.toKotlinUuid()) and (ListEntryTable.animeId eq animeId)
                 }.singleOrNull()
-        return if (slot == null) insert(userId, change, animeId) else update(userId, change, animeId, slot)
+        return if (slot == null) insert(userId, change, animeId, room) else update(userId, change, animeId, slot)
     }
 
     private fun rejection(change: EntryChange): PushOutcome? {
@@ -146,7 +164,11 @@ class SyncRepository(
                 PushOutcome.REJECTED_INVALID
             }
 
-            change.malId <= 0 -> {
+            change.updatedAt.isBefore(MIN_TIMESTAMP) || change.deletedAt?.isBefore(MIN_TIMESTAMP) == true -> {
+                PushOutcome.REJECTED_INVALID
+            }
+
+            change.malId !in 1..MAX_MAL_ID -> {
                 PushOutcome.REJECTED_INVALID
             }
 
@@ -204,7 +226,10 @@ class SyncRepository(
         userId: UUID,
         change: EntryChange,
         animeId: Long,
+        room: EntryRoom,
     ): ChangeResult {
+        if (room.remaining <= 0) return ChangeResult(change.id, PushOutcome.REJECTED_INVALID, change.id)
+        room.remaining -= 1
         ListEntryTable.insert {
             it[ListEntryTable.id] = change.id.toKotlinUuid()
             it[ListEntryTable.userId] = userId.toKotlinUuid()

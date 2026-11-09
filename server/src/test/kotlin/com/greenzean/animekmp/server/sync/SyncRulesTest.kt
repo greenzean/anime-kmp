@@ -1,5 +1,6 @@
 package com.greenzean.animekmp.server.sync
 
+import com.greenzean.animekmp.server.InvalidInput
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,7 +28,7 @@ class SyncRulesTest {
 
     @Test
     fun invalidCursorIsRejected() {
-        assertFailsWith<IllegalArgumentException> { Cursor.decode("abc") }
-        assertFailsWith<IllegalArgumentException> { Cursor.decode("-1") }
+        assertFailsWith<InvalidInput> { Cursor.decode("abc") }
+        assertFailsWith<InvalidInput> { Cursor.decode("-1") }
     }
 }

@@ -17,6 +17,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlin.uuid.toKotlinUuid
@@ -317,9 +318,20 @@ class SyncApiTest : SyncApiTestBase() {
         }
 
     @Test
+    fun batchAtTheLimitIsAccepted() =
+        sync {
+            val changes = (1..500).map { change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z") }
+            val r =
+                client.gql(
+                    """mutation { pushChanges(changes: [${changes.joinToString(",")}]) { results { id } } }""",
+                )
+            assertFalse(r.containsKey("errors"), r.toString())
+        }
+
+    @Test
     fun oversizedBatchIsAnError() =
         sync {
-            val changes = (1..1001).map { change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z") }
+            val changes = (1..501).map { change(UUID.randomUUID(), bebop, "WATCHING", "2026-10-19T12:00:00Z") }
             val r =
                 client.gql(
                     """mutation { pushChanges(changes: [${changes.joinToString(",")}]) { results { id } } }""",
@@ -491,5 +503,39 @@ class SyncApiTest : SyncApiTestBase() {
         assertEquals(PushOutcome.IGNORED_STALE, repo.push(userA, listOf(change)).single().outcome)
         val stored = repo.changesSince(userA, null, 10).changes.single()
         assertEquals(Instant.parse("2026-10-19T12:00:00.123Z"), stored.updatedAt)
+    }
+
+    @Test
+    fun malIdAboveTheCeilingIsRejected() =
+        sync {
+            val r = client.push(change(UUID.randomUUID(), MAX_MAL_ID + 1, "WATCHING", "2026-10-19T12:00:00Z"))
+            assertEquals(listOf("REJECTED_INVALID"), r.outcomes())
+            val ok = client.push(change(UUID.randomUUID(), MAX_MAL_ID, "WATCHING", "2026-10-19T12:00:00Z"))
+            assertEquals(listOf("APPLIED"), ok.outcomes())
+        }
+
+    @Test
+    fun timestampsBeforeTheFloorAreRejected() =
+        sync {
+            val old = client.push(change(UUID.randomUUID(), bebop, "WATCHING", "1999-12-31T23:59:59Z"))
+            assertEquals(listOf("REJECTED_INVALID"), old.outcomes())
+        }
+
+    @Test
+    fun entriesPerUserAreCapped() {
+        val capped = SyncRepository(db, clock, maxEntriesPerUser = 2)
+        val results =
+            capped.push(
+                userA,
+                listOf(
+                    EntryChange(UUID.randomUUID(), 1, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null, 0, null),
+                    EntryChange(UUID.randomUUID(), 2, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null, 0, null),
+                    EntryChange(UUID.randomUUID(), 3, "WATCHING", Instant.parse("2026-10-19T12:00:00Z"), null, 0, null),
+                ),
+            )
+        assertEquals(
+            listOf(PushOutcome.APPLIED, PushOutcome.APPLIED, PushOutcome.REJECTED_INVALID),
+            results.map { it.outcome },
+        )
     }
 }
