@@ -296,14 +296,23 @@ class MigrationTest {
     }
 
     @Test
-    fun linkedPlatformMigrationIsApplied() {
-        val versions =
+    fun linkedPlatformTableExists() {
+        val table =
             transaction(db) {
-                exec("SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank") { rs ->
-                    generateSequence { if (rs.next()) rs.getString(1) else null }.toList()
-                }
+                exec("SELECT to_regclass('linked_platform')::text") { rs -> if (rs.next()) rs.getString(1) else null }
             }
-        assertTrue(versions.orEmpty().containsAll(listOf("1", "2")))
+        assertEquals("linked_platform", table)
+    }
+
+    @Test
+    fun signInNonceExpiryIsIndexed() {
+        val index =
+            transaction(db) {
+                exec(
+                    "SELECT to_regclass('sign_in_nonce_expires_idx')::text",
+                ) { rs -> if (rs.next()) rs.getString(1) else null }
+            }
+        assertEquals("sign_in_nonce_expires_idx", index)
     }
 
     private fun linkedCount(userId: Uuid): Long =

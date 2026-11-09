@@ -11,7 +11,7 @@ Decision and versions: ADR 0005. Flyway owns the schema; Exposed only queries.
 ## Layout
 
 ```
-server/src/main/resources/db/migration/   V1__create_schema.sql (later: V2__..., V3__...)
+server/src/main/resources/db/migration/   V1__create_schema.sql
 server/src/main/kotlin/.../server/db/     Database.kt (pool + Flyway + Exposed), Tables.kt
 server/src/test/kotlin/.../server/db/     MigrationTest.kt (Testcontainers)
 ```

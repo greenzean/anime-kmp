@@ -34,6 +34,8 @@ CREATE TABLE sign_in_nonce (
     expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE INDEX sign_in_nonce_expires_idx ON sign_in_nonce (expires_at);
+
 CREATE TABLE refresh_token (
     id         UUID        PRIMARY KEY,
     user_id    UUID        NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
@@ -45,3 +47,9 @@ CREATE TABLE refresh_token (
 );
 
 CREATE INDEX refresh_token_family_idx ON refresh_token (family_id);
+
+CREATE TABLE linked_platform (
+    user_id  UUID NOT NULL REFERENCES app_user (id) ON DELETE CASCADE,
+    platform TEXT NOT NULL CHECK (platform IN ('MAL')),
+    PRIMARY KEY (user_id, platform)
+);

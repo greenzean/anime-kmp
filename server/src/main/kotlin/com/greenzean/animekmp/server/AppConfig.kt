@@ -8,7 +8,6 @@ data class DatabaseConfig(
     val password: String,
 )
 
-/** `googleClientId` is the web/server OAuth client ID that Google ID tokens must be issued for (`aud`). */
 data class AuthConfig(
     val googleClientId: String,
     val jwtSecret: String,
@@ -22,6 +21,7 @@ data class AppConfig(
     val env: AppEnv,
     val database: DatabaseConfig? = null,
     val auth: AuthConfig? = null,
+    val introspection: Boolean = env == AppEnv.DEV,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()): AppConfig {
@@ -45,16 +45,20 @@ data class AppConfig(
                     )
                 }
             val auth = authFromEnv(env, appEnv)
+            val introspection =
+                env["GRAPHQL_INTROSPECTION"]?.takeIf { it.isNotBlank() }?.let {
+                    it.toBooleanStrictOrNull() ?: error("GRAPHQL_INTROSPECTION must be 'true' or 'false', got '$it'")
+                } ?: (appEnv == AppEnv.DEV)
             return AppConfig(
                 host = env["HOST"] ?: "0.0.0.0",
                 port = port,
                 env = appEnv,
                 database = database,
                 auth = auth,
+                introspection = introspection,
             )
         }
 
-        // Both or neither. Blank counts as unset (compose passes empty strings through). Prod requires both.
         private fun authFromEnv(
             env: Map<String, String>,
             appEnv: AppEnv,

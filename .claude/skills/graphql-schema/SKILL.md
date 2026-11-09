@@ -61,6 +61,6 @@ The drift test in `server-tests :server:test` fails if `schema.graphqls` no long
 
 graphql-kotlin ships none of these. Add a scalar in three places: the hook, the `mapScalar` line, and a round-trip test. Nullable resolver arguments need a Kotlin default (`= null`) or omitting them fails.
 
-## TODO
+## Limits
 
-- Query depth/complexity limits.
+Depth 10 and complexity 1000 (ADR 0024). Complexity is 1 per field plus the weights in `graphql/QueryCost.kt` (push batch size, pull page size, auth and account operations). Add a weight there for any new operation that writes in bulk or calls an outside service. Batched requests (a JSON array) are rejected.

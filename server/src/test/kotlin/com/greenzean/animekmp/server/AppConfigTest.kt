@@ -81,4 +81,34 @@ class AppConfigTest {
     fun prodRequiresAuth() {
         assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("APP_ENV" to "prod")) }
     }
+
+    @Test
+    fun introspectionDefaultsToOnInDevAndOffInProd() {
+        assertEquals(true, AppConfig.fromEnv(emptyMap()).introspection)
+        val prod =
+            mapOf(
+                "APP_ENV" to "prod",
+                "GOOGLE_CLIENT_ID" to "cid",
+                "JWT_SECRET" to "0123456789abcdef0123456789abcdef",
+            )
+        assertEquals(false, AppConfig.fromEnv(prod).introspection)
+    }
+
+    @Test
+    fun introspectionEnvVarOverridesTheDefault() {
+        assertEquals(false, AppConfig.fromEnv(mapOf("GRAPHQL_INTROSPECTION" to "false")).introspection)
+        val prod =
+            mapOf(
+                "APP_ENV" to "prod",
+                "GOOGLE_CLIENT_ID" to "cid",
+                "JWT_SECRET" to "0123456789abcdef0123456789abcdef",
+                "GRAPHQL_INTROSPECTION" to "true",
+            )
+        assertEquals(true, AppConfig.fromEnv(prod).introspection)
+    }
+
+    @Test
+    fun invalidIntrospectionValueRejected() {
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("GRAPHQL_INTROSPECTION" to "maybe")) }
+    }
 }

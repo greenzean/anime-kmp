@@ -8,12 +8,18 @@ import com.greenzean.animekmp.server.auth.GoogleIdTokenVerifier
 import com.greenzean.animekmp.server.auth.SessionTokens
 import com.greenzean.animekmp.server.db.connectDatabase
 import com.greenzean.animekmp.server.graphql.GraphQLSchemaDefinition
+import com.greenzean.animekmp.server.graphql.QueryCost
+import com.greenzean.animekmp.server.graphql.SafeExceptionHandler
+import com.greenzean.animekmp.server.graphql.SingleRequestParser
 import com.greenzean.animekmp.server.graphql.SyncSchemaHooks
 import com.greenzean.animekmp.server.graphql.auth.AuthContextFactory
 import com.greenzean.animekmp.server.routes.accountDeletionRoutes
 import com.greenzean.animekmp.server.routes.graphQLRoutes
 import com.greenzean.animekmp.server.routes.healthRoutes
+import com.greenzean.animekmp.server.routes.installGraphQLRateLimits
 import com.greenzean.animekmp.server.sync.SyncRepository
+import graphql.analysis.MaxQueryComplexityInstrumentation
+import graphql.analysis.MaxQueryDepthInstrumentation
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -24,6 +30,7 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.v1.jdbc.Database
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.time.Clock
 
 fun main() {
@@ -33,7 +40,13 @@ fun main() {
     val tokens = config.auth?.let { SessionTokens(it.jwtSecret) }
     val auth = config.auth?.let { authService(it, database, checkNotNull(tokens)) }
     embeddedServer(Netty, port = config.port, host = config.host) {
-        module(database, auth = auth, tokens = tokens, googleClientId = config.auth?.googleClientId)
+        module(
+            database,
+            auth = auth,
+            tokens = tokens,
+            googleClientId = config.auth?.googleClientId,
+            introspectionEnabled = config.introspection,
+        )
     }.start(wait = true)
 }
 
@@ -56,10 +69,13 @@ fun Application.module(
     auth: AuthService? = null,
     tokens: SessionTokens? = null,
     googleClientId: String? = null,
+    limits: Limits = Limits(),
+    introspectionEnabled: Boolean = true,
 ) {
     val sync = SyncRepository(database, clock)
     val linked = LinkedPlatformRepository(database)
     install(CallLogging)
+    installGraphQLRateLimits(limits, tokens)
     install(GraphQL) {
         schema {
             packages = GraphQLSchemaDefinition.packages
@@ -67,7 +83,17 @@ fun Application.module(
             mutations = GraphQLSchemaDefinition.mutations(sync, auth, linked)
             hooks = SyncSchemaHooks
         }
+        engine {
+            introspection { enabled = introspectionEnabled }
+            exceptionHandler = SafeExceptionHandler
+            instrumentations =
+                listOf(
+                    MaxQueryDepthInstrumentation(limits.maxQueryDepth),
+                    MaxQueryComplexityInstrumentation(limits.maxQueryComplexity, QueryCost),
+                )
+        }
         server {
+            requestParser = SingleRequestParser(jacksonMapperBuilder().build())
             contextFactory = AuthContextFactory(tokens)
         }
     }
@@ -77,6 +103,6 @@ fun Application.module(
             healthRoutes()
             accountDeletionRoutes(googleClientId)
         }
-        graphQLRoutes()
+        graphQLRoutes(limits, introspectionEnabled)
     }
 }

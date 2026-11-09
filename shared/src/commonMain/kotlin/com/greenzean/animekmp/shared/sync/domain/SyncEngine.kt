@@ -110,7 +110,7 @@ class SyncEngine(
 
     private companion object {
         const val TAG = "Sync"
-        const val PUSH_BATCH_SIZE = 1000
+        const val PUSH_BATCH_SIZE = 500
         const val PULL_LIMIT = 500
     }
 }

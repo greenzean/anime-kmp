@@ -86,6 +86,18 @@ class SyncEngineTest {
         }
 
     @Test
+    fun pushesInBatchesOfAtMost500() =
+        runTest {
+            (100L..600L).forEach { db.animeQueries.insertOrIgnore(it, "Anime $it", null, null, null) }
+            (100..600).forEach { library.saveEntry(it, WatchStatus.WATCHING, 0, null) }
+
+            val result = engine.sync()
+
+            assertEquals(501, assertIs<SyncResult.Success>(result).pushed)
+            assertEquals(listOf(500, 1), api.pushed.map { it.size })
+        }
+
+    @Test
     fun pushesTombstones() =
         runTest {
             library.saveEntry(1, WatchStatus.WATCHING, 0, null)
