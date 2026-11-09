@@ -81,7 +81,7 @@ server-tests :server:test
 
 ## GraphQL
 
-graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` and GraphiQL at `/graphiql` (always on for now; no auth yet). Schema export and how an API change is split between the parts: `graphql-schema` skill.
+graphql-kotlin (ADR 0003). `install(GraphQL)` in `module()` reads `graphql/GraphQLSchemaDefinition`; `Route.graphQLRoutes()` in `routes/` serves `POST /graphql` (rate limited, body limited, depth and complexity limited) and GraphiQL at `/graphiql`, which exist only when `GRAPHQL_INTROSPECTION` is on (default on in dev, off in prod). Limits and their reasons: ADR 0024; costs per field are in `graphql/QueryCost.kt`, so a new expensive operation needs a cost there. Unexpected resolver errors are hidden by `SafeExceptionHandler`; throw `IllegalArgumentException` or a `GraphqlErrorException` for messages the client may see. Schema export and how an API change is split between the parts: `graphql-schema` skill.
 
 ## Auth (ADR 0010)
 

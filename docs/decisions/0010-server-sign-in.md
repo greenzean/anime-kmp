@@ -32,6 +32,6 @@ Use **java-jwt and jwks-rsa**, with a server-issued nonce and a rotating refresh
 ## Consequences
 - M2-5 calls `SessionTokens.verifyAccess` to authorize sync and adds the foreign key from `list_entry.user_id` to `app_user`.
 - Refresh tokens are one device each; there is no sign-out or "revoke all" yet (M2-7), and expired rows are not cleaned up.
-- The unauthenticated mutations have no rate limiting (GraphQL limits are still a TODO).
+- The unauthenticated mutations are rate limited per IP and the query is limited by [ADR 0024](0024-server-limits.md).
 - Access tokens cannot be revoked before they expire (15 min).
 - Real Google tokens are not verified until M2-6.

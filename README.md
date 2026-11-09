@@ -73,6 +73,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0021: Changes made on MAL are pulled by the app and applied by MAL's update time](docs/decisions/0021-get-changes-from-mal.md)
 - [0022: MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](docs/decisions/0022-mal-on-a-second-device.md)
 - [0023: When the MAL list is imported, MAL's update time settles differences instead of asking the user](docs/decisions/0023-mal-connect-import-by-update-time.md)
+- [0024: The GraphQL endpoint limits query size, request size, push batches and request rate, and hides introspection in production](docs/decisions/0024-server-limits.md)
 
 ## Build
 
@@ -104,7 +105,7 @@ curl localhost:8080/graphql -H 'content-type: application/json' -d '{"query":"{ 
 
 GraphiQL is at <http://localhost:8080/graphiql>. A GraphQL schema change is written into `shared/src/commonMain/graphql/schema.graphqls` first and the server is made to match it ([ADR 0015](docs/decisions/0015-parallel-parts-against-a-contract.md)). `server-tests -PupdateSchema :server:test` ([ADR 0014](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)) only rewrites the file to fix ordering or formatting differences.
 
-Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`. See `.env.example`.
+Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`, and optionally `GRAPHQL_INTROSPECTION` (`true` | `false`; default on in dev, off in prod). See `.env.example`.
 
 Google sign-in needs `GOOGLE_CLIENT_ID` (the web/server OAuth client ID) and `JWT_SECRET` (at least 32 bytes, e.g. `openssl rand -base64 48`), and a database. Set both or neither; `APP_ENV=prod` requires them. Without them the server starts and the `signInNonce`, `signInWithGoogle` and `refreshSession` mutations return "Sign-in is not configured".
 

@@ -24,7 +24,7 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0003 | [GraphQL server library](0003-graphql-server.md) | Accepted | M0-7 |
 | 0004 | [Client/server contract](0004-shared-contract.md) | Accepted; routing order superseded by 0015 | M0-8 |
 | 0005 | [Postgres access, migrations and test database](0005-postgres-access.md) | Accepted | M1-3 |
-| 0006 | [Sync protocol](0006-sync-protocol.md) | Accepted | M1-5 |
+| 0006 | [Sync protocol](0006-sync-protocol.md) | Accepted; push batch changed by 0024 | M1-5 |
 | 0007 | [Client-side platform access](0007-client-side-platform-access.md) | Accepted | M2 MVP brief |
 | 0008 | [MAL API behaviour and how the app uses it](0008-mal-api.md) | Accepted | M2-2 |
 | 0009 | [Anime references: a server-side ID map keyed by platform IDs](0009-anime-id-map.md) | Accepted | M2-3 |
@@ -42,3 +42,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0021 | [Changes made on MAL are pulled by the app and applied by MAL's update time](0021-get-changes-from-mal.md) | Accepted | M2-22 |
 | 0022 | [MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](0022-mal-on-a-second-device.md) | Accepted | M2-23 |
 | 0023 | [When the MAL list is imported, MAL's update time settles differences instead of asking the user](0023-mal-connect-import-by-update-time.md) | Accepted | M2-23 |
+| 0024 | [The GraphQL endpoint limits query size, request size, push batches and request rate, and hides introspection in production](0024-server-limits.md) | Accepted | M2-24 |
