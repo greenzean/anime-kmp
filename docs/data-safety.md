@@ -25,3 +25,4 @@ No email, name, MAL token or MAL profile data is stored (ADR 0007).
 - Data collected: user ID (Google `sub`) and app activity (library entries), both linked to the account, for app functionality.
 - Data is encrypted in transit once the server is behind HTTPS (M2-25).
 - Users can request deletion, in the app and on the web page above.
+- The public privacy policy is at https://greenzean.github.io/privacy/ (source in the Pages repo) and is linked from Settings and from the MAL consent text.
