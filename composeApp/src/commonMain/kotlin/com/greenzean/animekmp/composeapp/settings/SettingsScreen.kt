@@ -183,6 +183,7 @@ fun SettingsScreen(
                 onImportAction = onImportAction,
             )
             DisplaySection(state = displayState, onAction = onDisplayAction)
+            PrivacySection()
         }
     }
 }

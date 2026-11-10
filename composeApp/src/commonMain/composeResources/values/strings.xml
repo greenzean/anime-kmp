@@ -128,6 +128,8 @@
     <string name="settings_signed_in_message">Your library syncs to your account.</string>
     <string name="settings_signed_out_message">An account is optional. Sign in to sync your library between your devices.</string>
     <string name="settings_sign_out">Sign out</string>
+    <string name="settings_privacy_heading">Privacy</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
     <string name="settings_delete_account">Delete account</string>
     <string name="settings_mal_title">MyAnimeList</string>
     <string name="settings_library_title">Library</string>
