@@ -74,6 +74,7 @@ Recorded as ADRs in [`docs/decisions/`](docs/decisions/README.md):
 - [0022: MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](docs/decisions/0022-mal-on-a-second-device.md)
 - [0023: When the MAL list is imported, MAL's update time settles differences instead of asking the user](docs/decisions/0023-mal-connect-import-by-update-time.md)
 - [0024: The GraphQL endpoint limits query size, request size, push batches and request rate, and hides introspection in production](docs/decisions/0024-server-limits.md)
+- [0025: The server is hosted on the mini PC and published through Tailscale Funnel](docs/decisions/0025-server-hosting.md)
 
 ## Build
 
@@ -105,7 +106,7 @@ curl localhost:8080/graphql -H 'content-type: application/json' -d '{"query":"{ 
 
 GraphiQL is at <http://localhost:8080/graphiql>. A GraphQL schema change is written into `shared/src/commonMain/graphql/schema.graphqls` first and the server is made to match it ([ADR 0015](docs/decisions/0015-parallel-parts-against-a-contract.md)). `server-tests -PupdateSchema :server:test` ([ADR 0014](docs/decisions/0014-mini-pc-runs-server-and-deploys.md)) only rewrites the file to fix ordering or formatting differences.
 
-Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`, and optionally `GRAPHQL_INTROSPECTION` (`true` | `false`; default on in dev, off in prod). See `.env.example`.
+Configured by env vars `HOST`, `PORT`, `APP_ENV` (`dev` | `prod`; `prod` logs JSON) and `LOG_LEVEL`, and optionally `GRAPHQL_INTROSPECTION` (`true` | `false`; default on in dev, off in prod) and `TRUST_FORWARDED_HEADERS` (`true` | `false`, default `false`; set it only behind a proxy that sets `X-Forwarded-For` itself, see Deploy to production). See `.env.example`.
 
 Google sign-in needs `GOOGLE_CLIENT_ID` (the web/server OAuth client ID) and `JWT_SECRET` (at least 32 bytes, e.g. `openssl rand -base64 48`), and a database. Set both or neither; `APP_ENV=prod` requires them. Without them the server starts and the `signInNonce`, `signInWithGoogle` and `refreshSession` mutations return "Sign-in is not configured".
 
@@ -118,7 +119,7 @@ The server URL comes from the `animekmp.serverUrl` Gradle property (default: a p
 - `androidApp/src/debug/AndroidManifest.xml`: a `<manifest>` with `<application android:networkSecurityConfig="@xml/network_security_config" />`
 - `androidApp/src/debug/res/xml/network_security_config.xml`: a `<network-security-config>` with a `<domain-config cleartextTrafficPermitted="true">` for the domain `10.0.2.2`
 
-Release builds use the same property and must use HTTPS.
+Release builds take their URL from `animekmp.serverUrl.release` instead (see Deploy to production) and must use HTTPS.
 
 ### Google sign-in on the emulator
 
@@ -163,7 +164,7 @@ To keep Docker off your laptop, run the same Compose stack on a spare Linux box 
 3. `docker compose up -d --build`, then `curl http://<box-address>:8080/health` from your laptop.
 4. Set `animekmp.serverUrl=http://<box-address>:8080/graphql` in `local.properties` and add `<box-address>` as another cleartext domain in the debug network security config (see above). Give the box a fixed address (a DHCP reservation on your router).
 
-`SERVER_BIND` defaults to `127.0.0.1`; Postgres always stays on `127.0.0.1`. Plain HTTP sends sign-in and session tokens unencrypted, so use this only on a network you trust. Production hosting and HTTPS are a separate decision.
+`SERVER_BIND` defaults to `127.0.0.1`; Postgres always stays on `127.0.0.1`. Plain HTTP sends sign-in and session tokens unencrypted, so use this only on a network you trust. Production runs separately, see Deploy to production.
 
 ### Server tests with Docker on another machine
 
@@ -174,6 +175,19 @@ To keep Docker off your laptop, run the same Compose stack on a spare Linux box 
 3. `TESTCONTAINERS_HOST_OVERRIDE=<box-address> TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock ./gradlew :server:test`
 
 The box's published container ports must be reachable from your laptop. Keep these settings outside the repository.
+
+## Deploy to production
+
+Two stacks run on the mini PC, each with its own database ([ADR 0025](docs/decisions/0025-server-hosting.md)): dev in `anime-kmp/` (project `anime-kmp`, port 8080 on the LAN, deployed by `server-deploy`) and production in `anime-kmp-prod/` (project `anime-kmp-prod`, port 8081 on `127.0.0.1`, no published Postgres port, its own secrets and volume), published with Tailscale Funnel. Keep the real host and Funnel names out of the repository.
+
+1. On the box, create `anime-kmp-prod/.env` (`chmod 600`) with `POSTGRES_PASSWORD` and `JWT_SECRET` (`openssl rand -hex 32`, different from dev), `GOOGLE_CLIENT_ID` (the web/server OAuth client ID), `SERVER_BIND=127.0.0.1`, `SERVER_PORT=8081` (`POSTGRES_PORT` is not needed in production, which does not publish Postgres). `compose.prod.yaml` sets `APP_ENV=prod` (JSON logs, introspection off) and `TRUST_FORWARDED_HEADERS=true`, and requires the three secrets. Optional: `LOG_LEVEL`.
+2. Deploy from your machine with `scripts/deploy-prod.sh` (`PROD_HOST` and `PROD_DIR` override the SSH alias `minipc` and the folder). It refuses a dirty working tree unless `ALLOW_DIRTY=1`, checks that the prod `.env` binds to `127.0.0.1`, replaces `server/`, `gradle/` and `config/` on the box with the local ones, builds, starts the stack with migrations on start, and checks `/health`. Production is deployed by hand; it is never deployed by the tests.
+3. Publish it once: enable Funnel in the Tailscale admin console, run `sudo tailscale set --operator=$USER` once, then `tailscale funnel --bg 8081` on the box. The public URL is `https://<device>.<tailnet>.ts.net`.
+4. Client address: Funnel sends the real client address in `X-Forwarded-For` and replaces a value the client sends, which is why production sets `TRUST_FORWARDED_HEADERS=true`. Only turn it on behind a proxy that does the same.
+5. Backups: in `anime-kmp-prod/` on the box, `scripts/backup-db.sh` writes `~/animekmp-backups/animekmp-<UTC time>.sql.gz` (`BACKUP_DIR`, `BACKUP_KEEP_DAYS`, default 14). Run it daily from cron, for example `0 3 * * * cd /path/to/anime-kmp-prod && scripts/backup-db.sh`. Prove a backup works with `scripts/restore-db.sh <file> [scratch-db]`, which restores it into a scratch database and prints row counts for the live and restored databases; drop the scratch database afterwards.
+6. Release build: set `animekmp.serverUrl.release=https://<device>.<tailnet>.ts.net/graphql` in `local.properties` and run `./gradlew :androidApp:assembleRelease`. The build fails if the value is missing or not HTTPS.
+
+Add the Funnel name to the Google Cloud and MAL app settings where an HTTPS origin is needed.
 
 ## Quick start (emulator)
 

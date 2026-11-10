@@ -9,6 +9,7 @@ import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.bodylimit.RequestBodyLimit
+import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.RateLimit
 import io.ktor.server.plugins.ratelimit.RateLimitName
 import io.ktor.server.plugins.ratelimit.RateLimiter
@@ -29,7 +30,7 @@ fun Application.installGraphQLRateLimits(
             rateLimiter(limit = limits.requestsPerIp, refillPeriod = limits.rateWindow)
             requestKey { call ->
                 tokens?.userIdOrNull(call.request.header(HttpHeaders.Authorization))?.let { "user:$it" }
-                    ?: rateLimitAddress(call.request.local.remoteAddress)
+                    ?: rateLimitAddress(call.request.origin.remoteAddress)
             }
         }
         register(perUser) {
@@ -47,7 +48,7 @@ fun Application.installGraphQLRateLimits(
             }
             requestKey { call ->
                 tokens?.userIdOrNull(call.request.header(HttpHeaders.Authorization))?.let { "user:$it" }
-                    ?: (ANONYMOUS_PREFIX + rateLimitAddress(call.request.local.remoteAddress))
+                    ?: (ANONYMOUS_PREFIX + rateLimitAddress(call.request.origin.remoteAddress))
             }
         }
     }

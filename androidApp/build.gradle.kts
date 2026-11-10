@@ -7,6 +7,15 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val releaseLocalProperties =
+    Properties().apply {
+        rootProject
+            .file("local.properties")
+            .takeIf { it.exists() }
+            ?.reader()
+            ?.use(::load)
+    }
+
 android {
     namespace = "com.greenzean.animekmp"
     compileSdk =
@@ -96,6 +105,16 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            val releaseServerUrl =
+                providers
+                    .gradleProperty("animekmp.serverUrl.release")
+                    .orElse(releaseLocalProperties.getProperty("animekmp.serverUrl.release") ?: "")
+                    .get()
+            buildConfigField(
+                "String",
+                "GRAPHQL_URL",
+                "\"${releaseServerUrl.ifBlank { "https://api.example.invalid/graphql" }}\"",
+            )
         }
     }
 }
@@ -110,4 +129,17 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.androidx.browser)
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    val releaseServerUrl =
+        providers
+            .gradleProperty("animekmp.serverUrl.release")
+            .orElse(releaseLocalProperties.getProperty("animekmp.serverUrl.release") ?: "")
+    doFirst {
+        val releaseUri = runCatching { URI(releaseServerUrl.get()) }.getOrNull()
+        check(releaseUri?.scheme == "https" && !releaseUri.host.isNullOrBlank()) {
+            "animekmp.serverUrl.release must be an https URL for release builds"
+        }
+    }
 }

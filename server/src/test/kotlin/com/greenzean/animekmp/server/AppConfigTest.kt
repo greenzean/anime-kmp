@@ -108,6 +108,17 @@ class AppConfigTest {
     }
 
     @Test
+    fun trustForwardedHeadersIsOffByDefaultAndCanBeTurnedOn() {
+        assertEquals(false, AppConfig.fromEnv(emptyMap()).trustForwardedHeaders)
+        assertEquals(true, AppConfig.fromEnv(mapOf("TRUST_FORWARDED_HEADERS" to "true")).trustForwardedHeaders)
+    }
+
+    @Test
+    fun invalidTrustForwardedHeadersValueRejected() {
+        assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("TRUST_FORWARDED_HEADERS" to "yes")) }
+    }
+
+    @Test
     fun invalidIntrospectionValueRejected() {
         assertFailsWith<IllegalStateException> { AppConfig.fromEnv(mapOf("GRAPHQL_INTROSPECTION" to "maybe")) }
     }
