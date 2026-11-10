@@ -31,11 +31,26 @@ class GraphQLLimitsTest {
     private fun app(
         limits: Limits = Limits(),
         introspection: Boolean = true,
+        trustForwardedHeaders: Boolean = false,
         block: suspend ApplicationTestBuilder.() -> Unit,
     ) = testApplication {
-        application { module(tokens = tokens, limits = limits, introspectionEnabled = introspection) }
+        application {
+            module(
+                tokens = tokens,
+                limits = limits,
+                introspectionEnabled = introspection,
+                trustForwardedHeaders = trustForwardedHeaders,
+            )
+        }
         block()
     }
+
+    private suspend fun HttpClient.gqlFrom(forwardedFor: String): HttpResponse =
+        post("/graphql") {
+            contentType(ContentType.Application.Json)
+            header("X-Forwarded-For", forwardedFor)
+            setBody("""{"query":"{ hello }"}""")
+        }
 
     private suspend fun HttpClient.gql(
         query: String,
@@ -107,6 +122,30 @@ class GraphQLLimitsTest {
         app(Limits(requestsPerIp = 3, requestsPerUser = 100)) {
             repeat(3) { assertEquals(HttpStatusCode.OK, client.gql("{ hello }").status) }
             assertEquals(HttpStatusCode.TooManyRequests, client.gql("{ hello }").status)
+        }
+
+    @Test
+    fun forwardedClientAddressesAreLimitedSeparatelyWhenTrusted() =
+        app(Limits(requestsPerIp = 2, requestsPerUser = 100), trustForwardedHeaders = true) {
+            repeat(2) { assertEquals(HttpStatusCode.OK, client.gqlFrom("203.0.113.1").status) }
+            assertEquals(HttpStatusCode.TooManyRequests, client.gqlFrom("203.0.113.1").status)
+            assertEquals(HttpStatusCode.OK, client.gqlFrom("203.0.113.2").status)
+        }
+
+    @Test
+    fun forwardedClientAddressIsIgnoredWhenNotTrusted() =
+        app(Limits(requestsPerIp = 2, requestsPerUser = 100)) {
+            assertEquals(HttpStatusCode.OK, client.gqlFrom("203.0.113.1").status)
+            assertEquals(HttpStatusCode.OK, client.gqlFrom("203.0.113.2").status)
+            assertEquals(HttpStatusCode.TooManyRequests, client.gqlFrom("203.0.113.3").status)
+        }
+
+    @Test
+    fun spoofedFirstForwardedAddressDoesNotEscapeTheLimitWhenTrusted() =
+        app(Limits(requestsPerIp = 2, requestsPerUser = 100), trustForwardedHeaders = true) {
+            assertEquals(HttpStatusCode.OK, client.gqlFrom("198.51.100.1, 203.0.113.9").status)
+            assertEquals(HttpStatusCode.OK, client.gqlFrom("198.51.100.2, 203.0.113.9").status)
+            assertEquals(HttpStatusCode.TooManyRequests, client.gqlFrom("198.51.100.3, 203.0.113.9").status)
         }
 
     @Test

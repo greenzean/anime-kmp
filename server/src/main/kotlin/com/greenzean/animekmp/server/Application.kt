@@ -27,6 +27,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.forwardedheaders.XForwardedHeaders
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -46,6 +47,7 @@ fun main() {
             tokens = tokens,
             googleClientId = config.auth?.googleClientId,
             introspectionEnabled = config.introspection,
+            trustForwardedHeaders = config.trustForwardedHeaders,
         )
     }.start(wait = true)
 }
@@ -71,9 +73,11 @@ fun Application.module(
     googleClientId: String? = null,
     limits: Limits = Limits(),
     introspectionEnabled: Boolean = true,
+    trustForwardedHeaders: Boolean = false,
 ) {
     val sync = SyncRepository(database, clock)
     val linked = LinkedPlatformRepository(database)
+    if (trustForwardedHeaders) install(XForwardedHeaders) { useLastProxy() }
     install(CallLogging)
     installGraphQLRateLimits(limits, tokens)
     install(GraphQL) {

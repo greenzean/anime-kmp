@@ -22,6 +22,7 @@ data class AppConfig(
     val database: DatabaseConfig? = null,
     val auth: AuthConfig? = null,
     val introspection: Boolean = env == AppEnv.DEV,
+    val trustForwardedHeaders: Boolean = false,
 ) {
     companion object {
         fun fromEnv(env: Map<String, String> = System.getenv()): AppConfig {
@@ -45,10 +46,8 @@ data class AppConfig(
                     )
                 }
             val auth = authFromEnv(env, appEnv)
-            val introspection =
-                env["GRAPHQL_INTROSPECTION"]?.takeIf { it.isNotBlank() }?.let {
-                    it.toBooleanStrictOrNull() ?: error("GRAPHQL_INTROSPECTION must be 'true' or 'false', got '$it'")
-                } ?: (appEnv == AppEnv.DEV)
+            val introspection = booleanFromEnv(env, "GRAPHQL_INTROSPECTION") ?: (appEnv == AppEnv.DEV)
+            val trustForwardedHeaders = booleanFromEnv(env, "TRUST_FORWARDED_HEADERS") ?: false
             return AppConfig(
                 host = env["HOST"] ?: "0.0.0.0",
                 port = port,
@@ -56,8 +55,17 @@ data class AppConfig(
                 database = database,
                 auth = auth,
                 introspection = introspection,
+                trustForwardedHeaders = trustForwardedHeaders,
             )
         }
+
+        private fun booleanFromEnv(
+            env: Map<String, String>,
+            name: String,
+        ): Boolean? =
+            env[name]?.takeIf { it.isNotBlank() }?.let {
+                it.toBooleanStrictOrNull() ?: error("$name must be 'true' or 'false', got '$it'")
+            }
 
         private fun authFromEnv(
             env: Map<String, String>,
