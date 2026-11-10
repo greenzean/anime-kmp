@@ -43,3 +43,4 @@ Accepted ADRs are not rewritten. A changed decision gets a new ADR, and the old 
 | 0022 | [MAL on a second device: the server keeps only a "MAL linked" flag, and a device without MAL never sends to MAL](0022-mal-on-a-second-device.md) | Accepted | M2-23 |
 | 0023 | [When the MAL list is imported, MAL's update time settles differences instead of asking the user](0023-mal-connect-import-by-update-time.md) | Accepted | M2-23 |
 | 0024 | [The GraphQL endpoint limits query size, request size, push batches and request rate, and hides introspection in production](0024-server-limits.md) | Accepted | M2-24 |
+| 0025 | [The server is hosted on the mini PC and published through Tailscale Funnel](0025-server-hosting.md) | Accepted | M2-25 |
