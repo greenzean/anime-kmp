@@ -15,10 +15,10 @@ The release build needs an HTTPS server URL on the internet. Until now the serve
 | Mini PC + Cloudflare quick tunnel | $0 | Yes | Ours | Low | URL changes at each start; no uptime guarantee; testing only |
 | ngrok Free | $0 | Yes | Ours | Low | 1 GB and 20,000 requests per month; interstitial page on HTTP endpoints not tested |
 | Railway Hobby | $5 per month with $5 of usage; my estimate for this setup $15-25 | Not verified | Volume backups, plan coverage not stated | Low | Estimate, not a quoted price |
-| Render | Not verified | Not verified | Paid Postgres only | Low | Free web service sleeps; free Postgres is deleted after 44 days |
-| DigitalOcean Droplet | $4 per month for 512 MiB, too small | No | Whole-disk, 20% or 30% of the price | High | 1 GiB and managed Postgres prices not verified |
+| Render | Starter web service $7 per month (512 MB); smallest paid Postgres $6 per month (256 MB) plus $0.30 per GB; Hobby workspace $0, so about $13 per month | Not verified | Paid Postgres only (point-in-time recovery, 3 days on Hobby) | Low | Free web service sleeps; free Postgres expires after 30 days, then 14 days of grace, then is deleted |
+| DigitalOcean | 1 GiB Droplet $6 per month; smallest managed Postgres $15.15 per month plus storage at $0.215 per GB | No for the Droplet: self-managed | Droplet backups, whole-disk, 20% or 30% of the price | High for the Droplet | Whether the $15.15 includes the base 10 GiB of storage was not confirmed |
 
-Sources: tailscale.com/kb/1223/funnel, docs.fly.io/about/pricing, hetzner.com/cloud/cost-optimized, docs.hetzner.com/cloud/servers/backups-snapshots/overview, developers.cloudflare.com (quick tunnels and create-remote-tunnel), ngrok.com/pricing, railway.com/pricing, render.com/docs/free, digitalocean.com/pricing/droplets. None of the options were run; all were judged from docs.
+Sources: tailscale.com/kb/1223/funnel, docs.fly.io/about/pricing, hetzner.com/cloud/cost-optimized, docs.hetzner.com/cloud/servers/backups-snapshots/overview, developers.cloudflare.com (quick tunnels and create-remote-tunnel), ngrok.com/pricing, railway.com/pricing, render.com/docs/free, render.com/pricing.md, digitalocean.com/pricing/droplets, digitalocean.com/pricing/managed-databases, tailscale.com/funnel-aup. Prices checked 2026-11-10, read through a page summarizer, excluding tax. None of the options were run; all were judged from docs.
 
 ## Decision
 Use **the mini PC, published through Tailscale Funnel**, with backups we run ourselves.
@@ -31,7 +31,7 @@ Use **the mini PC, published through Tailscale Funnel**, with backups we run our
 ## Consequences
 - Cost is $0. Availability is that of the mini PC, its power and its internet line, with no failover. If it goes down, the app keeps working offline and syncs later.
 - Funnel is a beta feature with an unpublished bandwidth limit. If it becomes a problem, Fly.io is the next choice (about $7-10 per month); the compose files and Dockerfile are reusable.
-- Terms of use of Funnel for a public API were not verified.
+- Funnel's terms: Tailscale's acceptable use policy says nothing about hosting an API or app backend, commercial use or bandwidth. It forbids illegal content, spam or bulk automated activity of excessive volume, malware, phishing, unauthorized access, and interfering with or putting an undue burden on the service, and Tailscale may suspend an account with or without notice. The Terms of Service and the Main Service Agreement were seen only in search snippets and were not read in full. Funnel is documented as beta (last validated 2026-01-20) and "available for all plans", but no line names the free Personal plan, and the bandwidth limit has no published figure. A sync server for a handful of users is small traffic, and Fly.io is the fallback if the account is suspended or throttled.
 - Funnel sends the client's address in `X-Forwarded-For` and replaces a value the client sends itself (checked on 2026-11-10 with a request carrying a fake header), so `TRUST_FORWARDED_HEADERS=true` is safe behind it. Internet scanners reached the public name within minutes of enabling Funnel, so the endpoint must stay production-hardened (ADR 0024).
 - Backups live on the same machine by default. Copying them off the box is not done; the dump directory can be synced to another place later.
 - Log and backup retention for [ADR 0013](0013-account-deletion.md): server logs go to Docker's default log driver on the box and dumps are kept 14 days.
