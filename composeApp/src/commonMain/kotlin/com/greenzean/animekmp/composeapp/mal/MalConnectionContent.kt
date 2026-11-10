@@ -28,6 +28,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.mal_connecting
 import com.greenzean.animekmp.composeapp.generated.resources.mal_consent_accept
 import com.greenzean.animekmp.composeapp.generated.resources.mal_consent_body
 import com.greenzean.animekmp.composeapp.generated.resources.mal_disconnect
+import com.greenzean.animekmp.composeapp.settings.PrivacyPolicyLink
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountAction
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountState
 import com.greenzean.animekmp.shared.mal.presentation.MalAccountStatus
@@ -98,6 +99,7 @@ private fun NeedsConsent(onAction: (MalAccountAction) -> Unit) {
             onClick = { onAction(MalAccountAction.OnConsentAccepted) },
             modifier = Modifier.fillMaxWidth().testTag(MalAccountTags.CONSENT_ACCEPT),
         )
+        PrivacyPolicyLink(modifier = Modifier.fillMaxWidth())
     }
 }
 
