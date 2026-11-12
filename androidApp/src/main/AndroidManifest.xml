@@ -13,7 +13,8 @@
         android:name=".AnimeApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:icon="@android:drawable/sym_def_app_icon"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="Anime Tracker"
         android:supportsRtl="true"
         android:theme="@style/Theme.AnimeTracker">
