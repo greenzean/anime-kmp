@@ -3,6 +3,7 @@ package com.greenzean.animekmp.composeapp.settings
 import com.greenzean.animekmp.composeapp.core.UiText
 import com.greenzean.animekmp.composeapp.generated.resources.Res
 import com.greenzean.animekmp.composeapp.generated.resources.delete_error_unauthorized
+import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_cancelled
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_google_failed
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_no_connection
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_no_credential
@@ -53,9 +54,11 @@ private fun GoogleSignInError.toUiText(): UiText =
             UiText.StringResource(Res.string.sign_in_error_not_configured)
         }
 
-        GoogleSignInError.CANCELLED, GoogleSignInError.UNKNOWN -> {
-            UiText.StringResource(
-                Res.string.sign_in_error_google_failed,
-            )
+        GoogleSignInError.CANCELLED -> {
+            UiText.StringResource(Res.string.sign_in_error_cancelled)
+        }
+
+        GoogleSignInError.UNKNOWN -> {
+            UiText.StringResource(Res.string.sign_in_error_google_failed)
         }
     }

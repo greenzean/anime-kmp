@@ -45,22 +45,26 @@ class MergeMalEntryUseCase(
         val local = library.getEntryIncludingRemoved(entry.malId)
         val outcome =
             if (local == null) {
-                addNew(entry, imageUrl)
+                addNew(entry, imageUrl, markOnMal)
             } else {
                 resolve(entry, local, malUpdatedAt, malChanged)
             }
-        if (markOnMal) onMal.markOnMal(entry.malId)
+        if (markOnMal && outcome != MergeOutcome.Added) onMal.markOnMal(entry.malId)
         return outcome
     }
 
     private suspend fun addNew(
         entry: MalExportEntry,
         imageUrl: String?,
+        markOnMal: Boolean,
     ): MergeOutcome {
-        library.saveAnime(
+        library.saveImported(
             Anime(malId = entry.malId, title = entry.title, imageUrl = imageUrl, episodes = entry.episodes),
+            entry.status,
+            entry.progress,
+            entry.score,
+            markOnMal,
         )
-        library.saveEntry(entry.malId, entry.status, entry.progress, entry.score)
         conflicts.deleteConflict(entry.malId)
         return MergeOutcome.Added
     }

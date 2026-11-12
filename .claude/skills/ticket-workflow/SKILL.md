@@ -28,6 +28,13 @@ Design criteria are in the Definition of Done, not repeated in each ticket.
 - Questions are answered when the ticket is written, in Decisions. When a ticket starts, ask only if the code contradicts it.
 - Design is part of every view ticket (see Definition of Done). The design system ticket M2-6a (#86) is the only separate design ticket.
 
+## Bugs
+- **ID:** `B-<n>`, numbered in the order bugs are reported, no milestone: `B-1` is the first. The title is `B-<n>: <what is wrong>`, at most 8 words, in the user's words (for example `B-3: Google sign-in failure shows no message`). The GitHub issue number goes next to it in text, as in `B-3 (#156)`.
+- **Label:** `bug` only. No milestone or project unless it blocks a milestone.
+- **Body** (same headings as a ticket): Goal (what should be true), Where in the app, What happens (what was seen, on which build and device), Acceptance (the fix and the test that covers it), Found in (the ticket or check that found it), Depends on.
+- **Work:** a bug is a ticket for the flow below. Branch `b-3-sign-in-failure-message`, commits `B-3: ...`. A small bug found while working a ticket is fixed in that ticket; otherwise it gets its own `B-<n>`.
+- **Next number:** the highest `B-` in `gh issue list --label bug --state all`, plus one.
+
 ## States
 Backlog, Ready, In Progress, In Review, Done. A ticket is not Done until it works on every platform it claims.
 
@@ -69,7 +76,7 @@ Support agents that own no code: `build-runner` (Gradle runs), `Explore` (search
 The rule is in `CLAUDE.md`; permission rules prompt for commits, pushes and `gh pr` as a safety net.
 
 ## Branch naming
-Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`.
+Include the ticket ID: `m0-1-create-monorepo`, `m1-5-push-pull-sync`. Bugs use their `B-` ID: `b-3-sign-in-failure-message`.
 
 ## Definition of Done
 - Builds in CI for all active targets.

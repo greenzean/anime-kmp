@@ -72,7 +72,7 @@ class AccountViewModel(
         _state.update { it.copy(isSigningIn = true, error = null) }
         viewModelScope.launch {
             val result = signInWithGoogle()
-            val error = (result as? Result.Error)?.error?.takeUnless(::isCancelled)
+            val error = (result as? Result.Error)?.error
             _state.update { it.copy(isSigningIn = false, error = error) }
             if (result is Result.Success) merge().join()
         }

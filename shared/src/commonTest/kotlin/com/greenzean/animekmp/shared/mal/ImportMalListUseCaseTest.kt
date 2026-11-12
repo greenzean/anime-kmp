@@ -164,7 +164,8 @@ class ImportMalListUseCaseTest {
 
             h.importList {}
 
-            assertEquals(listOf(1, 2, 3), h.onMal.marked)
+            assertEquals(listOf(1, 2), h.onMal.marked)
+            assertEquals(listOf(3), h.local.importedMarkedOnMal)
         }
 
     @Test

@@ -369,14 +369,37 @@ class AccountViewModelTest {
     }
 
     @Test
-    fun cancellingShowsNoError() {
+    fun cancellingShowsTheCancelledError() {
         provider.result = Result.Error(GoogleSignInError.CANCELLED)
         val viewModel = viewModel()
         viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
 
-        assertNull(viewModel.state.value.error)
+        assertEquals(SignInError.Google(GoogleSignInError.CANCELLED), viewModel.state.value.error)
         assertFalse(viewModel.state.value.isSignedIn)
         assertFalse(viewModel.state.value.isSigningIn)
+    }
+
+    @Test
+    fun retryingAfterACancelSignsIn() {
+        provider.result = Result.Error(GoogleSignInError.CANCELLED)
+        val viewModel = viewModel()
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+        provider.result = Result.Success("id-token")
+
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertNull(viewModel.state.value.error)
+        assertTrue(viewModel.state.value.isSignedIn)
+    }
+
+    @Test
+    fun anUnknownGoogleFailureShowsAnError() {
+        provider.result = Result.Error(GoogleSignInError.UNKNOWN)
+        val viewModel = viewModel()
+        viewModel.onAction(AccountAction.OnSignInWithGoogleClick)
+
+        assertEquals(SignInError.Google(GoogleSignInError.UNKNOWN), viewModel.state.value.error)
+        assertFalse(viewModel.state.value.isSignedIn)
     }
 
     @Test

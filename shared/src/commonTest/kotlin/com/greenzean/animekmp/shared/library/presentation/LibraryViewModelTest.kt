@@ -550,6 +550,7 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
     val savedAnime = mutableListOf<Anime>()
     val savedEntries = mutableListOf<SavedEntry>()
     val removedMalIds = mutableListOf<Int>()
+    val importedMarkedOnMal = mutableListOf<Int>()
     private val known = mutableMapOf<Int, Anime>()
     private val removed = mutableMapOf<Int, LibraryEntry>()
     private val library = MutableStateFlow<List<LibraryEntry>>(emptyList())
@@ -603,6 +604,18 @@ class FakeLibraryLocalDataSource : LibraryLocalDataSource {
     ) {
         savedEntries += SavedEntry(malId, status, progress, score)
         put(known.getValue(malId), SyncState.PENDING, status, progress, score)
+    }
+
+    override suspend fun saveImported(
+        anime: Anime,
+        status: WatchStatus,
+        progress: Int,
+        score: Int?,
+        markOnMal: Boolean,
+    ) {
+        saveAnime(anime)
+        saveEntry(anime.malId, status, progress, score)
+        if (markOnMal) importedMarkedOnMal += anime.malId
     }
 
     override suspend fun remove(malId: Int) {

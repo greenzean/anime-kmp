@@ -60,11 +60,11 @@ Verdicts come from reading the code and the test names. The tests were not re-ru
 
 ## Findings
 
-1. Open bug #154: library list or details chips stop drawing until scrolled, on the minified release build in the emulator. Not fixed here. To be reproduced on a real device.
+1. Open bug B-1 (#154): library list or details chips stop drawing until scrolled, on the minified release build in the emulator. Not fixed here. To be reproduced on a real device.
 2. KDoc comments remain, against the no-comments rule: `shared/.../auth/domain/GoogleIdTokenProvider.kt` and `server/.../auth/GoogleIdTokenVerifier.kt`. Not touched in this ticket.
 3. The privacy page lives in another repository, so this repo cannot check its content.
 4. After resolving the only conflict, the Import row in Settings still shows "1 entry needs your choice" while the conflicts row says "Nothing to resolve". The text is stale until the next import. Minor.
-5. The MAL list import is slow: about 3 minutes for 279 entries. Progress is shown ("Imported N so far"), so it works, but it is the longest wait in the MVP.
+5. B-4 (#157): the MAL list import took about 3 minutes for 279 entries in this check. It did not reproduce later on the debug build (Pixel 3 API 28 emulator, same 279-entry list): about 10 s in total, of which about 0.9 s was the 3 MAL requests and 7.4 s the database writes (about 4 commits per new entry). After saving the anime, its list entry and the on-MAL mark in one commit, the writes took 4.4 s (about 6 s in total). The cause of the 3-minute run is unknown.
 6. The test changed the real MAL list: Steins;Gate is now Watching 5/24, score 9. The other test entries were already on the MAL list (279 entries on both sides), so nothing else was added.
 
 7. Google sign-in does not complete in the release APK signed with the upload key (`./gradlew :androidApp:assembleRelease` with the upload keystore, installed on the emulator). The account picker opens, the chosen account is accepted, and the app stays signed out with no message. The debug build signs in. Cause confirmed: no Android OAuth client in Google Cloud had the upload key's SHA-1. After a new Android client was created for `com.greenzean.animekmp` with that SHA-1 (`39:76:0B:8F:27:C8:B5:D5:6A:0C:18:B5:90:95:71:72:50:25:17:C9`), the same APK signed in ("Signed in with Google"). Google sign-in also works on the build installed from Google Play (version 0.1.0, installer `com.android.vending`, same emulator), so the Play app signing key is registered as well. Separately, a silent failure with no message is a UX gap worth a ticket.
@@ -93,4 +93,4 @@ Checked against the Play build and the release build on the emulator. The Play C
 - D5 (MAL API terms), D11 empty-list case, automatic periodic MAL pull timing, D17 on a device without MAL.
 - Deleting an account through the web page.
 - The Play Console side of the listing.
-- Bug #154 on a real device with the release build.
+- B-1 (#154) on a real device with the release build.

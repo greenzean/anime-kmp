@@ -125,7 +125,8 @@ class MergeMalEntryUseCaseTest {
             merge(malEntry(2, "Trigun"), null, markOnMal = true)
             merge(malEntry(3, "Monster"), null, markOnMal = true)
 
-            assertEquals(listOf(1, 2, 3), onMal.marked)
+            assertEquals(listOf(1, 2), onMal.marked)
+            assertEquals(listOf(3), local.importedMarkedOnMal)
         }
 
     @Test
@@ -137,6 +138,7 @@ class MergeMalEntryUseCaseTest {
             merge(malEntry(2, "Trigun"), null, markOnMal = false)
 
             assertTrue(onMal.marked.isEmpty())
+            assertTrue(local.importedMarkedOnMal.isEmpty())
         }
 
     @Test
