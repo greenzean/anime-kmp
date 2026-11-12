@@ -59,6 +59,7 @@ import com.greenzean.animekmp.composeapp.generated.resources.settings_sign_out
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_message
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_in_title
 import com.greenzean.animekmp.composeapp.generated.resources.settings_signed_out_message
+import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_cancelled
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_google_failed
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_no_connection
 import com.greenzean.animekmp.composeapp.generated.resources.sign_in_error_no_credential
@@ -264,6 +265,14 @@ class SettingsScreenTest {
         runComposeUiTest {
             SettingsRobot(this, signedOut.copy(error = SignInError.Google(GoogleSignInError.NO_CREDENTIAL)))
                 .assertTextShown(str(Res.string.sign_in_error_no_credential))
+        }
+
+    @Test
+    fun cancelledSignInShowsTheHintAndKeepsTheSignInButton() =
+        runComposeUiTest {
+            SettingsRobot(this, signedOut.copy(error = SignInError.Google(GoogleSignInError.CANCELLED)))
+                .assertTextShown(str(Res.string.sign_in_error_cancelled))
+                .assertLabelShown(str(Res.string.sign_in_with_google))
         }
 
     @Test

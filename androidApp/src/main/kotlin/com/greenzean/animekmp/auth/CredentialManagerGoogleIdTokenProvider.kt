@@ -15,7 +15,6 @@ import com.greenzean.animekmp.shared.auth.domain.GoogleIdTokenProvider
 import com.greenzean.animekmp.shared.auth.domain.GoogleSignInError
 import com.greenzean.animekmp.shared.core.domain.Result
 
-/** [serverClientId] is the web OAuth client ID: the ID token is issued for our server, which checks `aud`. */
 class CredentialManagerGoogleIdTokenProvider(
     private val activities: CurrentActivityHolder,
     private val serverClientId: String,

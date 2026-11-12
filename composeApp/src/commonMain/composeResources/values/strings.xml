@@ -234,6 +234,7 @@
 
     <string name="sign_in_error_no_credential">No Google account was found on this device.</string>
     <string name="sign_in_error_not_configured">Sign-in is not set up in this build.</string>
+    <string name="sign_in_error_cancelled">Sign-in did not finish. Try again.</string>
     <string name="sign_in_error_google_failed">Google sign-in failed. Try again.</string>
     <string name="sign_in_error_no_connection">No connection. Try again online.</string>
     <string name="sign_in_error_unauthorized">The server did not accept this sign-in. Try again.</string>
