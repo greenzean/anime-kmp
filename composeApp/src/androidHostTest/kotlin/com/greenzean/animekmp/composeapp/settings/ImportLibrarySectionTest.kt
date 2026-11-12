@@ -54,7 +54,11 @@ private class ImportSectionRobot(
                 LibrarySection(
                     state = ExportState(),
                     onAction = {},
-                    importState = ImportFileState(status),
+                    importState =
+                        ImportFileState(
+                            status,
+                            conflictCount = (status as? ImportStatus.Done)?.conflicts ?: 0,
+                        ),
                     onImportAction = { actions += it },
                 )
             }

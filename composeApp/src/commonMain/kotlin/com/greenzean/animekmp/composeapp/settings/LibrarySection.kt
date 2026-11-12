@@ -99,7 +99,7 @@ fun LibrarySection(
                         { ImportProgress(progress = status.progress) }
                     },
             )
-            ImportStatusMessage(status = importState.status)
+            ImportStatusMessage(status = importState.status, pendingConflicts = importState.conflictCount)
             AppListRow(
                 title = stringResource(Res.string.settings_conflicts_row),
                 supportingText =
@@ -147,14 +147,18 @@ private fun ImportProgress(progress: Float) {
 }
 
 @Composable
-private fun ImportStatusMessage(status: ImportStatus) {
+private fun ImportStatusMessage(
+    status: ImportStatus,
+    pendingConflicts: Int,
+) {
     when (status) {
         is ImportStatus.Done -> {
+            val conflicts = minOf(status.conflicts, pendingConflicts)
             val lines =
                 listOfNotNull(
                     pluralStringResource(Res.plurals.settings_import_added, status.added, status.added),
-                    if (status.conflicts > 0) {
-                        pluralStringResource(Res.plurals.settings_import_conflicts, status.conflicts, status.conflicts)
+                    if (conflicts > 0) {
+                        pluralStringResource(Res.plurals.settings_import_conflicts, conflicts, conflicts)
                     } else {
                         null
                     },

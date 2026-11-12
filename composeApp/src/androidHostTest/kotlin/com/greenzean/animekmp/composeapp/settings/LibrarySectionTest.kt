@@ -185,13 +185,38 @@ class LibrarySectionTest {
     @Test
     fun importSummaryShowsTheConflictsLine() =
         runComposeUiTest {
-            ConflictsRowRobot(this, ImportFileState(ImportStatus.Done(added = 4, conflicts = 2, invalid = 0)))
-                .assertTextShown(
-                    listOf(
-                        plural(Res.plurals.settings_import_added, 4, 4),
-                        plural(Res.plurals.settings_import_conflicts, 2, 2),
-                    ).joinToString("\n"),
-                )
+            ConflictsRowRobot(
+                this,
+                ImportFileState(ImportStatus.Done(added = 4, conflicts = 2, invalid = 0), conflictCount = 2),
+            ).assertTextShown(
+                listOf(
+                    plural(Res.plurals.settings_import_added, 4, 4),
+                    plural(Res.plurals.settings_import_conflicts, 2, 2),
+                ).joinToString("\n"),
+            )
+        }
+
+    @Test
+    fun importSummaryDropsTheConflictsLineOnceNoneArePending() =
+        runComposeUiTest {
+            ConflictsRowRobot(
+                this,
+                ImportFileState(ImportStatus.Done(added = 4, conflicts = 2, invalid = 0), conflictCount = 0),
+            ).assertTextShown(plural(Res.plurals.settings_import_added, 4, 4))
+        }
+
+    @Test
+    fun importSummaryShowsOnlyTheConflictsStillPending() =
+        runComposeUiTest {
+            ConflictsRowRobot(
+                this,
+                ImportFileState(ImportStatus.Done(added = 4, conflicts = 3, invalid = 0), conflictCount = 1),
+            ).assertTextShown(
+                listOf(
+                    plural(Res.plurals.settings_import_added, 4, 4),
+                    plural(Res.plurals.settings_import_conflicts, 1, 1),
+                ).joinToString("\n"),
+            )
         }
 
     @Test

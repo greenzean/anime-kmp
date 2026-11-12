@@ -68,7 +68,11 @@ private fun ImportPreview(
         LibrarySection(
             state = ExportState(),
             onAction = {},
-            importState = ImportFileState(status = status),
+            importState =
+                ImportFileState(
+                    status = status,
+                    conflictCount = (status as? ImportStatus.Done)?.conflicts ?: 0,
+                ),
             onImportAction = {},
         )
     }
