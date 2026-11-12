@@ -634,4 +634,38 @@ class SqlDelightLibraryDataSourceTest {
             assertTrue(titles(query = "nothing").isEmpty())
             assertEquals(1, repository.observeActiveCount().first())
         }
+
+    @Test
+    fun savingAnImportedEntryWritesAnimeEntryAndOnMalMarkTogether() =
+        runTest {
+            now = 5
+            repository.saveImported(frieren, WatchStatus.WATCHING, 3, 8, markOnMal = true)
+
+            val entry = repository.getEntry(frieren.malId)
+            assertEquals(WatchStatus.WATCHING, entry?.status)
+            assertEquals(3, entry?.progress)
+            assertEquals(8, entry?.score)
+            assertEquals(SyncState.PENDING, entry?.syncState)
+            assertEquals(
+                listOf(frieren.malId),
+                db.listEntryQueries
+                    .selectActiveOnMalIds()
+                    .executeAsList()
+                    .map { it.toInt() },
+            )
+        }
+
+    @Test
+    fun savingAnImportedEntryWithoutMarkLeavesItOffMal() =
+        runTest {
+            repository.saveImported(frieren, WatchStatus.COMPLETED, 28, null, markOnMal = false)
+
+            assertEquals(WatchStatus.COMPLETED, repository.getEntry(frieren.malId)?.status)
+            assertTrue(
+                db.listEntryQueries
+                    .selectActiveOnMalIds()
+                    .executeAsList()
+                    .isEmpty(),
+            )
+        }
 }

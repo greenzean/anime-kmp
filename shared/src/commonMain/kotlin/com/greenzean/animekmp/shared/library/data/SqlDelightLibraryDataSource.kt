@@ -71,14 +71,7 @@ class SqlDelightLibraryDataSource(
         }
 
     override suspend fun saveAnime(anime: Anime) {
-        withContext(dispatcher) {
-            val malId = anime.malId.toLong()
-            val episodes = anime.episodes?.toLong()
-            db.transaction {
-                db.animeQueries.insertOrIgnore(malId, anime.title, anime.titleEn, anime.imageUrl, episodes)
-                db.animeQueries.updateDetails(anime.title, anime.titleEn, anime.imageUrl, episodes, malId)
-            }
-        }
+        withContext(dispatcher) { db.transaction { upsertAnime(anime) } }
     }
 
     override suspend fun saveEntry(
@@ -87,18 +80,46 @@ class SqlDelightLibraryDataSource(
         progress: Int,
         score: Int?,
     ) = withContext(dispatcher) {
-        val now = clock.now().toEpochMilliseconds()
+        db.transaction { upsertEntry(malId, status, progress, score) }
+    }
+
+    override suspend fun saveImported(
+        anime: Anime,
+        status: WatchStatus,
+        progress: Int,
+        score: Int?,
+        markOnMal: Boolean,
+    ) = withContext(dispatcher) {
         db.transaction {
-            db.listEntryQueries.updatePending(status.name, progress.toLong(), score?.toLong(), now, malId.toLong())
-            db.listEntryQueries.insertPending(
-                Uuid.random().toString(),
-                malId.toLong(),
-                status.name,
-                progress.toLong(),
-                score?.toLong(),
-                now,
-            )
+            upsertAnime(anime)
+            upsertEntry(anime.malId, status, progress, score)
+            if (markOnMal) db.listEntryQueries.markOnMal(anime.malId.toLong())
         }
+    }
+
+    private fun upsertAnime(anime: Anime) {
+        val malId = anime.malId.toLong()
+        val episodes = anime.episodes?.toLong()
+        db.animeQueries.insertOrIgnore(malId, anime.title, anime.titleEn, anime.imageUrl, episodes)
+        db.animeQueries.updateDetails(anime.title, anime.titleEn, anime.imageUrl, episodes, malId)
+    }
+
+    private fun upsertEntry(
+        malId: Int,
+        status: WatchStatus,
+        progress: Int,
+        score: Int?,
+    ) {
+        val now = clock.now().toEpochMilliseconds()
+        db.listEntryQueries.updatePending(status.name, progress.toLong(), score?.toLong(), now, malId.toLong())
+        db.listEntryQueries.insertPending(
+            Uuid.random().toString(),
+            malId.toLong(),
+            status.name,
+            progress.toLong(),
+            score?.toLong(),
+            now,
+        )
     }
 
     override suspend fun remove(malId: Int) =

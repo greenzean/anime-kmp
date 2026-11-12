@@ -28,5 +28,13 @@ interface LibraryLocalDataSource {
         score: Int?,
     )
 
+    suspend fun saveImported(
+        anime: Anime,
+        status: WatchStatus,
+        progress: Int,
+        score: Int?,
+        markOnMal: Boolean,
+    )
+
     suspend fun remove(malId: Int)
 }
