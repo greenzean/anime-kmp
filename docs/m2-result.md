@@ -60,7 +60,7 @@ Verdicts come from reading the code and the test names. The tests were not re-ru
 
 ## Findings
 
-1. Open bug B-1 (#154): library list or details chips stop drawing until scrolled, on the minified release build in the emulator. Not fixed here. To be reproduced on a real device.
+1. B-1 (#154): library list or details chips stopped drawing until scrolled, on the minified release build in the emulator. Not reproduced later on the Google Play build (0.1.0) in the emulator: about 1,500 text-node checks against the screenshots over scrolling, flings, open-and-back cycles and cold starts found nothing undrawn. Closed as not reproducible, probably emulator-only. Not tested: a real device and the release build signed with the upload key.
 2. KDoc comments remain, against the no-comments rule: `shared/.../auth/domain/GoogleIdTokenProvider.kt` and `server/.../auth/GoogleIdTokenVerifier.kt`. Not touched in this ticket.
 3. The privacy page lives in another repository, so this repo cannot check its content.
 4. After resolving the only conflict, the Import row in Settings still shows "1 entry needs your choice" while the conflicts row says "Nothing to resolve". The text is stale until the next import. Minor.
@@ -93,4 +93,4 @@ Checked against the Play build and the release build on the emulator. The Play C
 - D5 (MAL API terms), D11 empty-list case, automatic periodic MAL pull timing, D17 on a device without MAL.
 - Deleting an account through the web page.
 - The Play Console side of the listing.
-- B-1 (#154) on a real device with the release build.
+- B-1 (#154) on a real device (closed as not reproducible in the emulator).
