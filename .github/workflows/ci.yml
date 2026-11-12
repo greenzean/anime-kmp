@@ -41,6 +41,12 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew :androidApp:assembleDebug :shared:allTests :composeApp:testAndroidHostTest
+      - run: >
+          ./gradlew :androidApp:assembleRelease
+          -Panimekmp.serverUrl.release=https://ci.example.invalid/graphql
+          -Panimekmp.googleServerClientId=ci
+          -Panimekmp.malClientId=ci
+          -Panimekmp.malRedirectUri=https://ci.example.invalid/mal
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

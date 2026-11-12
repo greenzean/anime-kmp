@@ -33,7 +33,7 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 1
+        versionCode = 2
         versionName = "0.1.0"
 
         val localProperties =
@@ -102,9 +102,24 @@ android {
         buildConfig = true
     }
 
+    val keystorePath = providers.environmentVariable("ANIMEKMP_KEYSTORE_PATH").orNull
+    signingConfigs {
+        if (keystorePath != null) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = providers.environmentVariable("ANIMEKMP_KEYSTORE_PASSWORD").get()
+                keyAlias = providers.environmentVariable("ANIMEKMP_KEY_ALIAS").get()
+                keyPassword = providers.environmentVariable("ANIMEKMP_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             val releaseServerUrl =
                 providers
                     .gradleProperty("animekmp.serverUrl.release")
@@ -140,6 +155,14 @@ tasks.matching { it.name == "preReleaseBuild" }.configureEach {
         val releaseUri = runCatching { URI(releaseServerUrl.get()) }.getOrNull()
         check(releaseUri?.scheme == "https" && !releaseUri.host.isNullOrBlank()) {
             "animekmp.serverUrl.release must be an https URL for release builds"
+        }
+        listOf("animekmp.googleServerClientId", "animekmp.malClientId", "animekmp.malRedirectUri").forEach { key ->
+            val value =
+                providers
+                    .gradleProperty(key)
+                    .orElse(releaseLocalProperties.getProperty(key) ?: "")
+                    .get()
+            check(value.isNotBlank()) { "$key must be set for release builds" }
         }
     }
 }
